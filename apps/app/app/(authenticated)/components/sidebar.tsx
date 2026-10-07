@@ -22,7 +22,6 @@ import {
 } from "@repo/design-system/components/ui/sidebar";
 import { NotificationsTrigger } from "@repo/notifications/components/trigger";
 import {
-  AnchorIcon,
   ApertureIcon,
   KanbanIcon,
   LayoutDashboardIcon,
@@ -55,10 +54,6 @@ const studio: NavItem[] = [
   { title: "Tablero", icon: KanbanIcon },
   { title: "Editor", icon: ApertureIcon },
   { title: "Clientes", icon: UsersIcon },
-];
-
-const system: NavItem[] = [
-  { title: "Webhooks", url: "/webhooks", icon: AnchorIcon },
 ];
 
 const groupLabel =
@@ -133,9 +128,6 @@ export const GlobalSidebar = ({ children, user }: GlobalSidebarProperties) => {
         <Search />
         <SidebarContent>
           <NavGroup items={studio} label="Estudio" pathname={pathname} />
-          <div className="mt-auto">
-            <NavGroup items={system} label="Sistema" pathname={pathname} />
-          </div>
         </SidebarContent>
         <SidebarFooter>
           <SidebarMenu>

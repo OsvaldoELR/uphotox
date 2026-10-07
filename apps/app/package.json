@@ -22,7 +22,6 @@
     "@repo/observability": "*",
     "@repo/security": "*",
     "@repo/seo": "*",
-    "@repo/webhooks": "*",
     "@sentry/nextjs": "^10.42.0",
     "@t3-oss/env-nextjs": "^0.13.10",
     "fuse.js": "^7.1.0",
