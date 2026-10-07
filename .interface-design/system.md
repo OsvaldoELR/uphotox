@@ -92,8 +92,17 @@ Patrones de la app:
   (uso repetido). **Ningún ancestro de un draggable puede tener transform, filter ni
   backdrop-filter** (rompe el `position: fixed` del arrastre), y un solo contenedor de
   scroll para todo el tablero.
+- **Kanban en móvil (< md)**: nada depende de arrastrar. Barra de pestañas de etapas
+  (chips con índice, nombre y contador; la activa en signal/15 con borde signal-ink) y una
+  sola columna a ancho completo. Cada tarjeta tiene el botón ⇄ «Mover a…» (siempre visible
+  en móvil, al pasar el ratón en escritorio) y el panel de detalle un select «Etapa». Al
+  mover, el aviso ofrece «Ver etapa».
+- **Foto de tarjeta**: miniatura `aspect-[16/9] object-cover` arriba de la tarjeta (como
+  portada), comprimida en el navegador a ≤ 640 px WebP. Recuadro discontinuo «Añadir foto»
+  cuando no hay.
 - **Panel lateral de detalle** (Sheet derecha, `sm:max-w-lg`/`xl`): cabecera con borde,
   secciones con etiqueta mono 10px `tracking-[0.3em]` signal-ink, sin autofoco al abrir.
+  Lo que se aplica al instante (etapa, foto) va en una sección propia sobre el formulario.
 - **Permisos tipo GHL**: un bloque por grupo (switch del grupo = alguno activo, contador
   `x/y` mono), permisos individuales con switch indentados `pl-14`; interruptor
   «Solo datos asignados» en caja con borde y explicación.
