@@ -173,13 +173,16 @@ export type Database = {
           assigned_to: string | null
           board_id: number
           client_id: number | null
+          cover_path: string | null
           created_at: string
           created_by: string | null
+          external_id: string | null
           gallery_url: string | null
           id: number
           notes: string | null
           position: number
           session_at: string | null
+          source: string
           stage_entered_at: string
           stage_id: number
           studio_id: number
@@ -190,13 +193,16 @@ export type Database = {
           assigned_to?: string | null
           board_id: number
           client_id?: number | null
+          cover_path?: string | null
           created_at?: string
           created_by?: string | null
+          external_id?: string | null
           gallery_url?: string | null
           id?: never
           notes?: string | null
           position: number
           session_at?: string | null
+          source?: string
           stage_entered_at?: string
           stage_id: number
           studio_id: number
@@ -207,13 +213,16 @@ export type Database = {
           assigned_to?: string | null
           board_id?: number
           client_id?: number | null
+          cover_path?: string | null
           created_at?: string
           created_by?: string | null
+          external_id?: string | null
           gallery_url?: string | null
           id?: never
           notes?: string | null
           position?: number
           session_at?: string | null
+          source?: string
           stage_entered_at?: string
           stage_id?: number
           studio_id?: number
@@ -342,6 +351,70 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      studio_integrations: {
+        Row: {
+          board_id: number | null
+          created_at: string
+          enabled: boolean
+          id: number
+          last_error: string | null
+          last_received_at: string | null
+          provider: string
+          stage_id: number | null
+          studio_id: number
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          board_id?: number | null
+          created_at?: string
+          enabled?: boolean
+          id?: never
+          last_error?: string | null
+          last_received_at?: string | null
+          provider: string
+          stage_id?: number | null
+          studio_id: number
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          board_id?: number | null
+          created_at?: string
+          enabled?: boolean
+          id?: never
+          last_error?: string | null
+          last_received_at?: string | null
+          provider?: string
+          stage_id?: number | null
+          studio_id?: number
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studio_integrations_board_id_studio_id_fkey"
+            columns: ["board_id", "studio_id"]
+            isOneToOne: false
+            referencedRelation: "boards"
+            referencedColumns: ["id", "studio_id"]
+          },
+          {
+            foreignKeyName: "studio_integrations_stage_id_board_id_fkey"
+            columns: ["stage_id", "board_id"]
+            isOneToOne: false
+            referencedRelation: "board_stages"
+            referencedColumns: ["id", "board_id"]
+          },
+          {
+            foreignKeyName: "studio_integrations_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       studio_members: {
         Row: {
