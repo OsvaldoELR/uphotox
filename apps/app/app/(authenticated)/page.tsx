@@ -1,113 +1,116 @@
-import { auth } from "@repo/auth/server";
 import { createClient } from "@repo/database/server";
 import { HudLabel } from "@repo/design-system/components/hud/hud-label";
+import { Panel } from "@repo/design-system/components/hud/panel";
 import { Button } from "@repo/design-system/components/ui/button";
-import { Input } from "@repo/design-system/components/ui/input";
+import { KanbanIcon, MailWarningIcon } from "lucide-react";
 import type { Metadata } from "next";
-import dynamic from "next/dynamic";
-import { notFound } from "next/navigation";
-import { createProject } from "@/app/actions/projects/create";
-import { env } from "@/env";
-import { AvatarStack } from "./components/avatar-stack";
-import { Cursors } from "./components/cursors";
+import Link from "next/link";
+import { getBoardSummaries } from "@/lib/board-summary";
+import { isEmailEnabled } from "@/lib/email";
+import { ROLES } from "@/lib/permissions";
+import { requireStudio } from "@/lib/studio";
+import { BoardPipeline } from "./components/board-pipeline";
 import { Header } from "./components/header";
-import { ProjectGrid } from "./components/project-grid";
-
-const title = "Uphotox";
-const description = "Panel del estudio.";
-
-const CollaborationProvider = dynamic(() =>
-  import("./components/collaboration-provider").then(
-    (mod) => mod.CollaborationProvider
-  )
-);
 
 export const metadata: Metadata = {
-  title,
-  description,
+  title: "Panel · Uphotox",
+  description: "Panel del estudio.",
 };
 
-const App = async () => {
-  const { userId } = await auth();
-
-  if (!userId) {
-    notFound();
-  }
-
+const Dashboard = async () => {
+  const context = await requireStudio();
+  const canViewBoards = context.can("boards.view");
   const supabase = await createClient();
-  const [{ data: profile }, { data: projects, error }] = await Promise.all([
-    supabase.from("profiles").select("full_name").eq("id", userId).single(),
-    supabase
-      .from("projects")
-      .select("id, name, description")
-      .order("created_at", { ascending: false }),
-  ]);
-
-  const firstName = profile?.full_name?.split(" ")[0];
-  const projectCount = projects?.length ?? 0;
+  const boards = canViewBoards ? await getBoardSummaries(supabase) : [];
+  const firstName = context.member.fullName?.split(" ")[0];
+  const showEmailNotice = context.can("settings.manage") && !isEmailEnabled();
 
   return (
     <>
-      <Header page="Panel" pages={["Uphotox"]}>
-        {env.LIVEBLOCKS_SECRET && (
-          <CollaborationProvider workspaceId={userId}>
-            <AvatarStack />
-            <Cursors />
-          </CollaborationProvider>
-        )}
-      </Header>
+      <Header page="Panel" />
       <div className="flex flex-1 flex-col gap-12 px-4 pt-4 pb-12 md:px-10">
-        <section className="flex animate-fade-in-up flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="flex flex-col gap-3">
-            <HudLabel align="start" className="max-w-xs">
-              写真 · Panel del estudio
-            </HudLabel>
-            <h1 className="font-black font-mono text-4xl uppercase tracking-[-0.02em] md:text-5xl">
-              {firstName ? "Hola, " : "Hola"}
-              {firstName && (
-                <span className="text-glow text-signal-ink">{firstName}</span>
-              )}
-            </h1>
-            <p className="max-w-prose text-muted-foreground">
-              Cada proyecto es una sesión: de la reserva a la entrega.
-            </p>
-          </div>
-          <form action={createProject} className="flex w-full gap-3 lg:w-auto">
-            <Input
-              aria-label="Nombre del proyecto"
-              className="lg:w-64"
-              maxLength={120}
-              name="name"
-              placeholder="Ej.: Boda Ana y Luis"
-              required
-            />
-            <Button type="submit">Crear proyecto</Button>
-          </form>
+        <section className="flex animate-fade-in-up flex-col gap-3">
+          <HudLabel align="start" className="max-w-sm">
+            写真 · {context.studio.name}
+          </HudLabel>
+          <h1 className="font-black font-mono text-4xl uppercase tracking-[-0.02em] md:text-5xl">
+            {firstName ? "Hola, " : "Hola"}
+            {firstName && (
+              <span className="text-glow text-signal-ink">{firstName}</span>
+            )}
+          </h1>
+          <p className="max-w-prose text-muted-foreground">
+            <span className="font-mono text-[11px] text-foreground uppercase tracking-[0.2em]">
+              {ROLES[context.member.role].label}
+            </span>{" "}
+            · {ROLES[context.member.role].description}
+          </p>
         </section>
 
-        {error && (
-          <p className="text-destructive text-sm" role="alert">
-            No se pudieron cargar los proyectos: {error.message}
-          </p>
+        {showEmailNotice && (
+          <Panel className="flex items-start gap-3 border-flare/30 p-4">
+            <MailWarningIcon className="mt-0.5 size-5 shrink-0 text-flare" />
+            <div className="flex flex-col gap-1">
+              <p className="font-bold font-mono text-xs uppercase tracking-[0.18em]">
+                Correos desactivados
+              </p>
+              <p className="text-muted-foreground text-sm">
+                Los tableros funcionan, pero los clientes y tú no recibiréis
+                avisos hasta conectar Resend.
+              </p>
+            </div>
+          </Panel>
         )}
 
         <section className="flex flex-col gap-5">
           <div className="flex items-center gap-4">
             <HudLabel align="start" className="flex-1">
-              Proyectos
+              Tableros
             </HudLabel>
-            <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.2em]">
-              <span className="tabular font-bold text-foreground">
-                {String(projectCount).padStart(2, "0")}
-              </span>{" "}
-              activos
-            </span>
+            {canViewBoards && boards.length > 0 && (
+              <Button asChild size="sm" variant="outline">
+                <Link href="/tableros">Ver todos</Link>
+              </Button>
+            )}
           </div>
-          <ProjectGrid projects={projects ?? []} />
+
+          {canViewBoards && boards.length > 0 && (
+            <div className="grid gap-5">
+              {boards.map((board, index) => (
+                <BoardPipeline board={board} index={index} key={board.id} />
+              ))}
+            </div>
+          )}
+
+          {canViewBoards && boards.length === 0 && (
+            <Panel className="flex flex-col items-center gap-3 border-dashed px-6 py-16 text-center">
+              <KanbanIcon className="size-8 text-signal-ink/60" />
+              <p className="font-bold font-mono text-xs uppercase tracking-[0.25em]">
+                Mesa vacía
+              </p>
+              <p className="max-w-sm text-muted-foreground text-sm">
+                {context.can("boards.manage")
+                  ? "Crea un tablero para empezar a mover a tus clientes por el flujo."
+                  : "Todavía no hay tableros en el estudio."}
+              </p>
+              {context.can("boards.manage") && (
+                <Button asChild className="mt-2">
+                  <Link href="/tableros">Crear tablero</Link>
+                </Button>
+              )}
+            </Panel>
+          )}
+
+          {!canViewBoards && (
+            <Panel className="px-6 py-10 text-center text-muted-foreground text-sm">
+              Tu rol todavía no tiene acceso a los tableros. Pídele permiso a la
+              dueña del estudio.
+            </Panel>
+          )}
         </section>
       </div>
     </>
   );
 };
 
-export default App;
+export default Dashboard;

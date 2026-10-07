@@ -11,14 +11,13 @@
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
+    "@hello-pangea/dnd": "18.0.1",
     "@repo/analytics": "*",
     "@repo/auth": "*",
-    "@repo/collaboration": "*",
     "@repo/database": "*",
     "@repo/design-system": "*",
-    "@repo/feature-flags": "*",
+    "@repo/email": "*",
     "@repo/next-config": "*",
-    "@repo/notifications": "*",
     "@repo/observability": "*",
     "@repo/security": "*",
     "@repo/seo": "*",
@@ -32,6 +31,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "require-in-the-middle": "8.0.1",
+    "sonner": "2.0.8",
     "zod": "^4.3.6"
   },
   "devDependencies": {

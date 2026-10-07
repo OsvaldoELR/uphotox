@@ -5,7 +5,6 @@ import { StudioBackdrop } from "@repo/design-system/components/hud/backdrop";
 import { CropMarks } from "@repo/design-system/components/hud/crop-marks";
 import { Wordmark } from "@repo/design-system/components/hud/wordmark";
 import { ModeToggle } from "@repo/design-system/components/mode-toggle";
-import { Button } from "@repo/design-system/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -20,21 +19,24 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@repo/design-system/components/ui/sidebar";
-import { NotificationsTrigger } from "@repo/notifications/components/trigger";
 import {
   ApertureIcon,
   KanbanIcon,
   LayoutDashboardIcon,
   type LucideIcon,
+  ShieldCheckIcon,
   UsersIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import type { Permission } from "@/lib/permissions";
 import { Search } from "./search";
 
 interface GlobalSidebarProperties {
   readonly children: ReactNode;
+  readonly permissions: Permission[];
+  readonly studioName: string;
   readonly user: {
     name: string | null;
     email: string | null;
@@ -44,6 +46,8 @@ interface GlobalSidebarProperties {
 
 interface NavItem {
   readonly icon: LucideIcon;
+  /** Hidden unless the member has this permission. */
+  readonly permission?: Permission;
   readonly title: string;
   /** Without a url the module is planned but not built yet. */
   readonly url?: string;
@@ -51,9 +55,23 @@ interface NavItem {
 
 const studio: NavItem[] = [
   { title: "Panel", url: "/", icon: LayoutDashboardIcon },
-  { title: "Tablero", icon: KanbanIcon },
-  { title: "Editor", icon: ApertureIcon },
-  { title: "Clientes", icon: UsersIcon },
+  {
+    title: "Tableros",
+    url: "/tableros",
+    icon: KanbanIcon,
+    permission: "boards.view",
+  },
+  { title: "Clientes", icon: UsersIcon, permission: "clients.view" },
+  { title: "Editor", icon: ApertureIcon, permission: "editor.access" },
+];
+
+const admin: NavItem[] = [
+  {
+    title: "Equipo",
+    url: "/equipo",
+    icon: ShieldCheckIcon,
+    permission: "team.manage",
+  },
 ];
 
 const groupLabel =
@@ -62,6 +80,11 @@ const groupLabel =
 // Active item: cyan rail on the left edge, like a lit HUD indicator.
 const menuButton =
   "data-[active=true]:font-semibold data-[active=true]:shadow-[inset_2px_0_0_var(--signal-ink)]";
+
+const isActive = (pathname: string, url: string) =>
+  url === "/"
+    ? pathname === "/"
+    : pathname === url || pathname.startsWith(`${url}/`);
 
 const NavGroup = ({
   items,
@@ -82,7 +105,7 @@ const NavGroup = ({
               <SidebarMenuButton
                 asChild
                 className={menuButton}
-                isActive={pathname === item.url}
+                isActive={isActive(pathname, item.url)}
                 tooltip={item.title}
               >
                 <Link href={item.url}>
@@ -108,8 +131,18 @@ const NavGroup = ({
   </SidebarGroup>
 );
 
-export const GlobalSidebar = ({ children, user }: GlobalSidebarProperties) => {
+export const GlobalSidebar = ({
+  children,
+  permissions,
+  studioName,
+  user,
+}: GlobalSidebarProperties) => {
   const pathname = usePathname();
+  const visible = (items: NavItem[]) =>
+    items.filter(
+      (item) => !item.permission || permissions.includes(item.permission)
+    );
+  const adminItems = visible(admin);
 
   return (
     <>
@@ -117,17 +150,35 @@ export const GlobalSidebar = ({ children, user }: GlobalSidebarProperties) => {
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild className="h-auto py-2" size="lg">
+              <SidebarMenuButton
+                asChild
+                className="h-auto flex-col items-start gap-1.5 py-2"
+                size="lg"
+              >
                 <Link href="/">
                   <Wordmark kanji />
+                  <span className="w-full truncate font-mono text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
+                    {studioName}
+                  </span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
-        <Search />
+        {permissions.includes("boards.view") && <Search />}
         <SidebarContent>
-          <NavGroup items={studio} label="Estudio" pathname={pathname} />
+          <NavGroup
+            items={visible(studio)}
+            label="Estudio"
+            pathname={pathname}
+          />
+          {adminItems.length > 0 && (
+            <NavGroup
+              items={adminItems}
+              label="Administración"
+              pathname={pathname}
+            />
+          )}
         </SidebarContent>
         <SidebarFooter>
           <SidebarMenu>
@@ -137,19 +188,7 @@ export const GlobalSidebar = ({ children, user }: GlobalSidebarProperties) => {
                 email={user.email}
                 name={user.name}
               />
-              <div className="flex shrink-0 items-center gap-px">
-                <ModeToggle />
-                <Button
-                  asChild
-                  className="shrink-0"
-                  size="icon"
-                  variant="ghost"
-                >
-                  <div className="h-4 w-4">
-                    <NotificationsTrigger />
-                  </div>
-                </Button>
-              </div>
+              <ModeToggle />
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>

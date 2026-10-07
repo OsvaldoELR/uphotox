@@ -8,32 +8,35 @@ import {
 } from "@repo/design-system/components/ui/breadcrumb";
 import { Separator } from "@repo/design-system/components/ui/separator";
 import { SidebarTrigger } from "@repo/design-system/components/ui/sidebar";
+import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
 
 interface HeaderProps {
-  children?: ReactNode;
-  page: string;
-  pages: string[];
+  readonly children?: ReactNode;
+  readonly page: string;
+  /** Parent pages, outermost first. */
+  readonly trail?: { label: string; href: string }[];
 }
 
-export const Header = ({ pages, page, children }: HeaderProps) => (
-  <header className="flex h-16 shrink-0 items-center justify-between gap-2">
-    <div className="flex items-center gap-2 px-4 md:px-6">
+export const Header = ({ trail = [], page, children }: HeaderProps) => (
+  <header className="flex h-16 shrink-0 items-center justify-between gap-2 pr-4 md:pr-6">
+    <div className="flex min-w-0 items-center gap-2 px-4 md:px-6">
       <SidebarTrigger className="-ml-1" />
       <Separator className="mr-2 h-4" orientation="vertical" />
-      <Breadcrumb>
+      <Breadcrumb className="min-w-0">
         <BreadcrumbList className="font-mono text-[11px] uppercase tracking-[0.18em]">
-          {pages.map((page, index) => (
-            <Fragment key={page}>
-              {index > 0 && <BreadcrumbSeparator className="hidden md:block" />}
+          {trail.map((item) => (
+            <Fragment key={item.href}>
               <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbLink href="/">{page}</BreadcrumbLink>
+                <BreadcrumbLink asChild>
+                  <Link href={item.href}>{item.label}</Link>
+                </BreadcrumbLink>
               </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden md:block" />
             </Fragment>
           ))}
-          <BreadcrumbSeparator className="hidden md:block" />
-          <BreadcrumbItem>
-            <BreadcrumbPage className="font-semibold text-signal-ink">
+          <BreadcrumbItem className="min-w-0">
+            <BreadcrumbPage className="truncate font-semibold text-signal-ink">
               {page}
             </BreadcrumbPage>
           </BreadcrumbItem>
