@@ -79,7 +79,26 @@ Patrones de la app:
 - **Tarjeta de proyecto**: Panel interactivo, cabecera `aspect-[16/7]` con degradado
   de una de las tres tintas (signal/flare/bloom, rotando), retícula, CropMarks e
   índice `P-01`; cuerpo con nombre mono bold.
-- **Estado vacío**: Panel con borde discontinuo, icono Aperture, título mono tracked.
+- **Estado vacío**: Panel con borde discontinuo, icono, título mono tracked, CTA si el rol puede actuar.
+- **Embudo de tablero** (`BoardPipeline`): Panel interactivo a ancho completo; una fila
+  `grid-flow-col auto-cols-[minmax(6.5rem,1fr)]` de celdas separadas por `gap-px bg-border`;
+  número mono black `text-xl` (signal-ink si > 0, muted/50 si 0) + nombre de etapa mono 10px
+  en 2 líneas. Nunca partir el embudo en varias filas.
+- **Kanban**: columna `w-72` `bg-secondary/90` con borde, cabecera sticky (índice `01`
+  signal-ink, nombre mono bold 11px, icono de correo si avisa al cliente, contador, ajustes).
+  Tarjeta `bg-popover` borde + `corner-notch` 8px, título sans 14px medium, cliente muted
+  12px, meta mono 10px (fecha, enlace, «sin correo» en flare, días en etapa, iniciales del
+  responsable). Arrastrando: `rotate-2` + anillo signal + glow. Sin hover-lift ni escaneo
+  (uso repetido). **Ningún ancestro de un draggable puede tener transform, filter ni
+  backdrop-filter** (rompe el `position: fixed` del arrastre), y un solo contenedor de
+  scroll para todo el tablero.
+- **Panel lateral de detalle** (Sheet derecha, `sm:max-w-lg`/`xl`): cabecera con borde,
+  secciones con etiqueta mono 10px `tracking-[0.3em]` signal-ink, sin autofoco al abrir.
+- **Permisos tipo GHL**: un bloque por grupo (switch del grupo = alguno activo, contador
+  `x/y` mono), permisos individuales con switch indentados `pl-14`; interruptor
+  «Solo datos asignados» en caja con borde y explicación.
+- **Chips de estado** (`Correos activos`, `Ves solo tus tarjetas`): borde, mono 10px
+  mayúsculas `tracking-[0.16em]`; signal-ink = activo, flare = requiere atención.
 
 ## Movimiento
 
