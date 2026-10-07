@@ -128,8 +128,8 @@ export const StageDialog = ({
               placeholder={`Tu sesión con ${studioName} pasó a la etapa «${stage.name}».`}
             />
             <p className="text-muted-foreground text-xs">
-              Si hay enlace de entrega en la tarjeta, el correo incluye el botón
-              «Ver mi galería»; si el estudio tiene WhatsApp, también uno para
+              Si la tarjeta tiene álbum de entrega, el correo incluye el botón
+              «Ver mi álbum»; si el estudio tiene WhatsApp, también uno para
               escribirte. Es un aviso automático: no pidas que respondan.
             </p>
           </div>

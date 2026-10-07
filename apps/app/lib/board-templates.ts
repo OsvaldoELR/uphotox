@@ -54,7 +54,7 @@ export const BOARD_TEMPLATES = {
         name: "Entregadas",
         notifyClient: true,
         message:
-          "¡Tus fotos están listas! Puedes verlas y descargarlas desde tu galería.",
+          "¡Tus fotos están listas! Puedes verlas y descargarlas desde tu álbum.",
       },
     ],
   },

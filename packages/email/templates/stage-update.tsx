@@ -64,7 +64,7 @@ export const StageUpdateTemplate = ({
             letterSpacing: "0.14em",
           }}
         >
-          Ver mi galería
+          Ver mi álbum
         </Button>
       </Section>
     ) : null}
@@ -99,7 +99,7 @@ StageUpdateTemplate.PreviewProps = {
   studioName: "Estudio Luz",
   message:
     "Tus fotos están listas para que elijas tus favoritas.\n\nRevisa tu galería y márcalas cuando puedas.",
-  galleryUrl: "https://drive.google.com/",
+  galleryUrl: "https://photos.app.goo.gl/",
   whatsappUrl: "https://wa.me/34612345678",
 };
 

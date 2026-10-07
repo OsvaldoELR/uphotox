@@ -18,6 +18,10 @@ export interface BoardClient {
 export interface BoardCard {
   readonly assigned_to: string | null;
   readonly client: BoardClient | null;
+  /** Storage path of the cover thumbnail (null when there is none). */
+  readonly cover_path: string | null;
+  /** Short-lived signed URL for cover_path, created by the page. */
+  readonly cover_url: string | null;
   readonly gallery_url: string | null;
   readonly id: number;
   readonly notes: string | null;

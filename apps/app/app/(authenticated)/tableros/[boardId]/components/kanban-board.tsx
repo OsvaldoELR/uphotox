@@ -40,6 +40,13 @@ export const KanbanBoard = ({
   const [cards, setCards] = useState(serverCards);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [activeCardId, setActiveCardId] = useState<number | null>(null);
+  // Phones show one stage at a time (no drag needed); desktop shows all.
+  const [mobileStageId, setMobileStageId] = useState<number | null>(
+    stages[0]?.id ?? null
+  );
+  const visibleStageId = stages.some((stage) => stage.id === mobileStageId)
+    ? mobileStageId
+    : (stages[0]?.id ?? null);
 
   useEffect(() => {
     setCards(serverCards);
@@ -75,33 +82,24 @@ export const KanbanBoard = ({
     setSheetOpen(true);
   };
 
-  const onDragEnd = async ({
-    destination,
-    draggableId,
-    source,
-  }: DropResult) => {
-    if (
-      !destination ||
-      (destination.droppableId === source.droppableId &&
-        destination.index === source.index)
-    ) {
-      return;
-    }
-
-    const cardId = Number(draggableId);
-    const toStageId = Number(destination.droppableId);
+  /**
+   * Moves a card optimistically and rolls back if the server refuses.
+   * Without an index the card goes to the end of the target stage.
+   */
+  const moveTo = async (cardId: number, toStageId: number, index?: number) => {
     const card = cards.find((item) => item.id === cardId);
 
-    if (!card) {
+    if (!card || (index === undefined && card.stage_id === toStageId)) {
       return;
     }
 
     const siblings = (cardsByStage.get(toStageId) ?? []).filter(
       (item) => item.id !== cardId
     );
+    const at = index ?? siblings.length;
     const position = positionBetween(
-      siblings[destination.index - 1]?.position,
-      siblings[destination.index]?.position
+      siblings[at - 1]?.position,
+      siblings[at]?.position
     );
     const stageChanged = card.stage_id !== toStageId;
     const previous = cards;
@@ -138,8 +136,29 @@ export const KanbanBoard = ({
         description: willEmail
           ? `Avisamos a ${card.client?.full_name} por correo.`
           : undefined,
+        // On phones only one stage is visible: offer to follow the card.
+        action: {
+          label: "Ver etapa",
+          onClick: () => setMobileStageId(toStageId),
+        },
       });
     }
+  };
+
+  const onDragEnd = ({ destination, draggableId, source }: DropResult) => {
+    if (
+      !destination ||
+      (destination.droppableId === source.droppableId &&
+        destination.index === source.index)
+    ) {
+      return;
+    }
+
+    moveTo(
+      Number(draggableId),
+      Number(destination.droppableId),
+      destination.index
+    );
   };
 
   return (
@@ -178,25 +197,65 @@ export const KanbanBoard = ({
         )}
       </div>
 
+      {stages.length > 0 && (
+        <nav
+          aria-label="Etapas"
+          className="flex gap-2 overflow-x-auto px-4 pb-3 md:hidden"
+        >
+          {stages.map((stage, index) => {
+            const selected = stage.id === visibleStageId;
+            return (
+              <button
+                aria-current={selected ? "true" : undefined}
+                className={cn(
+                  "flex shrink-0 items-center gap-2 border px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] transition-colors",
+                  selected
+                    ? "border-signal-ink/60 bg-signal/15 text-foreground"
+                    : "bg-secondary/80 text-muted-foreground"
+                )}
+                key={stage.id}
+                onClick={() => setMobileStageId(stage.id)}
+                type="button"
+              >
+                <span className="text-signal-ink">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                {stage.name}
+                <span className="tabular font-bold text-foreground">
+                  {cardsByStage.get(stage.id)?.length ?? 0}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+      )}
+
       {/* One scroll container (both axes) for the whole board: nested
           scroll containers are not supported by the drag-and-drop library. */}
       <DragDropContext onDragEnd={onDragEnd}>
         <div className="min-h-0 flex-1 overflow-auto px-4 pb-6 md:px-10">
-          <div className="flex w-max items-start gap-4">
+          <div className="flex items-start gap-4 md:w-max">
             {stages.map((stage, index) => (
               <StageColumn
                 access={access}
                 boardId={boardId}
                 cards={cardsByStage.get(stage.id) ?? []}
+                hiddenOnMobile={stage.id !== visibleStageId}
                 index={index}
                 key={stage.id}
                 members={memberById}
+                onMoveCard={moveTo}
                 onOpenCard={openCard}
                 stage={stage}
+                stages={stages}
                 studioName={studioName}
               />
             ))}
-            {access.canManage && <AddStage boardId={boardId} />}
+            {access.canManage && (
+              <div className="hidden md:block">
+                <AddStage boardId={boardId} />
+              </div>
+            )}
             {stages.length === 0 && !access.canManage && (
               <p className="text-muted-foreground text-sm">
                 Este tablero todavía no tiene etapas.
@@ -211,8 +270,10 @@ export const KanbanBoard = ({
         card={activeCard}
         members={members}
         onClose={() => setSheetOpen(false)}
+        onMoveCard={moveTo}
         open={sheetOpen}
         stage={stages.find((stage) => stage.id === activeCard?.stage_id)}
+        stages={stages}
       />
     </div>
   );

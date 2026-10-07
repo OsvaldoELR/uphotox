@@ -39,6 +39,7 @@ import {
   updateCard,
 } from "@/app/actions/cards";
 import { ROLES } from "@/lib/permissions";
+import { CoverField } from "./cover-field";
 import {
   formatDateTime,
   fromLocalInput,
@@ -54,9 +55,11 @@ interface CardSheetProperties {
   readonly card: BoardCard | null;
   readonly members: BoardMember[];
   readonly onClose: () => void;
+  readonly onMoveCard: (cardId: number, stageId: number) => void;
   /** Separate from `card` so the content stays during the close animation. */
   readonly open: boolean;
   readonly stage: BoardStage | undefined;
+  readonly stages: BoardStage[];
 }
 
 const describeEvent = (event: CardHistoryEntry) => {
@@ -126,8 +129,10 @@ export const CardSheet = ({
   card,
   members,
   onClose,
+  onMoveCard,
   open,
   stage,
+  stages,
 }: CardSheetProperties) => {
   const [pending, startTransition] = useTransition();
   const [assignee, setAssignee] = useState(UNASSIGNED);
@@ -208,6 +213,42 @@ export const CardSheet = ({
                 etapa: {timeInStage(card.stage_entered_at)}
               </SheetDescription>
             </SheetHeader>
+
+            {/* Applied immediately, outside the form: moving and the photo do
+                not wait for "Guardar". */}
+            <section className="grid gap-5 border-b p-4">
+              {access.canMove && stages.length > 1 && (
+                <div className="grid gap-2">
+                  <Label htmlFor="card-stage">Etapa</Label>
+                  <Select
+                    onValueChange={(value) =>
+                      onMoveCard(card.id, Number(value))
+                    }
+                    value={String(card.stage_id)}
+                  >
+                    <SelectTrigger className="w-full" id="card-stage">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {stages.map((option, index) => (
+                        <SelectItem key={option.id} value={String(option.id)}>
+                          {String(index + 1).padStart(2, "0")} · {option.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-muted-foreground text-xs">
+                    La tarjeta pasa a esa etapa en el tablero; si la etapa avisa
+                    al cliente, le llega su correo.
+                  </p>
+                </div>
+              )}
+              <CoverField
+                cardId={card.id}
+                coverUrl={card.cover_url}
+                editable={access.canEdit}
+              />
+            </section>
 
             <form className="grid gap-5 p-4" key={card.id} onSubmit={save}>
               <fieldset className="grid gap-4" disabled={readOnly}>
@@ -298,18 +339,18 @@ export const CardSheet = ({
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="card-gallery">Enlace de entrega</Label>
+                  <Label htmlFor="card-gallery">Álbum de entrega</Label>
                   <Input
                     defaultValue={card.gallery_url ?? ""}
                     id="card-gallery"
                     maxLength={2048}
                     name="galleryUrl"
-                    placeholder="https://drive.google.com/…"
+                    placeholder="https://photos.app.goo.gl/…"
                     type="url"
                   />
                   <p className="text-muted-foreground text-xs">
-                    Carpeta de Google Drive o galería. Se incluye en los correos
-                    al cliente.
+                    Enlace del álbum compartido de Google Fotos. Se incluye en
+                    los correos al cliente con el botón «Ver mi álbum».
                   </p>
                 </div>
 

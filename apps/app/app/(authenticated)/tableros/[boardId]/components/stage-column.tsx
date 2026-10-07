@@ -19,10 +19,14 @@ interface StageColumnProperties {
   readonly access: BoardAccess;
   readonly boardId: number;
   readonly cards: BoardCardData[];
+  /** Phones show a single stage; the others are hidden below md. */
+  readonly hiddenOnMobile: boolean;
   readonly index: number;
   readonly members: Map<string, BoardMember>;
+  readonly onMoveCard: (cardId: number, stageId: number) => void;
   readonly onOpenCard: (cardId: number) => void;
   readonly stage: BoardStage;
+  readonly stages: BoardStage[];
   readonly studioName: string;
 }
 
@@ -30,10 +34,13 @@ export const StageColumn = ({
   access,
   boardId,
   cards,
+  hiddenOnMobile,
   index,
   members,
+  onMoveCard,
   onOpenCard,
   stage,
+  stages,
   studioName,
 }: StageColumnProperties) => {
   const [configOpen, setConfigOpen] = useState(false);
@@ -41,7 +48,10 @@ export const StageColumn = ({
   return (
     <section
       aria-label={stage.name}
-      className="flex w-72 shrink-0 flex-col border bg-secondary/90"
+      className={cn(
+        "w-full shrink-0 flex-col border bg-secondary/90 md:flex md:w-72",
+        hiddenOnMobile ? "hidden" : "flex"
+      )}
     >
       <header className="sticky top-0 z-10 flex items-center gap-2 border-b bg-secondary px-3 py-2.5">
         <span className="tabular font-mono text-[10px] text-signal-ink">
@@ -87,11 +97,13 @@ export const StageColumn = ({
                 assignee={
                   card.assigned_to ? members.get(card.assigned_to) : undefined
                 }
+                canMove={access.canMove}
                 card={card}
-                dragDisabled={!access.canMove}
                 index={cardIndex}
                 key={card.id}
+                onMove={onMoveCard}
                 onOpen={onOpenCard}
+                stages={stages}
               />
             ))}
             {provided.placeholder}

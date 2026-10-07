@@ -5,7 +5,7 @@ import { isEmailEnabled } from "@/lib/email";
 import { requirePermission } from "@/lib/studio";
 import { Header } from "../../components/header";
 import { KanbanBoard } from "./components/kanban-board";
-import type { BoardMember } from "./components/types";
+import type { BoardCard, BoardMember } from "./components/types";
 
 export const metadata: Metadata = {
   title: "Tablero · Uphotox",
@@ -35,7 +35,7 @@ const BoardPage = async ({ params }: BoardPageProperties) => {
     supabase
       .from("cards")
       .select(
-        "id, title, stage_id, position, session_at, gallery_url, notes, assigned_to, stage_entered_at, client:clients(id, full_name, email, phone)"
+        "id, title, stage_id, position, session_at, gallery_url, notes, assigned_to, stage_entered_at, cover_path, client:clients(id, full_name, email, phone)"
       )
       .eq("board_id", boardId)
       .order("position"),
@@ -48,6 +48,25 @@ const BoardPage = async ({ params }: BoardPageProperties) => {
   if (!board.data) {
     notFound();
   }
+
+  // Covers live in a private bucket: one batch of short-lived signed URLs.
+  const coverPaths = (cards.data ?? [])
+    .map((card) => card.cover_path)
+    .filter((path): path is string => Boolean(path));
+  const { data: signed } = coverPaths.length
+    ? await supabase.storage
+        .from("card-covers")
+        .createSignedUrls(coverPaths, 60 * 60)
+    : { data: [] };
+  const coverUrls = new Map(
+    (signed ?? []).map((entry) => [entry.path, entry.signedUrl])
+  );
+  const boardCards: BoardCard[] = (cards.data ?? []).map((card) => ({
+    ...card,
+    cover_url: card.cover_path
+      ? (coverUrls.get(card.cover_path) ?? null)
+      : null,
+  }));
 
   const boardMembers: BoardMember[] = (members.data ?? []).map((member) => ({
     id: member.user_id,
@@ -75,7 +94,7 @@ const BoardPage = async ({ params }: BoardPageProperties) => {
         }}
         boardId={boardId}
         boardName={board.data.name}
-        cards={cards.data ?? []}
+        cards={boardCards}
         emailEnabled={isEmailEnabled()}
         members={boardMembers}
         stages={stages.data ?? []}

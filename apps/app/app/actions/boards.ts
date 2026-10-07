@@ -125,6 +125,12 @@ export const deleteBoard = async (boardId: number): Promise<ActionResult> => {
   }
 
   const supabase = await createClient();
+  // Read the cover photos first: the cards cascade away with the board.
+  const { data: covers } = await supabase
+    .from("cards")
+    .select("cover_path")
+    .eq("board_id", boardId)
+    .not("cover_path", "is", null);
   const { data, error } = await supabase
     .from("boards")
     .delete()
@@ -133,6 +139,14 @@ export const deleteBoard = async (boardId: number): Promise<ActionResult> => {
 
   if (error || !data?.length) {
     return { error: "No se pudo eliminar el tablero." };
+  }
+
+  const coverPaths = (covers ?? [])
+    .map((card) => card.cover_path)
+    .filter((path): path is string => Boolean(path));
+
+  if (coverPaths.length) {
+    await supabase.storage.from("card-covers").remove(coverPaths);
   }
 
   revalidatePath("/tableros");

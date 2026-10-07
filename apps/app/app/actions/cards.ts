@@ -303,12 +303,18 @@ export const deleteCard = async (cardId: number): Promise<ActionResult> => {
     .from("cards")
     .delete()
     .eq("id", cardId)
-    .select("board_id");
+    .select("board_id, cover_path");
 
   const boardId = data?.[0]?.board_id;
 
   if (error || !boardId) {
     return { error: "No se pudo eliminar la tarjeta." };
+  }
+
+  const coverPath = data?.[0]?.cover_path;
+
+  if (coverPath) {
+    await supabase.storage.from("card-covers").remove([coverPath]);
   }
 
   revalidateBoard(boardId);
@@ -351,4 +357,119 @@ export const getCardHistory = async (
     from: event.from?.name ?? null,
     to: event.to?.name ?? null,
   }));
+};
+
+// --- Cover photo -----------------------------------------------------------
+
+const COVER_BUCKET = "card-covers";
+const COVER_TYPES: Record<string, string> = {
+  "image/webp": "webp",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+};
+// The browser compresses to a ~640px thumbnail first; this is a safety cap
+// (the bucket enforces the same limit).
+const COVER_MAX_BYTES = 512 * 1024;
+
+/** Stores a compressed thumbnail under <studio_id>/<card_id>/ and links it. */
+export const uploadCardCover = async (
+  cardId: number,
+  formData: FormData
+): Promise<ActionResult> => {
+  const context = await requireStudio();
+
+  if (!context.can("cards.edit")) {
+    return { error: "No tienes permiso para editar tarjetas." };
+  }
+
+  const file = formData.get("cover");
+
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Elige una imagen." };
+  }
+
+  const extension = COVER_TYPES[file.type];
+
+  if (!extension) {
+    return { error: "Formato no admitido. Usa JPG, PNG o WebP." };
+  }
+
+  if (file.size > COVER_MAX_BYTES) {
+    return { error: "La imagen pesa demasiado incluso comprimida." };
+  }
+
+  const supabase = await createClient();
+  const { data: card } = await supabase
+    .from("cards")
+    .select("board_id, cover_path")
+    .eq("id", cardId)
+    .maybeSingle();
+
+  if (!card) {
+    return { error: "La tarjeta ya no existe." };
+  }
+
+  const path = `${context.studio.id}/${cardId}/${crypto.randomUUID()}.${extension}`;
+  const storage = supabase.storage.from(COVER_BUCKET);
+  const { error: uploadError } = await storage.upload(path, file, {
+    contentType: file.type,
+    cacheControl: "31536000",
+    upsert: false,
+  });
+
+  if (uploadError) {
+    return { error: "No se pudo subir la foto." };
+  }
+
+  const { data, error } = await supabase
+    .from("cards")
+    .update({ cover_path: path })
+    .eq("id", cardId)
+    .select("id");
+
+  if (error || !data?.length) {
+    await storage.remove([path]);
+    return { error: "No se pudo guardar la foto en la tarjeta." };
+  }
+
+  if (card.cover_path) {
+    await storage.remove([card.cover_path]);
+  }
+
+  revalidateBoard(card.board_id);
+  return { ok: true };
+};
+
+export const removeCardCover = async (
+  cardId: number
+): Promise<ActionResult> => {
+  const context = await requireStudio();
+
+  if (!context.can("cards.edit")) {
+    return { error: "No tienes permiso para editar tarjetas." };
+  }
+
+  const supabase = await createClient();
+  const { data: card } = await supabase
+    .from("cards")
+    .select("board_id, cover_path")
+    .eq("id", cardId)
+    .maybeSingle();
+
+  if (!card?.cover_path) {
+    return { ok: true };
+  }
+
+  const { error } = await supabase
+    .from("cards")
+    .update({ cover_path: null })
+    .eq("id", cardId);
+
+  if (error) {
+    return { error: "No se pudo quitar la foto." };
+  }
+
+  await supabase.storage.from(COVER_BUCKET).remove([card.cover_path]);
+  revalidateBoard(card.board_id);
+  return { ok: true };
 };
