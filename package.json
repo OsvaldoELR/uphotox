@@ -1,0 +1,47 @@
+{
+  "name": "uphotox",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "check": "ultracite check",
+    "fix": "ultracite fix",
+    "test": "turbo test",
+    "typecheck": "turbo typecheck",
+    "analyze": "turbo analyze",
+    "translate": "turbo translate",
+    "boundaries": "turbo boundaries",
+    "bump-deps": "npx npm-check-updates --deep -u && npm install",
+    "bump-ui": "npx shadcn@latest add --all --overwrite -c packages/design-system",
+    "db:link": "npm run db:link --workspace @repo/database --",
+    "db:new": "npm run db:new --workspace @repo/database --",
+    "db:push": "npm run db:push --workspace @repo/database --",
+    "db:types": "npm run db:types --workspace @repo/database",
+    "clean": "git clean -xdf node_modules"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.6",
+    "@repo/typescript-config": "*",
+    "@turbo/gen": "^2.8.14",
+    "@types/node": "^25.3.5",
+    "turbo": "^2.8.14",
+    "typescript": "^5.9.3",
+    "ultracite": "7.2.5",
+    "vitest": "^4.0.18"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "npm@10.8.1",
+  "overrides": {
+    "parse5": "^7.2.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "biomejs.biome",
+    "bradlc.vscode-tailwindcss",
+    "supabase.vscode-supabase-extension",
+    "unifiedjs.vscode-mdx",
+    "mikestead.dotenv",
+    "christian-kohler.npm-intellisense"
+  ]
+}
