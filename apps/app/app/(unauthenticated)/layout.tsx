@@ -53,7 +53,7 @@ const AuthLayout = ({ children }: AuthLayoutProps) => (
     </aside>
 
     <main className="relative isolate flex flex-col items-center justify-center gap-8 overflow-hidden p-6">
-      <StudioBackdrop className="lg:hidden" variant="calm" />
+      <StudioBackdrop className="lg:hidden" />
       <div
         aria-hidden="true"
         className="absolute inset-0 -z-10 hidden bg-hud-grid [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_80%)] lg:block"

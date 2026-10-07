@@ -64,15 +64,15 @@ Primitivas HUD en `packages/design-system/components/hud/`:
 | `Button` (ui) | h-9 · px-5 · mono 12px bold mayúsculas `tracking-[0.14em]` · paralelogramo. `default` relleno signal + texto ink + glow al hover · `outline` texto signal-ink, fondo signal/8, borde signal-ink/35 · `secondary` igual en flare · `ghost`/`link` sin paralelogramo · sm h-8 px-4 11px · lg h-11 px-7 13px · press `scale(0.97)` |
 | `Input`/`Textarea` (ui) | h-9 · `bg-field` · radio md · foco: borde signal-ink/60, fondo blanco, halo `0 0 0 3px glow-soft` |
 | `Panel` | Vidrio `bg-card` (blanco 78 %) + `backdrop-blur-md`, borde, esquinas recortadas 14px. `interactive`: sube 4px, borde signal-ink/40, glow, línea de escaneo 2.4s. `stream`: barra data-stream arriba |
-| `StudioBackdrop` | `full` en login/primer uso (50 partículas, orbes, escaneo 3.2s, textura CRT). `calm` detrás del trabajo (18 partículas, orbes al 60 %, escaneo 9s al 50 %). Va dentro de un contenedor `relative isolate` |
+| `StudioBackdrop` | `full` solo en login y landing (atmósfera, orbes, 50 partículas, escaneo 3.2s, textura CRT). `calm` dentro de la app: **solo la retícula estática** con desvanecido en los bordes. Va dentro de un contenedor `relative isolate` |
 | `CropMarks` | Esquinas de visor; **firma visual**. Marco de la zona de trabajo (`inset-3`), tarjetas (`size-3`), panel de marca (`size-8`) |
 | `Wordmark` | UPHO + TOX (signal-ink con glow). sm/md/xl, `glitch`, `kanji` |
 | `HudLabel` | `── LABEL ──` (center) o etiqueta + línea (start) |
 | `ScanLine` | Barrido animando solo transform |
 
 Patrones de la app:
-- **Shell**: sidebar `inset`; el `SidebarInset` es la mesa de luz (`StudioBackdrop calm` +
-  `CropMarks inset-3`, sombra de anillo con el borde).
+- **Shell**: sidebar `inset`; el `SidebarInset` es la mesa de luz (`StudioBackdrop calm`
+  = retícula estática + `CropMarks inset-3`, sombra de anillo con el borde).
 - **Navegación**: etiquetas de grupo mono 10px `tracking-[0.3em]` signal-ink/80;
   ítem activo con raíl `inset 2px` signal-ink; módulos aún no construidos sin URL,
   deshabilitados y con badge "PRONTO".
@@ -86,8 +86,11 @@ Patrones de la app:
 - Curva `ease-snap` = `cubic-bezier(0.23, 1, 0.32, 1)`. Nunca `ease-in` para entradas.
 - Entrada: `animate-fade-in-up` (550ms, sube 24px), escalonado 60ms, máximo 12 elementos.
 - Hover de superficies 300ms; botones 150–200ms.
-- Bucles ambientales (orbes 11–16s, escaneo, glitch cada 7s, partículas) solo
-  decorativos y desactivados con `prefers-reduced-motion`.
+- **Bucles ambientales (orbes, línea de escaneo, partículas, glitch) solo en login
+  y landing.** Dentro de los módulos nada se mueve solo: retícula estática, y el
+  movimiento únicamente como respuesta a la interacción (hover, entrada de la
+  página). Decisión del usuario: en el día a día "está muy cargado".
+- Todo bucle ambiental se desactiva con `prefers-reduced-motion`.
 - Animar solo `transform` y `opacity`. Nada de `Math.random()` en render: usar el
   PRNG con semilla de `backdrop.tsx` (si no, falla la hidratación).
 - Acciones muy repetidas (atajos, menús del tablero) sin animación decorativa.

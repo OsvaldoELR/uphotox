@@ -51,10 +51,7 @@ const createParticles = (count: number, seed: number): Particle[] => {
   });
 };
 
-const PARTICLES = {
-  full: createParticles(50, 7),
-  calm: createParticles(18, 11),
-};
+const PARTICLES = createParticles(50, 7);
 
 const ATMOSPHERE: CSSProperties = {
   background: [
@@ -94,7 +91,10 @@ const CRT_TEXTURE: CSSProperties = {
 
 interface StudioBackdropProperties {
   readonly className?: string;
-  /** full: auth and first-run screens. calm: behind everyday work. */
+  /**
+   * full: login and landing — every Tokyo effect.
+   * calm: inside the app's modules — static grid only, nothing moves.
+   */
   readonly variant?: "full" | "calm";
 }
 
@@ -117,44 +117,43 @@ export const StudioBackdrop = ({
         className
       )}
     >
-      <div className="absolute inset-0" style={ATMOSPHERE} />
-
-      {ORBS.map((orb) => (
-        <div
-          className={cn(
-            "absolute rounded-full",
-            orb.className,
-            !full && "opacity-60"
-          )}
-          key={orb.className}
-          style={{ background: orb.background }}
-        />
-      ))}
+      {full && (
+        <>
+          <div className="absolute inset-0" style={ATMOSPHERE} />
+          {ORBS.map((orb) => (
+            <div
+              className={cn("absolute rounded-full", orb.className)}
+              key={orb.className}
+              style={{ background: orb.background }}
+            />
+          ))}
+        </>
+      )}
 
       <div className="absolute inset-0 bg-hud-grid" />
 
-      <div className="absolute inset-0 motion-reduce:hidden">
-        {PARTICLES[variant].map((particle) => (
-          <span
-            className="absolute bottom-0 rounded-full"
-            key={particle.id}
-            style={{
-              left: `${particle.left}%`,
-              width: particle.size,
-              height: particle.size,
-              backgroundColor: particle.color,
-              boxShadow: `0 0 ${particle.size * 4}px ${particle.color}`,
-              opacity: 0,
-              animation: `particle-rise ${particle.duration}s linear ${particle.delay}s infinite`,
-            }}
-          />
-        ))}
-      </div>
-
-      <ScanLine
-        className={full ? undefined : "opacity-50"}
-        duration={full ? undefined : 9}
-      />
+      {full && (
+        <>
+          <div className="absolute inset-0 motion-reduce:hidden">
+            {PARTICLES.map((particle) => (
+              <span
+                className="absolute bottom-0 rounded-full"
+                key={particle.id}
+                style={{
+                  left: `${particle.left}%`,
+                  width: particle.size,
+                  height: particle.size,
+                  backgroundColor: particle.color,
+                  boxShadow: `0 0 ${particle.size * 4}px ${particle.color}`,
+                  opacity: 0,
+                  animation: `particle-rise ${particle.duration}s linear ${particle.delay}s infinite`,
+                }}
+              />
+            ))}
+          </div>
+          <ScanLine />
+        </>
+      )}
 
       <div className="absolute inset-0" style={VIGNETTE} />
 
