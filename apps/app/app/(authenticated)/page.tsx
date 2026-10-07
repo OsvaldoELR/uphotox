@@ -2,7 +2,7 @@ import { createClient } from "@repo/database/server";
 import { HudLabel } from "@repo/design-system/components/hud/hud-label";
 import { Panel } from "@repo/design-system/components/hud/panel";
 import { Button } from "@repo/design-system/components/ui/button";
-import { KanbanIcon, MailWarningIcon } from "lucide-react";
+import { KanbanIcon, MailWarningIcon, MessageCircleIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getBoardSummaries } from "@/lib/board-summary";
@@ -24,6 +24,8 @@ const Dashboard = async () => {
   const boards = canViewBoards ? await getBoardSummaries(supabase) : [];
   const firstName = context.member.fullName?.split(" ")[0];
   const showEmailNotice = context.can("settings.manage") && !isEmailEnabled();
+  const showWhatsappNotice =
+    context.can("settings.manage") && !context.studio.whatsapp;
 
   return (
     <>
@@ -59,6 +61,23 @@ const Dashboard = async () => {
                 avisos hasta conectar Resend.
               </p>
             </div>
+          </Panel>
+        )}
+
+        {showWhatsappNotice && (
+          <Panel className="flex flex-wrap items-center gap-3 border-signal-ink/30 p-4">
+            <MessageCircleIcon className="size-5 shrink-0 text-signal-ink" />
+            <div className="flex min-w-48 flex-1 flex-col gap-1">
+              <p className="font-bold font-mono text-xs uppercase tracking-[0.18em]">
+                Añade tu WhatsApp
+              </p>
+              <p className="text-muted-foreground text-sm">
+                Así tus clientes pueden escribirte desde cada aviso por correo.
+              </p>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/ajustes">Ir a Ajustes</Link>
+            </Button>
           </Panel>
         )}
 

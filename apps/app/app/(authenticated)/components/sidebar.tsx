@@ -24,6 +24,7 @@ import {
   KanbanIcon,
   LayoutDashboardIcon,
   type LucideIcon,
+  Settings2Icon,
   ShieldCheckIcon,
   UsersIcon,
 } from "lucide-react";
@@ -71,6 +72,12 @@ const admin: NavItem[] = [
     url: "/equipo",
     icon: ShieldCheckIcon,
     permission: "team.manage",
+  },
+  {
+    title: "Ajustes",
+    url: "/ajustes",
+    icon: Settings2Icon,
+    permission: "settings.manage",
   },
 ];
 

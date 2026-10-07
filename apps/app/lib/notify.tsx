@@ -7,6 +7,7 @@ import { env } from "@/env";
 import { defaultStageMessage } from "./board-templates";
 import { isEmailEnabled, type SendEmailResult, sendEmail } from "./email";
 import type { StudioContext } from "./studio";
+import { whatsappUrl } from "./whatsapp";
 
 type ServerClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -105,9 +106,17 @@ export const notifyStageEntry = async ({
   const client = card.clients;
 
   if (toStage.notify_client && client?.email) {
+    const whatsapp = context.studio.whatsapp
+      ? whatsappUrl(
+          context.studio.whatsapp,
+          `Hola ${studioName}, soy ${client.full_name}. Te escribo por mi sesión «${card.title}».`
+        )
+      : null;
     const result = await sendEmail({
       fromName: studioName,
       to: client.email,
+      // The email never invites replies (WhatsApp is the channel), but if a
+      // client replies anyway it reaches the owner instead of bouncing.
       replyTo: owner?.email,
       subject: `${toStage.name} · ${studioName}`,
       idempotencyKey: `stage-email/${eventId}/client`,
@@ -121,6 +130,7 @@ export const notifyStageEntry = async ({
           }
           stageName={toStage.name}
           studioName={studioName}
+          whatsappUrl={whatsapp}
         />
       ),
     });

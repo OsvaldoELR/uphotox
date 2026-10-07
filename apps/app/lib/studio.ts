@@ -21,7 +21,12 @@ export interface StudioContext {
   };
   /** Effective permissions (owners get all of them). */
   readonly permissions: Permission[];
-  readonly studio: { readonly id: number; readonly name: string };
+  readonly studio: {
+    readonly id: number;
+    readonly name: string;
+    /** Digits only (international format), or null when not set. */
+    readonly whatsapp: string | null;
+  };
   readonly userId: string;
 }
 
@@ -41,7 +46,7 @@ export const getStudioContext = cache(
     const { data } = await supabase
       .from("studio_members")
       .select(
-        "role, permissions, only_assigned, studios(id, name), profiles(full_name, email)"
+        "role, permissions, only_assigned, studios(id, name, whatsapp), profiles(full_name, email)"
       )
       .eq("user_id", userId)
       .maybeSingle();

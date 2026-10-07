@@ -8,24 +8,33 @@ import {
   Shell,
 } from "../components/shell";
 
+// WhatsApp's dark green: recognisable and readable on white.
+const whatsappGreen = "#128c4a";
+
 interface StageUpdateTemplateProps {
   readonly clientName: string;
   readonly galleryUrl?: string | null;
   readonly message: string;
   readonly stageName: string;
   readonly studioName: string;
+  /** wa.me link to the studio; the contact block is hidden without it. */
+  readonly whatsappUrl?: string | null;
 }
 
-/** Sent to the client when their card enters a stage with notify_client on. */
+/**
+ * Sent to the client when their card enters a stage with notify_client on.
+ * It is a notification: clients are pointed to WhatsApp, never to "reply".
+ */
 export const StageUpdateTemplate = ({
   clientName,
   galleryUrl,
   message,
   stageName,
   studioName,
+  whatsappUrl,
 }: StageUpdateTemplateProps) => (
   <Shell
-    footer={`Recibes este correo porque ${studioName} gestiona tu sesión con Uphotox. Si tienes dudas, responde a este correo.`}
+    footer={`Aviso automático de ${studioName} vía Uphotox.`}
     preview={`${stageName}: novedades de tu sesión con ${studioName}`}
     studioName={studioName}
   >
@@ -59,6 +68,28 @@ export const StageUpdateTemplate = ({
         </Button>
       </Section>
     ) : null}
+    {whatsappUrl ? (
+      <Section
+        className="mt-8 pt-6"
+        style={{ borderTop: `1px solid ${colors.border}` }}
+      >
+        <Text className="m-0 mb-3 text-[14px]" style={{ color: colors.muted }}>
+          ¿Tienes alguna duda? Escríbenos por WhatsApp.
+        </Text>
+        <Button
+          className="px-5 py-2.5 font-bold text-[12px] uppercase"
+          href={whatsappUrl}
+          style={{
+            border: `1px solid ${whatsappGreen}`,
+            color: whatsappGreen,
+            fontFamily: mono,
+            letterSpacing: "0.14em",
+          }}
+        >
+          Escribir por WhatsApp
+        </Button>
+      </Section>
+    ) : null}
   </Shell>
 );
 
@@ -69,6 +100,7 @@ StageUpdateTemplate.PreviewProps = {
   message:
     "Tus fotos están listas para que elijas tus favoritas.\n\nRevisa tu galería y márcalas cuando puedas.",
   galleryUrl: "https://drive.google.com/",
+  whatsappUrl: "https://wa.me/34612345678",
 };
 
 export default StageUpdateTemplate;

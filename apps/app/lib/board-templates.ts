@@ -19,7 +19,7 @@ export const BOARD_TEMPLATES = {
         name: "Agendado",
         notifyClient: true,
         message:
-          "¡Tu sesión está confirmada! Te esperamos en la fecha acordada.\n\nSi necesitas cambiar algo, responde a este correo.",
+          "¡Tu sesión está confirmada! Te esperamos en la fecha acordada.",
       },
       {
         name: "Sesión realizada",

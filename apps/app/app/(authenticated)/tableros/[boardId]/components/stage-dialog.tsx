@@ -129,7 +129,8 @@ export const StageDialog = ({
             />
             <p className="text-muted-foreground text-xs">
               Si hay enlace de entrega en la tarjeta, el correo incluye el botón
-              «Ver mi galería».
+              «Ver mi galería»; si el estudio tiene WhatsApp, también uno para
+              escribirte. Es un aviso automático: no pidas que respondan.
             </p>
           </div>
           <div className="flex items-center justify-between gap-3">
