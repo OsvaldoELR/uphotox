@@ -16,7 +16,6 @@
     "@repo/cms": "*",
     "@repo/design-system": "*",
     "@repo/email": "*",
-    "@repo/feature-flags": "*",
     "@repo/internationalization": "*",
     "@repo/next-config": "*",
     "@repo/observability": "*",

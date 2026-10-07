@@ -1,11 +1,7 @@
 import { internationalizationMiddleware } from "@repo/internationalization/proxy";
 import { parseError } from "@repo/observability/error";
 import { secure } from "@repo/security";
-import {
-  noseconeOptions,
-  noseconeOptionsWithToolbar,
-  securityMiddleware,
-} from "@repo/security/proxy";
+import { noseconeOptions, securityMiddleware } from "@repo/security/proxy";
 import { createNEMO } from "@rescale/nemo";
 import { type NextProxy, type NextRequest, NextResponse } from "next/server";
 import { env } from "@/env";
@@ -18,9 +14,7 @@ export const config = {
   ],
 };
 
-const securityHeaders = env.FLAGS_SECRET
-  ? securityMiddleware(noseconeOptionsWithToolbar)
-  : securityMiddleware(noseconeOptions);
+const securityHeaders = securityMiddleware(noseconeOptions);
 
 // Custom middleware for Arcjet security checks
 const arcjetMiddleware = async (request: NextRequest) => {
