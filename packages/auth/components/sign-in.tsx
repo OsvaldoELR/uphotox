@@ -20,25 +20,25 @@ export const SignIn = ({ next = "/", error }: SignInProperties) => {
     <form action={formAction} className="grid gap-4">
       <input name="next" type="hidden" value={next} />
       <div className="grid gap-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">Correo</Label>
         <Input
           autoComplete="email"
           defaultValue={state.email}
           id="email"
           name="email"
-          placeholder="you@example.com"
+          placeholder="tu@estudio.com"
           required
           type="email"
         />
       </div>
       <div className="grid gap-2">
         <div className="flex items-center justify-between">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">Contraseña</Label>
           <Link
             className="text-muted-foreground text-sm underline-offset-4 hover:underline"
             href="/forgot-password"
           >
-            Forgot password?
+            ¿Olvidaste tu contraseña?
           </Link>
         </div>
         <Input
@@ -51,12 +51,12 @@ export const SignIn = ({ next = "/", error }: SignInProperties) => {
       </div>
       <FormStatus state={state} />
       <Button disabled={pending} type="submit">
-        {pending ? "Signing in..." : "Sign in"}
+        {pending ? "Entrando..." : "Entrar"}
       </Button>
       <p className="text-center text-muted-foreground text-sm">
-        Don&apos;t have an account?{" "}
+        ¿No tienes cuenta?{" "}
         <Link className="underline underline-offset-4" href="/sign-up">
-          Sign up
+          Regístrate
         </Link>
       </p>
     </form>

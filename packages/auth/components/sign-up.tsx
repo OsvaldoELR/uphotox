@@ -14,29 +14,29 @@ export const SignUp = () => {
   return (
     <form action={formAction} className="grid gap-4">
       <div className="grid gap-2">
-        <Label htmlFor="fullName">Name</Label>
+        <Label htmlFor="fullName">Nombre</Label>
         <Input
           autoComplete="name"
           id="fullName"
           name="fullName"
-          placeholder="Jane Doe"
+          placeholder="Ana García"
           required
         />
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">Correo</Label>
         <Input
           autoComplete="email"
           defaultValue={state.email}
           id="email"
           name="email"
-          placeholder="you@example.com"
+          placeholder="tu@estudio.com"
           required
           type="email"
         />
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password">Contraseña</Label>
         <Input
           autoComplete="new-password"
           id="password"
@@ -48,12 +48,12 @@ export const SignUp = () => {
       </div>
       <FormStatus state={state} />
       <Button disabled={pending} type="submit">
-        {pending ? "Creating account..." : "Create account"}
+        {pending ? "Creando cuenta..." : "Crear cuenta"}
       </Button>
       <p className="text-center text-muted-foreground text-sm">
-        Already have an account?{" "}
+        ¿Ya tienes cuenta?{" "}
         <Link className="underline underline-offset-4" href="/sign-in">
-          Sign in
+          Entrar
         </Link>
       </p>
     </form>

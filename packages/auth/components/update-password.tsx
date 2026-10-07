@@ -13,7 +13,7 @@ export const UpdatePassword = () => {
   return (
     <form action={formAction} className="grid gap-4">
       <div className="grid gap-2">
-        <Label htmlFor="password">New password</Label>
+        <Label htmlFor="password">Contraseña nueva</Label>
         <Input
           autoComplete="new-password"
           id="password"
@@ -24,7 +24,7 @@ export const UpdatePassword = () => {
         />
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="confirmPassword">Confirm password</Label>
+        <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
         <Input
           autoComplete="new-password"
           id="confirmPassword"
@@ -36,7 +36,7 @@ export const UpdatePassword = () => {
       </div>
       <FormStatus state={state} />
       <Button disabled={pending} type="submit">
-        {pending ? "Saving..." : "Update password"}
+        {pending ? "Guardando..." : "Actualizar contraseña"}
       </Button>
     </form>
   );

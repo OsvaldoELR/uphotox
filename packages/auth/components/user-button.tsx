@@ -39,7 +39,7 @@ export const UserButton = ({
   avatarUrl,
 }: UserButtonProperties) => {
   const [pending, startTransition] = useTransition();
-  const label = name || email || "Account";
+  const label = name || email || "Cuenta";
 
   return (
     <DropdownMenu>
@@ -65,7 +65,7 @@ export const UserButton = ({
           onSelect={() => startTransition(() => signOut())}
         >
           <LogOutIcon />
-          Sign out
+          Cerrar sesión
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

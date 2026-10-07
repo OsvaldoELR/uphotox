@@ -3,8 +3,8 @@ import { createMetadata } from "@repo/seo/metadata";
 import type { Metadata } from "next";
 import { AuthHeader } from "../components/auth-header";
 
-const title = "Reset your password";
-const description = "We'll email you a link to choose a new password.";
+const title = "Recupera tu contraseña";
+const description = "Te enviaremos un enlace para elegir una contraseña nueva.";
 
 export const metadata: Metadata = createMetadata({ title, description });
 

@@ -4,8 +4,8 @@ import { createMetadata } from "@repo/seo/metadata";
 import type { Metadata } from "next";
 import { AuthHeader } from "../components/auth-header";
 
-const title = "Welcome back";
-const description = "Enter your details to sign in.";
+const title = "Bienvenido de nuevo";
+const description = "Introduce tus datos para entrar al estudio.";
 
 export const metadata: Metadata = createMetadata({ title, description });
 
@@ -21,7 +21,9 @@ const SignInPage = async ({ searchParams }: SignInPageProperties) => {
       <AuthHeader description={description} title={title} />
       <SignIn
         error={
-          error ? "That link is invalid or has expired. Try again." : undefined
+          error
+            ? "Ese enlace no es válido o ha caducado. Inténtalo de nuevo."
+            : undefined
         }
         next={safeRedirectPath(next)}
       />

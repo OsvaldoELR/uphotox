@@ -3,8 +3,8 @@ import { createMetadata } from "@repo/seo/metadata";
 import type { Metadata } from "next";
 import { AuthHeader } from "../components/auth-header";
 
-const title = "Create an account";
-const description = "Enter your details to get started.";
+const title = "Crea tu cuenta";
+const description = "Introduce tus datos para empezar.";
 
 export const metadata: Metadata = createMetadata({ title, description });
 

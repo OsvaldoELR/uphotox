@@ -1,20 +1,11 @@
 "use client";
 
 import { UserButton } from "@repo/auth/components/user-button";
+import { StudioBackdrop } from "@repo/design-system/components/hud/backdrop";
+import { CropMarks } from "@repo/design-system/components/hud/crop-marks";
+import { Wordmark } from "@repo/design-system/components/hud/wordmark";
 import { ModeToggle } from "@repo/design-system/components/mode-toggle";
 import { Button } from "@repo/design-system/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@repo/design-system/components/ui/collapsible";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@repo/design-system/components/ui/dropdown-menu";
 import {
   Sidebar,
   SidebarContent,
@@ -25,33 +16,21 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
-  SidebarMenuAction,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
 } from "@repo/design-system/components/ui/sidebar";
 import { NotificationsTrigger } from "@repo/notifications/components/trigger";
 import {
   AnchorIcon,
-  BookOpenIcon,
-  BotIcon,
-  ChevronRightIcon,
-  CommandIcon,
-  FolderIcon,
-  FrameIcon,
-  LifeBuoyIcon,
-  MapIcon,
-  MoreHorizontalIcon,
-  PieChartIcon,
-  SendIcon,
-  Settings2Icon,
-  ShareIcon,
-  SquareTerminalIcon,
-  Trash2Icon,
+  ApertureIcon,
+  KanbanIcon,
+  LayoutDashboardIcon,
+  type LucideIcon,
+  UsersIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { Search } from "./search";
 
@@ -64,143 +43,88 @@ interface GlobalSidebarProperties {
   };
 }
 
-const data = {
-  navMain: [
-    {
-      title: "Playground",
-      url: "#",
-      icon: SquareTerminalIcon,
-      isActive: true,
-      items: [
-        {
-          title: "History",
-          url: "#",
-        },
-        {
-          title: "Starred",
-          url: "#",
-        },
-        {
-          title: "Settings",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Models",
-      url: "#",
-      icon: BotIcon,
-      items: [
-        {
-          title: "Genesis",
-          url: "#",
-        },
-        {
-          title: "Explorer",
-          url: "#",
-        },
-        {
-          title: "Quantum",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Documentation",
-      url: "#",
-      icon: BookOpenIcon,
-      items: [
-        {
-          title: "Introduction",
-          url: "#",
-        },
-        {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Settings",
-      url: "#",
-      icon: Settings2Icon,
-      items: [
-        {
-          title: "General",
-          url: "#",
-        },
-        {
-          title: "Team",
-          url: "#",
-        },
-        {
-          title: "Billing",
-          url: "#",
-        },
-        {
-          title: "Limits",
-          url: "#",
-        },
-      ],
-    },
-  ],
-  navSecondary: [
-    {
-      title: "Webhooks",
-      url: "/webhooks",
-      icon: AnchorIcon,
-    },
-    {
-      title: "Support",
-      url: "#",
-      icon: LifeBuoyIcon,
-    },
-    {
-      title: "Feedback",
-      url: "#",
-      icon: SendIcon,
-    },
-  ],
-  projects: [
-    {
-      name: "Design Engineering",
-      url: "#",
-      icon: FrameIcon,
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: PieChartIcon,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: MapIcon,
-    },
-  ],
-};
+interface NavItem {
+  readonly icon: LucideIcon;
+  readonly title: string;
+  /** Without a url the module is planned but not built yet. */
+  readonly url?: string;
+}
+
+const studio: NavItem[] = [
+  { title: "Panel", url: "/", icon: LayoutDashboardIcon },
+  { title: "Tablero", icon: KanbanIcon },
+  { title: "Editor", icon: ApertureIcon },
+  { title: "Clientes", icon: UsersIcon },
+];
+
+const system: NavItem[] = [
+  { title: "Webhooks", url: "/webhooks", icon: AnchorIcon },
+];
+
+const groupLabel =
+  "font-mono text-[10px] text-signal-ink/80 uppercase tracking-[0.3em]";
+
+// Active item: cyan rail on the left edge, like a lit HUD indicator.
+const menuButton =
+  "data-[active=true]:font-semibold data-[active=true]:shadow-[inset_2px_0_0_var(--signal-ink)]";
+
+const NavGroup = ({
+  items,
+  label,
+  pathname,
+}: {
+  readonly items: NavItem[];
+  readonly label: string;
+  readonly pathname: string;
+}) => (
+  <SidebarGroup>
+    <SidebarGroupLabel className={groupLabel}>{label}</SidebarGroupLabel>
+    <SidebarGroupContent>
+      <SidebarMenu>
+        {items.map((item) => (
+          <SidebarMenuItem key={item.title}>
+            {item.url ? (
+              <SidebarMenuButton
+                asChild
+                className={menuButton}
+                isActive={pathname === item.url}
+                tooltip={item.title}
+              >
+                <Link href={item.url}>
+                  <item.icon />
+                  <span>{item.title}</span>
+                </Link>
+              </SidebarMenuButton>
+            ) : (
+              <>
+                <SidebarMenuButton aria-disabled tooltip={item.title}>
+                  <item.icon />
+                  <span>{item.title}</span>
+                </SidebarMenuButton>
+                <SidebarMenuBadge className="font-mono text-[9px] text-muted-foreground uppercase tracking-[0.2em]">
+                  Pronto
+                </SidebarMenuBadge>
+              </>
+            )}
+          </SidebarMenuItem>
+        ))}
+      </SidebarMenu>
+    </SidebarGroupContent>
+  </SidebarGroup>
+);
 
 export const GlobalSidebar = ({ children, user }: GlobalSidebarProperties) => {
+  const pathname = usePathname();
+
   return (
     <>
       <Sidebar variant="inset">
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild size="lg">
+              <SidebarMenuButton asChild className="h-auto py-2" size="lg">
                 <Link href="/">
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                    <CommandIcon className="size-4" />
-                  </div>
-                  <span className="truncate font-semibold">Uphotox</span>
+                  <Wordmark kanji />
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -208,114 +132,10 @@ export const GlobalSidebar = ({ children, user }: GlobalSidebarProperties) => {
         </SidebarHeader>
         <Search />
         <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>Platform</SidebarGroupLabel>
-            <SidebarMenu>
-              {data.navMain.map((item) => (
-                <Collapsible
-                  asChild
-                  defaultOpen={item.isActive}
-                  key={item.title}
-                >
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip={item.title}>
-                      <Link href={item.url}>
-                        <item.icon />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                    {item.items?.length ? (
-                      <>
-                        <CollapsibleTrigger asChild>
-                          <SidebarMenuAction className="data-[state=open]:rotate-90">
-                            <ChevronRightIcon />
-                            <span className="sr-only">Toggle</span>
-                          </SidebarMenuAction>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <SidebarMenuSub>
-                            {item.items?.map((subItem) => (
-                              <SidebarMenuSubItem key={subItem.title}>
-                                <SidebarMenuSubButton asChild>
-                                  <Link href={subItem.url}>
-                                    <span>{subItem.title}</span>
-                                  </Link>
-                                </SidebarMenuSubButton>
-                              </SidebarMenuSubItem>
-                            ))}
-                          </SidebarMenuSub>
-                        </CollapsibleContent>
-                      </>
-                    ) : null}
-                  </SidebarMenuItem>
-                </Collapsible>
-              ))}
-            </SidebarMenu>
-          </SidebarGroup>
-          <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-            <SidebarGroupLabel>Projects</SidebarGroupLabel>
-            <SidebarMenu>
-              {data.projects.map((item) => (
-                <SidebarMenuItem key={item.name}>
-                  <SidebarMenuButton asChild>
-                    <Link href={item.url}>
-                      <item.icon />
-                      <span>{item.name}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <SidebarMenuAction showOnHover>
-                        <MoreHorizontalIcon />
-                        <span className="sr-only">More</span>
-                      </SidebarMenuAction>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="end"
-                      className="w-48"
-                      side="bottom"
-                    >
-                      <DropdownMenuItem>
-                        <FolderIcon className="text-muted-foreground" />
-                        <span>View Project</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <ShareIcon className="text-muted-foreground" />
-                        <span>Share Project</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem>
-                        <Trash2Icon className="text-muted-foreground" />
-                        <span>Delete Project</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </SidebarMenuItem>
-              ))}
-              <SidebarMenuItem>
-                <SidebarMenuButton>
-                  <MoreHorizontalIcon />
-                  <span>More</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroup>
-          <SidebarGroup className="mt-auto">
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {data.navSecondary.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
-                      <Link href={item.url}>
-                        <item.icon />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          <NavGroup items={studio} label="Estudio" pathname={pathname} />
+          <div className="mt-auto">
+            <NavGroup items={system} label="Sistema" pathname={pathname} />
+          </div>
         </SidebarContent>
         <SidebarFooter>
           <SidebarMenu>
@@ -342,7 +162,11 @@ export const GlobalSidebar = ({ children, user }: GlobalSidebarProperties) => {
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset>{children}</SidebarInset>
+      <SidebarInset className="isolate overflow-hidden md:peer-data-[variant=inset]:shadow-[0_0_0_1px_var(--border)]">
+        <StudioBackdrop variant="calm" />
+        <CropMarks className="inset-3 hidden md:block" />
+        {children}
+      </SidebarInset>
     </>
   );
 };

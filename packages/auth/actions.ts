@@ -12,19 +12,19 @@ export interface AuthFormState {
   message?: string;
 }
 
-const email = z.email("Enter a valid email address.");
+const email = z.email("Introduce un correo válido.");
 const password = z
   .string()
-  .min(8, "Password must be at least 8 characters.")
-  .max(72, "Password must be at most 72 characters.");
+  .min(8, "La contraseña debe tener al menos 8 caracteres.")
+  .max(72, "La contraseña puede tener como máximo 72 caracteres.");
 
 const signInSchema = z.object({
   email,
-  password: z.string().min(1, "Enter your password."),
+  password: z.string().min(1, "Introduce tu contraseña."),
 });
 
 const signUpSchema = z.object({
-  fullName: z.string().trim().min(1, "Enter your name.").max(120),
+  fullName: z.string().trim().min(1, "Introduce tu nombre.").max(120),
   email,
   password,
 });
@@ -32,7 +32,7 @@ const signUpSchema = z.object({
 const updatePasswordSchema = z
   .object({ password, confirmPassword: z.string() })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match.",
+    message: "Las contraseñas no coinciden.",
   });
 
 const field = (formData: FormData, name: string) => {
@@ -106,7 +106,7 @@ export const signUp = async (
   // No session means email confirmation is enabled in Supabase Auth.
   if (!data.session) {
     return {
-      message: "Check your email to confirm your account.",
+      message: "Revisa tu correo para confirmar la cuenta.",
       email: parsed.data.email,
     };
   }
@@ -138,7 +138,8 @@ export const requestPasswordReset = async (
 
   // Same message whether or not the account exists, to avoid leaking emails.
   return {
-    message: "If an account exists for that email, a reset link is on its way.",
+    message:
+      "Si existe una cuenta con ese correo, te llegará un enlace para restablecerla.",
     email: parsed.data,
   };
 };

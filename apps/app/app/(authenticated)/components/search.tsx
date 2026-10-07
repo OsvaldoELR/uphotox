@@ -9,12 +9,14 @@ export const Search = () => (
         <SearchIcon className="text-muted-foreground" size={16} />
       </div>
       <Input
-        className="h-auto bg-background py-1.5 pr-3 pl-8 text-xs"
+        aria-label="Buscar"
+        className="h-auto py-1.5 pr-3 pl-8 text-xs"
         name="q"
-        placeholder="Search"
+        placeholder="Buscar"
         type="text"
       />
       <Button
+        aria-label="Buscar"
         className="absolute top-px right-px bottom-px h-8 w-8"
         size="icon"
         variant="ghost"

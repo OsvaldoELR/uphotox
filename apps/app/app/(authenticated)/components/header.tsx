@@ -18,22 +18,24 @@ interface HeaderProps {
 
 export const Header = ({ pages, page, children }: HeaderProps) => (
   <header className="flex h-16 shrink-0 items-center justify-between gap-2">
-    <div className="flex items-center gap-2 px-4">
+    <div className="flex items-center gap-2 px-4 md:px-6">
       <SidebarTrigger className="-ml-1" />
       <Separator className="mr-2 h-4" orientation="vertical" />
       <Breadcrumb>
-        <BreadcrumbList>
+        <BreadcrumbList className="font-mono text-[11px] uppercase tracking-[0.18em]">
           {pages.map((page, index) => (
             <Fragment key={page}>
               {index > 0 && <BreadcrumbSeparator className="hidden md:block" />}
               <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbLink href="#">{page}</BreadcrumbLink>
+                <BreadcrumbLink href="/">{page}</BreadcrumbLink>
               </BreadcrumbItem>
             </Fragment>
           ))}
           <BreadcrumbSeparator className="hidden md:block" />
           <BreadcrumbItem>
-            <BreadcrumbPage>{page}</BreadcrumbPage>
+            <BreadcrumbPage className="font-semibold text-signal-ink">
+              {page}
+            </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>

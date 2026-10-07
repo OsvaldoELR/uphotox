@@ -5,8 +5,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AuthHeader } from "../components/auth-header";
 
-const title = "Choose a new password";
-const description = "Enter a new password for your account.";
+const title = "Elige una contraseña nueva";
+const description = "Introduce la nueva contraseña de tu cuenta.";
 
 export const metadata: Metadata = createMetadata({ title, description });
 
