@@ -19,6 +19,8 @@ interface KanbanBoardProperties {
   readonly boardName: string;
   readonly cards: BoardCard[];
   readonly emailEnabled: boolean;
+  /** Card to open on arrival (?tarjeta=…), already checked to be here. */
+  readonly initialCardId: number | null;
   readonly members: BoardMember[];
   readonly stages: BoardStage[];
   readonly studioName: string;
@@ -32,17 +34,21 @@ export const KanbanBoard = ({
   boardName,
   cards: serverCards,
   emailEnabled,
+  initialCardId,
   members,
   stages,
   studioName,
 }: KanbanBoardProperties) => {
   // Optimistic copy; replaced whenever the server sends fresh data.
   const [cards, setCards] = useState(serverCards);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [activeCardId, setActiveCardId] = useState<number | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(initialCardId !== null);
+  const [activeCardId, setActiveCardId] = useState(initialCardId);
   // Phones show one stage at a time (no drag needed); desktop shows all.
   const [mobileStageId, setMobileStageId] = useState<number | null>(
-    stages[0]?.id ?? null
+    () =>
+      serverCards.find((card) => card.id === initialCardId)?.stage_id ??
+      stages[0]?.id ??
+      null
   );
   const visibleStageId = stages.some((stage) => stage.id === mobileStageId)
     ? mobileStageId

@@ -14,11 +14,14 @@ export const metadata: Metadata = {
 
 interface BoardPageProperties {
   readonly params: Promise<{ boardId: string }>;
+  /** ?tarjeta=<id> opens that card (links from the Clients module). */
+  readonly searchParams: Promise<{ tarjeta?: string }>;
 }
 
-const BoardPage = async ({ params }: BoardPageProperties) => {
+const BoardPage = async ({ params, searchParams }: BoardPageProperties) => {
   const context = await requirePermission("boards.view");
   const boardId = Number((await params).boardId);
+  const requestedCard = Number((await searchParams).tarjeta);
 
   if (!Number.isSafeInteger(boardId) || boardId <= 0) {
     notFound();
@@ -96,6 +99,11 @@ const BoardPage = async ({ params }: BoardPageProperties) => {
         boardName={board.data.name}
         cards={boardCards}
         emailEnabled={isEmailEnabled()}
+        initialCardId={
+          boardCards.some((card) => card.id === requestedCard)
+            ? requestedCard
+            : null
+        }
         members={boardMembers}
         stages={stages.data ?? []}
         studioName={context.studio.name}

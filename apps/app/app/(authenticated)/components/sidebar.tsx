@@ -62,7 +62,12 @@ const studio: NavItem[] = [
     icon: KanbanIcon,
     permission: "boards.view",
   },
-  { title: "Clientes", icon: UsersIcon, permission: "clients.view" },
+  {
+    title: "Clientes",
+    url: "/clientes",
+    icon: UsersIcon,
+    permission: "clients.view",
+  },
   { title: "Editor", icon: ApertureIcon, permission: "editor.access" },
 ];
 

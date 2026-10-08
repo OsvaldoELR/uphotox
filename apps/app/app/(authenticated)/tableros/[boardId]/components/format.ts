@@ -1,3 +1,5 @@
+import { isDayOnly } from "@/lib/session-date";
+
 const dateTime = new Intl.DateTimeFormat("es", {
   day: "numeric",
   month: "short",
@@ -5,11 +7,22 @@ const dateTime = new Intl.DateTimeFormat("es", {
   minute: "2-digit",
 });
 
+const dateOnly = new Intl.DateTimeFormat("es", {
+  day: "numeric",
+  month: "short",
+});
+
 const DAY = 86_400_000;
 const NAME_SEPARATORS = /[\s@._-]+/;
 
-/** Local time; render inside suppressHydrationWarning (server is UTC). */
-export const formatDateTime = (iso: string) => dateTime.format(new Date(iso));
+/**
+ * Local time; render inside suppressHydrationWarning (server is UTC).
+ * Midnight shows only the day (imported sessions without a time).
+ */
+export const formatDateTime = (iso: string) => {
+  const date = new Date(iso);
+  return (isDayOnly(date) ? dateOnly : dateTime).format(date);
+};
 
 export const timeInStage = (iso: string) => {
   const days = Math.floor((Date.now() - Date.parse(iso)) / DAY);
