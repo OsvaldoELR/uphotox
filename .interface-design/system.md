@@ -106,6 +106,21 @@ Patrones de la app:
 - **Permisos tipo GHL**: un bloque por grupo (switch del grupo = alguno activo, contador
   `x/y` mono), permisos individuales con switch indentados `pl-14`; interruptor
   «Solo datos asignados» en caja con borde y explicación.
+- **Lista de clientes**: `ul divide-y border bg-card` como Equipo; fila = iniciales (solo
+  letras) + nombre/contacto + a la derecha la sesión destacada (la próxima, o la última) con
+  fecha corta y etapa en signal-ink. Orden con chips (`Próxima sesión` por defecto,
+  `Recientes`, `A–Z`), mismo estilo que las pestañas del kanban móvil. La búsqueda ignora
+  acentos y encuentra por nombre, correo, dígitos del teléfono y títulos de tarjeta (niño/a).
+- **Ficha de cliente** (Sheet derecha): botones de contacto (WhatsApp solo si el número
+  trae código de país, Llamar, Correo), sesiones como tarjetas `corner-notch` con «Abrir»
+  (`/tableros/<id>?tarjeta=<id>`), formulario de datos y Eliminar (borra también sus tarjetas).
+- **Asistente de importación**: pasos numerados (`01 Archivo`, `02 Columnas`, `03 Revisión y
+  destino`), título mono bold con el índice en signal-ink. Zona de archivo = botón con borde
+  discontinuo que acepta arrastrar. Cada columna: cabecera + 3 valores de ejemplo + select de
+  destino; las columnas clave llevan el raíl `inset 2px` signal-ink. Revisión: chips de filtro
+  (`Todas`, `Revisar`, `Se omiten`) y filas con estado `Lista` (signal-ink), `Revisar`
+  (flare) o `Se omite` (tachada, motivo en destructive). Resultado en un Panel con borde
+  signal-ink/30, sin animación.
 - **Chips de estado** (`Correos activos`, `Ves solo tus tarjetas`): borde, mono 10px
   mayúsculas `tracking-[0.16em]`; signal-ink = activo, flare = requiere atención.
 

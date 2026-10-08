@@ -49,7 +49,7 @@ está comprobado todavía.
 | Paso | Hoy en Uphotox |
 | --- | --- |
 | 1 Solicitud | Typeform → Make → webhook de Uphotox: crea cliente y tarjeta con todas las respuestas en las notas (Ajustes → Entrada de clientes). No envía correo al cliente. |
-| 2 Agenda | Fecha de sesión en la tarjeta (sin Google Calendar todavía). |
+| 2 Agenda | Fecha de sesión en la tarjeta (sin Google Calendar todavía). Los clientes que ya estaban agendados antes de Uphotox se cargan con **Clientes → Importar CSV** directamente en «Agendado». |
 | 3 Preparación | Correo de etapa al cliente; botón de WhatsApp del estudio en cada correo. |
 | 4–13 | Etapas del tablero «Sesiones» con aviso al cliente en cada una; responsable por tarjeta; foto de la tarjeta (miniatura); álbum de Google Fotos en «Álbum de entrega». |
 
@@ -78,7 +78,10 @@ Cada fase es independiente; el orden es una propuesta.
 ### Hecho (octubre 2026)
 Tableros con etapas y avisos por correo, equipo con roles y permisos, WhatsApp
 del estudio en los correos, entrada de clientes por webhook (Make), foto de la
-tarjeta, uso en móvil sin arrastrar.
+tarjeta, uso en móvil sin arrastrar. Módulo **Clientes**: lista con búsqueda
+(también por el nombre del niño/a), ficha con sus sesiones y botones de
+WhatsApp/llamar, e importación de CSV con revisión fila a fila (sin correos,
+sin duplicados al repetir la importación).
 
 ### 1. Agenda con Google Calendar
 - Conectar la cuenta de Google del estudio (OAuth) y crear/actualizar el
@@ -131,6 +134,56 @@ tarjeta, uso en móvil sin arrastrar.
 
 ### 7. Paquetes y pagos (cuando se pida)
 Paquete contratado, fotos incluidas, extras y estado del pago en la tarjeta.
+
+## Qué recoge hoy el formulario de reserva (Typeform)
+
+Análisis de la exportación a Google Sheets (respuestas desde finales de 2023
+hasta octubre de 2026). Sirve para la integración con Make, el módulo de
+paquetes y las automatizaciones.
+
+**Lo que usa Uphotox** (entrada por Make o importación):
+
+| Dato | Columna del formulario | En Uphotox |
+| --- | --- | --- |
+| Cliente | «Cuál es su nombre?» (en bodas, «Nombre de la novia») | Nombre del cliente |
+| Teléfono | «Cual es su número de teléfono?» (ya viene con +código) | Teléfono; botón de WhatsApp |
+| Correo | «Déjanos tu correo…» (bodas: «Cual es tu email») | Correo (avisos) |
+| Niño/a | «Cual es el nombre del niño/a?» | Título: «Mateo · Smash Cake» |
+| Tipo de sesión | «Qué tipo de sesión fotográfica desea?» | Título |
+| ID de respuesta | «Token» | `external_id` (evita duplicados) |
+| Resto | formato, paquete, extras, lugar, edad, cumpleaños, semanas de embarazo, artículo de regalo, dudas | Notas: «• Pregunta: respuesta» |
+
+Se ignoran «Submitted At» (fecha de la solicitud, no de la sesión), las
+casillas de aceptación (TRUE) y las columnas ocultas `name`/`email`, que
+siempre llegan vacías.
+
+**Observaciones:**
+- **La fecha de la sesión no está en el formulario**: solo existe en Google
+  Calendar. Por eso los clientes ya agendados se importan desde otra hoja que
+  sí la tenga, y a partir de ahora la fecha se pone en la tarjeta.
+- **Tipos de sesión**: Niños y familia (la mayoría), Smash Cake, Embarazadas,
+  Recién nacidos, Navidad, Día de las madres, San Valentín, Retratos/Headshots y
+  algunas bodas (casi todas de prueba).
+- **Paquetes**: hay una columna «Qué oferta desea?» por tipo y formato
+  (digital o impreso), y el texto empieza por el precio («$345 - 12 FOTOS…»).
+  Los precios han subido varias veces en 2026 (p. ej. 12 fotos digitales de
+  niños: $250 → $285 → $315 → $345). Extras: decoración Smash Cake $200, Milk
+  Bath $100 y maquillaje $180. Base para el módulo de paquetes.
+- **Calidad de los datos**: muchas personas envían el formulario varias veces
+  (cambian de paquete o de fecha); hay filas de prueba; algunos correos traen
+  errores de dominio (gamil.com, gmial.com, .con), y el importador los corrige
+  y lo avisa; a veces ponen el nombre del niño como nombre propio o dos niños
+  en el mismo campo.
+- **Cumpleaños del niño/a**: se pide, pero en texto libre («18 enero», «01/24»,
+  «Marzo 6», «No es ahora»). Si en Typeform pasa a ser un campo de fecha, se
+  podría avisar al cliente antes del siguiente cumpleaños (el negocio fuerte es
+  el primer año / Smash Cake).
+- **Dudas frecuentes** («¿Alguna duda?»): maquillaje y peinado, si el estudio
+  pone la ropa, fechas disponibles, dirección, depósito y cancelación,
+  ampliaciones, mascotas o abuelos en las fotos. Candidatas a respuestas
+  automáticas o a una página de preguntas frecuentes enlazada desde el aviso.
+- **Artículos de regalo** (lienzo, acrílico, taza, cojín, bola de nieve): señal
+  de venta adicional que hoy se pierde en las respuestas.
 
 ## Datos que conviene guardar ya (para la IA)
 - Qué fotos preselecciona el estudio y cuáles elige el cliente (señal de
