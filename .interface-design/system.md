@@ -52,7 +52,8 @@ acento principal (signal); flare solo para lo secundario.
 - Etiqueta de sección: `HudLabel` — mono 10px, mayúsculas, `tracking-[0.3em]`, signal-ink.
 - Label de formulario: mono 11px semibold, mayúsculas, `tracking-[0.16em]`, muted.
 - Números dinámicos: `tabular` y con ceros a la izquierda (`03 ACTIVOS`, `P-01`).
-- Ornamento de marca: 写真 ("fotografía") encima del nombre, como 東京 en Tokyo.
+- **Sin caracteres chinos ni japoneses** en ninguna pantalla (decisión del usuario, 8 oct
+  2026): el 東京 de Tokyo Store no se traslada, ni como ornamento ni en etiquetas.
 - Texto de la interfaz en **español**.
 
 ## Componentes
@@ -66,7 +67,7 @@ Primitivas HUD en `packages/design-system/components/hud/`:
 | `Panel` | Vidrio `bg-card` (blanco 78 %) + `backdrop-blur-md`, borde, esquinas recortadas 14px. `interactive`: sube 4px, borde signal-ink/40, glow, línea de escaneo 2.4s. `stream`: barra data-stream arriba |
 | `StudioBackdrop` | `full` solo en login y landing (atmósfera, orbes, 50 partículas, escaneo 3.2s, textura CRT). `calm` dentro de la app: **solo la retícula estática** con desvanecido en los bordes. Va dentro de un contenedor `relative isolate` |
 | `CropMarks` | Esquinas de visor; **firma visual**. Marco de la zona de trabajo (`inset-3`), tarjetas (`size-3`), panel de marca (`size-8`) |
-| `Wordmark` | UPHO + TOX (signal-ink con glow). sm/md/xl, `glitch`, `kanji` |
+| `Wordmark` | UPHO + TOX (signal-ink con glow). sm/md/xl, `glitch` |
 | `HudLabel` | `── LABEL ──` (center) o etiqueta + línea (start) |
 | `ScanLine` | Barrido animando solo transform |
 

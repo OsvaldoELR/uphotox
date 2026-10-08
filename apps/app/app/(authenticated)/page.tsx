@@ -33,7 +33,7 @@ const Dashboard = async () => {
       <div className="flex flex-1 flex-col gap-12 px-4 pt-4 pb-12 md:px-10">
         <section className="flex animate-fade-in-up flex-col gap-3">
           <HudLabel align="start" className="max-w-sm">
-            写真 · {context.studio.name}
+            {context.studio.name}
           </HudLabel>
           <h1 className="font-black font-mono text-4xl uppercase tracking-[-0.02em] md:text-5xl">
             {firstName ? "Hola, " : "Hola"}

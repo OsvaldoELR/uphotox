@@ -63,6 +63,24 @@ paquetes y pagos.
 
 ## Historial
 
+### 8 oct 2026 · Fuera las letras japonesas (写真)
+**Qué se hizo**: se quitó el adorno 写真 («fotografía» en japonés) de todas las
+pantallas: encima del logo en el menú lateral y en el login, en la etiqueta
+del login (ahora «Estudio fotográfico») y en la del panel (ahora solo el
+nombre del estudio). El logo ya no tiene la opción de mostrarlo.
+
+**Decisión**: ningún carácter chino ni japonés en la app (anotado en
+`.interface-design/system.md`). La web pública de la plantilla (`apps/web`)
+conserva el idioma chino en su selector de idiomas porque es un idioma, no un
+adorno; se quita si se pide.
+
+**Código**: `packages/design-system/components/hud/wordmark.tsx`,
+`apps/app/app/(unauthenticated)/layout.tsx`, `apps/app/app/(authenticated)/page.tsx`,
+`apps/app/app/(authenticated)/components/sidebar.tsx`.
+
+**Comprobado**: búsqueda en el código (0 caracteres), login y panel en el
+navegador sin ninguno, Biome y tipos sin errores.
+
 ### 7–8 oct 2026 · Módulo Clientes e importación de CSV
 **Qué se hizo**
 - `/clientes`: lista de clientes ordenada por próxima sesión, búsqueda por

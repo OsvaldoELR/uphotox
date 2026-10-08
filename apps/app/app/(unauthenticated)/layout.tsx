@@ -22,10 +22,10 @@ const AuthLayout = ({ children }: AuthLayoutProps) => (
       <StudioBackdrop />
       <CropMarks className="inset-6" markClassName="size-8" />
 
-      <Wordmark className="relative" kanji />
+      <Wordmark className="relative" />
 
       <div className="relative flex flex-col items-center text-center">
-        <HudLabel className="mb-6">写真 · Estudio fotográfico · 写真</HudLabel>
+        <HudLabel className="mb-6">Estudio fotográfico</HudLabel>
         <div className="relative">
           <Wordmark glitch size="xl" />
           <div className="absolute inset-x-[12%] -bottom-2 h-px bg-linear-to-r from-transparent via-signal-ink/60 to-transparent" />
@@ -61,7 +61,7 @@ const AuthLayout = ({ children }: AuthLayoutProps) => (
       <div className="absolute top-4 right-4">
         <ModeToggle />
       </div>
-      <Wordmark className="lg:hidden" kanji size="md" />
+      <Wordmark className="lg:hidden" size="md" />
       <Panel className="w-full max-w-[400px] animate-fade-in-up" stream>
         <div className="flex flex-col gap-6 p-8">{children}</div>
       </Panel>

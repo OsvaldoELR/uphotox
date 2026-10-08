@@ -168,7 +168,7 @@ export const GlobalSidebar = ({
                 size="lg"
               >
                 <Link href="/">
-                  <Wordmark kanji />
+                  <Wordmark />
                   <span className="w-full truncate font-mono text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
                     {studioName}
                   </span>
