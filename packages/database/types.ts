@@ -502,6 +502,14 @@ export type Database = {
     }
     Functions: {
       create_studio: { Args: { studio_name: string }; Returns: number }
+      import_cards: {
+        Args: {
+          entries: Json
+          target_board_id: number
+          target_stage_id: number
+        }
+        Returns: Json
+      }
     }
     Enums: {
       studio_role: "owner" | "photographer" | "editor" | "assistant"
