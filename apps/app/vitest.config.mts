@@ -6,6 +6,9 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: "jsdom",
+    // Vercel builds with NODE_ENV=production, which loads React's production
+    // bundle (no `act`) and breaks component tests. Tests always run as test.
+    env: { NODE_ENV: "test" },
   },
   resolve: {
     alias: {
