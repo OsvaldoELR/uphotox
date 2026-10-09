@@ -36,6 +36,8 @@ Configuración:
 
 Del usuario:
 - [ ] Importar el CSV real de clientes agendados (Clientes → Importar CSV).
+- [ ] Autorizar la conexión MCP de Vercel en Claude Code (ver Historial,
+      «Herramientas de Vercel en el PC»).
 - [ ] Publicar la app en Vercel siguiendo `docs/deploy-vercel.md` (proyecto
       `uphotox-app`, carpeta `apps/app`) y poner la dirección pública en
       Supabase (Site URL y Redirect URLs).
@@ -68,6 +70,24 @@ paquetes y pagos.
 ---
 
 ## Historial
+
+### 8 oct 2026 · Herramientas de Vercel en el PC
+**Qué se hizo** (siguiendo la guía oficial https://vercel.com/get-started.md):
+- CLI de Vercel actualizada de 54.14.0 a **63.1.0** y con sesión iniciada como
+  **osvaldo-2335**. Equipo disponible: «Upgradix's projects» (plan Hobby).
+- Plugin oficial de Vercel instalado en Claude Code para todos los proyectos
+  (`vercel-plugin@vercel` 0.54.1): guías, comandos de publicación y la
+  conexión MCP con `https://mcp.vercel.com`.
+- La conexión MCP la aporta el plugin; no se añadió otra para no duplicarla.
+
+**Pendiente**: autorizar la conexión MCP (reiniciar la ventana de Claude Code →
+`/mcp` → `plugin:vercel:vercel` → Authenticate) y comprobarla. Aún no se ha
+creado ni enlazado ningún proyecto en Vercel; eso va con la publicación
+(`docs/deploy-vercel.md`).
+
+**Nota**: el plugin envía estadísticas mínimas de uso (nombres de las guías
+usadas e identificadores aleatorios). Se desactivan con la variable de entorno
+`VERCEL_PLUGIN_TELEMETRY=off`.
 
 ### 8 oct 2026 · Guía para publicar en Vercel
 **Qué se hizo**: guía paso a paso en `docs/deploy-vercel.md` para publicar la
