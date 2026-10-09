@@ -5,6 +5,7 @@ actualiza al terminar cada tarea. Para retomar en otra sesión, lee primero
 **Estado actual** y **Pendientes**.
 
 Documentos relacionados:
+- `docs/deploy-vercel.md`: cómo publicar la app y la API en Vercel.
 - `CLAUDE.md`: reglas técnicas del proyecto (base de datos, permisos, correo…).
 - `docs/flujo-estudio.md`: cómo trabaja el estudio, análisis del formulario de
   reserva y hoja de ruta de automatización con IA.
@@ -35,10 +36,15 @@ Configuración:
 
 Del usuario:
 - [ ] Importar el CSV real de clientes agendados (Clientes → Importar CSV).
-- [ ] Publicar `apps/api` en Vercel (HTTPS) y poner `NEXT_PUBLIC_API_URL` en
-      producción, para que Make pueda enviar las reservas. *Pospuesto.*
+- [ ] Publicar la app en Vercel siguiendo `docs/deploy-vercel.md` (proyecto
+      `uphotox-app`, carpeta `apps/app`) y poner la dirección pública en
+      Supabase (Site URL y Redirect URLs).
+- [ ] Publicar también `apps/api` (proyecto `uphotox-api`) y poner su
+      dirección en `NEXT_PUBLIC_API_URL` de la app, para que Make pueda enviar
+      las reservas. Además evita que Supabase gratuito se pause.
 - [ ] Usar Resend como SMTP de Supabase Auth, para que los nuevos dueños
-      reciban el correo de confirmación (no está confirmado que se haya hecho).
+      reciban el correo de confirmación (paso 3 de la guía; no está
+      confirmado que se haya hecho).
 - [ ] Opcional: activar en Supabase la protección de contraseñas filtradas
       (único aviso del revisor de seguridad).
 - [ ] Opcional: etapa «Solicitud recibida» antes de «Agendado» y apuntar ahí
@@ -62,6 +68,29 @@ paquetes y pagos.
 ---
 
 ## Historial
+
+### 8 oct 2026 · Guía para publicar en Vercel
+**Qué se hizo**: guía paso a paso en `docs/deploy-vercel.md` para publicar la
+app (`apps/app`) y la API (`apps/api`) desde el panel de Vercel conectado a
+GitHub: variables de entorno exactas, direcciones de Supabase, correo de
+registro con Resend, dominio propio y lista de comprobación.
+
+**Decisiones**
+- Dos proyectos en Vercel desde el mismo repositorio (`uphotox-app` y
+  `uphotox-api`); la web pública de la plantilla (`apps/web`) no se publica.
+- Variables obligatorias: `NEXT_PUBLIC_SUPABASE_URL`,
+  `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_APP_URL` y
+  `NEXT_PUBLIC_WEB_URL` (esta última no se usa: va con la misma dirección de la
+  app). `SUPABASE_SECRET_KEY` hace falta para crear usuarios en Equipo y para
+  la API.
+- La API se recomienda aunque no se use Make: su tarea nocturna evita que
+  Supabase gratuito se pause.
+- El plan gratuito de Vercel es solo para uso no comercial; para vender
+  Uphotox hará falta el plan Pro.
+
+**Estado**: la CLI de Vercel está instalada pero sin sesión, así que la
+publicación la hace el usuario desde el panel (o se puede hacer por CLI tras
+`vercel login`). Pendiente de hacerse.
 
 ### 8 oct 2026 · Fuera las letras japonesas (写真)
 **Qué se hizo**: se quitó el adorno 写真 («fotografía» en japonés) de todas las
