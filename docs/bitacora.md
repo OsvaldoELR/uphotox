@@ -23,8 +23,14 @@ Documentos relacionados:
 | Clientes | Hecho: lista, ficha, importación CSV | `/clientes`, `/clientes/importar` |
 | Equipo | Hecho: usuarios con rol y permisos tipo GoHighLevel | `/equipo` |
 | Ajustes | Hecho: nombre, WhatsApp, entrada de clientes (webhook) | `/ajustes` |
-| Entrada de clientes (Make/Typeform) | Hecho en local; falta publicar la API | `apps/api` |
+| Entrada de clientes (Make/Typeform) | Hecho y publicado | `apps/api` |
 | Editor de imágenes | Pendiente («Pronto» en el menú) | — |
+
+Publicado en Vercel (equipo «Upgradix's projects», plan Hobby):
+- **App**: https://uphotox-app.vercel.app (proyecto `uphotox-app`, carpeta `apps/app`).
+- **API**: https://uphotox-api.vercel.app (proyecto `uphotox-api`, carpeta `apps/api`).
+- Cada `git push` a `main` publica solo; los proyectos sin cambios se saltan y
+  un commit con `[skip ci]` en el mensaje no publica nada.
 
 Configuración:
 - **Supabase**: proyecto enlazado (`cdkosqookglkyrjazmho`), migraciones al día.
@@ -36,17 +42,21 @@ Configuración:
 
 Del usuario:
 - [ ] Importar el CSV real de clientes agendados (Clientes → Importar CSV).
-- [ ] Autorizar la conexión MCP de Vercel en Claude Code (ver Historial,
-      «Herramientas de Vercel en el PC»).
-- [ ] Publicar la app en Vercel siguiendo `docs/deploy-vercel.md` (proyecto
-      `uphotox-app`, carpeta `apps/app`) y poner la dirección pública en
-      Supabase (Site URL y Redirect URLs).
-- [ ] Publicar también `apps/api` (proyecto `uphotox-api`) y poner su
-      dirección en `NEXT_PUBLIC_API_URL` de la app, para que Make pueda enviar
-      las reservas. Además evita que Supabase gratuito se pause.
+- [ ] **Supabase → URL Configuration**: Site URL `https://uphotox-app.vercel.app`
+      y Redirect URLs `https://uphotox-app.vercel.app/**` (más
+      `http://localhost:3000/**`). Sin esto, los enlaces de los correos de
+      registro y de contraseña llevan a localhost. (Paso 2 de
+      `docs/deploy-vercel.md`.)
 - [ ] Usar Resend como SMTP de Supabase Auth, para que los nuevos dueños
       reciban el correo de confirmación (paso 3 de la guía; no está
       confirmado que se haya hecho).
+- [ ] En Make, pegar la URL definitiva del webhook (Ajustes → Entrada de
+      clientes en la app publicada; empieza por `https://uphotox-api.vercel.app`).
+- [ ] Opcional: volver a autorizar la conexión MCP de Vercel eligiendo el
+      equipo «Upgradix's projects» (ahora solo ve la cuenta personal; la CLI
+      sí tiene acceso al equipo, así que no bloquea nada).
+- [ ] Antes de vender a otros estudios: plan Pro de Vercel (el Hobby es solo
+      para uso no comercial) y, si se quiere, dominio `app.uphotox.com`.
 - [ ] Opcional: activar en Supabase la protección de contraseñas filtradas
       (único aviso del revisor de seguridad).
 - [ ] Opcional: etapa «Solicitud recibida» antes de «Agendado» y apuntar ahí
@@ -71,6 +81,31 @@ paquetes y pagos.
 
 ## Historial
 
+### 8 oct 2026 · Uphotox publicado en Vercel
+**Qué se hizo**
+- Proyectos creados en el equipo «Upgradix's projects» y conectados a GitHub
+  (`OsvaldoELR/uphotox`, rama `main`): `uphotox-app` (carpeta `apps/app`) y
+  `uphotox-api` (carpeta `apps/api`), ambos como Next.js.
+- Variables de entorno subidas desde `apps/app/.env.local` sin mostrarlas
+  (producción y preview): 8 en la app y 5 en la API. Las claves secretas
+  (`SUPABASE_SECRET_KEY`, `RESEND_TOKEN`) como *Sensitive*. Direcciones:
+  `NEXT_PUBLIC_APP_URL`/`NEXT_PUBLIC_WEB_URL` = https://uphotox-app.vercel.app,
+  `NEXT_PUBLIC_API_URL` = https://uphotox-api.vercel.app.
+- El primer deploy de la app falló en las pruebas: Vercel compila con
+  `NODE_ENV=production` y React cargaba su versión de producción (sin `act`),
+  que rompe las pruebas de login y registro. Arreglado forzando
+  `NODE_ENV=test` en `apps/app/vitest.config.mts`.
+
+**Comprobado**
+- API: `/health` responde OK; la entrada de clientes contesta 405 a GET y 404
+  a un token falso.
+- App: inicio de sesión real con un usuario temporal en la dirección pública;
+  panel, tablero, clientes y ajustes abren sin errores (usuario borrado).
+- Un `git push` publica solo (probado con el arreglo de las pruebas).
+
+**Detalle técnico**: el proyecto `uphotoxv2` que ya existía en el equipo es de
+otro repositorio (`OsvaldoELR/uphotoxv2`) y no se tocó.
+
 ### 8 oct 2026 · Herramientas de Vercel en el PC
 **Qué se hizo** (siguiendo la guía oficial https://vercel.com/get-started.md):
 - CLI de Vercel actualizada de 54.14.0 a **63.1.0** y con sesión iniciada como
@@ -80,10 +115,9 @@ paquetes y pagos.
   conexión MCP con `https://mcp.vercel.com`.
 - La conexión MCP la aporta el plugin; no se añadió otra para no duplicarla.
 
-**Pendiente**: autorizar la conexión MCP (reiniciar la ventana de Claude Code →
-`/mcp` → `plugin:vercel:vercel` → Authenticate) y comprobarla. Aún no se ha
-creado ni enlazado ningún proyecto en Vercel; eso va con la publicación
-(`docs/deploy-vercel.md`).
+**Después**: la conexión MCP quedó autorizada y comprobada (búsqueda en la
+documentación y lista de equipos), pero solo con la cuenta personal; para el
+equipo se usa la CLI. Los proyectos se crearon en la entrada siguiente.
 
 **Nota**: el plugin envía estadísticas mínimas de uso (nombres de las guías
 usadas e identificadores aleatorios). Se desactivan con la variable de entorno

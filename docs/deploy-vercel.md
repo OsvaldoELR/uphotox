@@ -4,6 +4,25 @@ Guía paso a paso para poner la app en internet. Se hace una vez; después,
 **cada `git push` a `main` publica solo** (salvo los commits que lleven
 `[skip ci]` en el mensaje).
 
+## Estado actual (8 oct 2026)
+
+| Paso | Estado |
+| --- | --- |
+| 1. Proyecto de la app | ✅ `uphotox-app` → https://uphotox-app.vercel.app |
+| 2. Direcciones en Supabase | ⏳ Pendiente (lo hace el usuario en el panel de Supabase) |
+| 3. Correo de registro con Resend | ⏳ Pendiente (lo hace el usuario en el panel de Supabase) |
+| 4. Proyecto de la API | ✅ `uphotox-api` → https://uphotox-api.vercel.app |
+| 5. Dominio propio | — No por ahora |
+
+Ambos proyectos están en el equipo «Upgradix's projects» de Vercel y
+conectados a `OsvaldoELR/uphotox` (rama `main`). Las variables ya están
+cargadas en cada proyecto (producción y preview).
+
+> Las pruebas se ejecutan antes de compilar. Vercel compila con
+> `NODE_ENV=production`, así que `apps/app/vitest.config.mts` fuerza
+> `NODE_ENV=test`; sin eso fallan las pruebas de componentes y el deploy se
+> detiene.
+
 El repositorio tiene varias apps. Solo hacen falta dos proyectos en Vercel:
 
 | Proyecto en Vercel | Carpeta | Para qué | ¿Obligatorio? |
