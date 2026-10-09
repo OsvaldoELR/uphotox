@@ -9,8 +9,8 @@ Guía paso a paso para poner la app en internet. Se hace una vez; después,
 | Paso | Estado |
 | --- | --- |
 | 1. Proyecto de la app | ✅ `uphotox-app` → https://uphotox-app.vercel.app |
-| 2. Direcciones en Supabase | ⏳ Pendiente (lo hace el usuario en el panel de Supabase) |
-| 3. Correo de registro con Resend | ⏳ Pendiente (lo hace el usuario en el panel de Supabase) |
+| 2. Direcciones en Supabase | ✅ Hecho y comprobado (9 oct) |
+| 3. Correo de registro con Resend | ✅ Hecho y comprobado (9 oct) |
 | 4. Proyecto de la API | ✅ `uphotox-api` → https://uphotox-api.vercel.app |
 | 5. Dominio propio | — No por ahora |
 

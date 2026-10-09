@@ -42,14 +42,6 @@ Configuración:
 
 Del usuario:
 - [ ] Importar el CSV real de clientes agendados (Clientes → Importar CSV).
-- [ ] **Supabase → URL Configuration**: Site URL `https://uphotox-app.vercel.app`
-      y Redirect URLs `https://uphotox-app.vercel.app/**` (más
-      `http://localhost:3000/**`). Sin esto, los enlaces de los correos de
-      registro y de contraseña llevan a localhost. (Paso 2 de
-      `docs/deploy-vercel.md`.)
-- [ ] Usar Resend como SMTP de Supabase Auth, para que los nuevos dueños
-      reciban el correo de confirmación (paso 3 de la guía; no está
-      confirmado que se haya hecho).
 - [ ] En Make, pegar la URL definitiva del webhook (Ajustes → Entrada de
       clientes en la app publicada; empieza por `https://uphotox-api.vercel.app`).
 - [ ] Opcional: volver a autorizar la conexión MCP de Vercel eligiendo el
@@ -80,6 +72,21 @@ paquetes y pagos.
 ---
 
 ## Historial
+
+### 9 oct 2026 · Supabase apunta a la app publicada y envía con Resend
+**Qué se hizo** (lo hizo el usuario en el panel de Supabase): Site URL
+`https://uphotox-app.vercel.app`, Redirect URLs con
+`https://uphotox-app.vercel.app/**` y SMTP personalizado con Resend.
+
+**Comprobado** (con usuarios temporales, ya borrados):
+- Un enlace de acceso con la dirección de la app la respeta
+  (`/auth/callback`); uno con una dirección ajena cae en la Site URL. Ninguno
+  lleva a localhost.
+- Un registro real a `delivered+…@resend.dev` (fuera de la organización de
+  Supabase) se acepta y queda registrado el envío del correo de confirmación;
+  con el correo propio de Supabase eso fallaría, así que sale por Resend.
+
+Con esto, cualquier dueña de estudio puede registrarse en la app publicada.
 
 ### 8 oct 2026 · Conexión MCP de Supabase
 **Qué se hizo**: añadido el servidor MCP de Supabase para este proyecto
