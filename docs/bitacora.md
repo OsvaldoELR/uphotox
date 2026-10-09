@@ -52,8 +52,6 @@ Del usuario:
       confirmado que se haya hecho).
 - [ ] En Make, pegar la URL definitiva del webhook (Ajustes → Entrada de
       clientes en la app publicada; empieza por `https://uphotox-api.vercel.app`).
-- [ ] Autenticar la conexión MCP de Supabase (ver Historial, «Conexión MCP de
-      Supabase»).
 - [ ] Opcional: volver a autorizar la conexión MCP de Vercel eligiendo el
       equipo «Upgradix's projects» (ahora solo ve la cuenta personal; la CLI
       sí tiene acceso al equipo, así que no bloquea nada).
@@ -96,8 +94,10 @@ falta.
 documentación; los cambios de esquema siguen yendo por migraciones (anotado en
 `CLAUDE.md`).
 
-**Pendiente**: autenticar la conexión (`/mcp` → `supabase` → Authenticate) y
-comprobarla.
+**Comprobado (9 oct)**: autenticada y funcionando. La dirección del proyecto es
+la de Uphotox, se ven las 9 tablas (todas con RLS), las 6 migraciones
+aplicadas coinciden con las del repositorio y el revisor de seguridad solo
+muestra el aviso conocido de contraseñas filtradas.
 
 ### 8 oct 2026 · Uphotox publicado en Vercel
 **Qué se hizo**
