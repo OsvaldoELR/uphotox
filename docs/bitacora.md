@@ -52,6 +52,8 @@ Del usuario:
       confirmado que se haya hecho).
 - [ ] En Make, pegar la URL definitiva del webhook (Ajustes → Entrada de
       clientes en la app publicada; empieza por `https://uphotox-api.vercel.app`).
+- [ ] Autenticar la conexión MCP de Supabase (ver Historial, «Conexión MCP de
+      Supabase»).
 - [ ] Opcional: volver a autorizar la conexión MCP de Vercel eligiendo el
       equipo «Upgradix's projects» (ahora solo ve la cuenta personal; la CLI
       sí tiene acceso al equipo, así que no bloquea nada).
@@ -80,6 +82,22 @@ paquetes y pagos.
 ---
 
 ## Historial
+
+### 8 oct 2026 · Conexión MCP de Supabase
+**Qué se hizo**: añadido el servidor MCP de Supabase para este proyecto
+(`.mcp.json`, proyecto `uphotox` = `cdkosqookglkyrjazmho`, con documentación,
+cuenta, base de datos, depuración, desarrollo, funciones y ramas). Aprobado en
+`.claude/settings.local.json` (local, no se sube). Las «skills» de Supabase ya
+estaban instaladas en el proyecto (`.claude/skills/supabase` y
+`supabase-postgres-best-practices`), así que el paso 3 de Supabase no hacía
+falta.
+
+**Decisión**: el MCP sirve para consultar datos, registros, avisos y
+documentación; los cambios de esquema siguen yendo por migraciones (anotado en
+`CLAUDE.md`).
+
+**Pendiente**: autenticar la conexión (`/mcp` → `supabase` → Authenticate) y
+comprobarla.
 
 ### 8 oct 2026 · Uphotox publicado en Vercel
 **Qué se hizo**
