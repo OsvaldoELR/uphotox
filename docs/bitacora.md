@@ -114,6 +114,9 @@ paquetes y pagos.
 **Comprobado**: Biome, tipos y 17 pruebas; en el navegador, el logo en login
 (claro, oscuro y móvil) y en el menú; metadatos con título, descripción e
 imagen; icono, icono de iPhone, manifest e imágenes responden 200.
+Publicado (app y API en estado READY) y comprobado en la dirección pública: lo
+que lee WhatsApp al abrir `https://uphotox-app.vercel.app` trae el título, la
+descripción y la imagen `https://uphotox-app.vercel.app/brand/og.jpg`.
 
 ### 9 oct 2026 · Supabase apunta a la app publicada y envía con Resend
 **Qué se hizo** (lo hizo el usuario en el panel de Supabase): Site URL
