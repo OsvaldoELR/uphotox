@@ -1,13 +1,13 @@
 import { SignIn } from "@repo/auth/components/sign-in";
 import { safeRedirectPath } from "@repo/auth/redirect";
-import { createMetadata } from "@repo/seo/metadata";
 import type { Metadata } from "next";
+import { publicPageMetadata } from "@/lib/metadata";
 import { AuthHeader } from "../components/auth-header";
 
 const title = "Bienvenido de nuevo";
 const description = "Introduce tus datos para entrar al estudio.";
 
-export const metadata: Metadata = createMetadata({ title, description });
+export const metadata: Metadata = publicPageMetadata({ title, description });
 
 interface SignInPageProperties {
   readonly searchParams: Promise<{ next?: string; error?: string }>;

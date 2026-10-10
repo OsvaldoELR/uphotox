@@ -5,6 +5,7 @@ import { Panel } from "@repo/design-system/components/hud/panel";
 import { Wordmark } from "@repo/design-system/components/hud/wordmark";
 import { ModeToggle } from "@repo/design-system/components/mode-toggle";
 import type { ReactNode } from "react";
+import { BrandLogo } from "@/components/brand-logo";
 
 interface AuthLayoutProps {
   readonly children: ReactNode;
@@ -22,7 +23,7 @@ const AuthLayout = ({ children }: AuthLayoutProps) => (
       <StudioBackdrop />
       <CropMarks className="inset-6" markClassName="size-8" />
 
-      <Wordmark className="relative" />
+      <BrandLogo className="relative" />
 
       <div className="relative flex flex-col items-center text-center">
         <HudLabel className="mb-6">Estudio fotográfico</HudLabel>
@@ -61,7 +62,7 @@ const AuthLayout = ({ children }: AuthLayoutProps) => (
       <div className="absolute top-4 right-4">
         <ModeToggle />
       </div>
-      <Wordmark className="lg:hidden" size="md" />
+      <BrandLogo className="lg:hidden" size="md" />
       <Panel className="w-full max-w-[400px] animate-fade-in-up" stream>
         <div className="flex flex-col gap-6 p-8">{children}</div>
       </Panel>

@@ -5,7 +5,9 @@ actualiza al terminar cada tarea. Para retomar en otra sesión, lee primero
 **Estado actual** y **Pendientes**.
 
 Documentos relacionados:
+- `CHANGELOG.md`: versiones publicadas.
 - `docs/deploy-vercel.md`: cómo publicar la app y la API en Vercel.
+- `docs/brand/README.md`: logo, iconos, colores y textos para compartir.
 - `CLAUDE.md`: reglas técnicas del proyecto (base de datos, permisos, correo…).
 - `docs/flujo-estudio.md`: cómo trabaja el estudio, análisis del formulario de
   reserva y hoja de ruta de automatización con IA.
@@ -13,7 +15,9 @@ Documentos relacionados:
 
 ---
 
-## Estado actual (8 oct 2026)
+## Estado actual (10 oct 2026 · versión 0.2.0)
+
+Versión publicada: **v0.2.0** (historial de versiones en `CHANGELOG.md`).
 
 | Módulo | Estado | Dónde |
 | --- | --- | --- |
@@ -72,6 +76,44 @@ paquetes y pagos.
 ---
 
 ## Historial
+
+### 10 oct 2026 · v0.2.0 · Logo, iconos y vista previa del enlace
+**Qué se hizo**
+- El usuario pasó el logo y el icono (PNG con fondo blanco, hechos con IA). Se
+  les quitó el fondo y se ajustó cada píxel a los colores exactos de la marca
+  (bordes suaves conservados, sin el «ruido» de la IA). Maestros en
+  `docs/brand/` con su guía.
+- Iconos: pestaña del navegador (`app/icon.png`), iPhone
+  (`app/apple-icon.png`, opaco porque iOS no admite transparencia) y Android
+  (`app/manifest.ts` + `public/brand/icon-*.png`, con versión «maskable»), y lo
+  mismo en la API.
+- Logo (símbolo + UPHOTOX) en el menú lateral y en el login, con versión de
+  corchetes blancos para el modo oscuro (`components/brand-logo.tsx`).
+- Vista previa al compartir el enlace: título «Uphotox · Gestiona tu estudio de
+  fotografía», la descripción y una imagen de 1200×630 hecha con las
+  tipografías y el fondo de la app (`public/brand/og.jpg`, 65 KB). Textos en
+  `apps/app/lib/metadata.ts`.
+- La página declara idioma español (`lang="es"`).
+- Versiones: nace `CHANGELOG.md`; esta es la **v0.2.0** (la v0.1.0 es la
+  primera publicación del 8 oct). Etiquetas `v0.1.0` y `v0.2.0` en Git y versión
+  en `package.json`.
+
+**Arreglos encontrados al probar**
+- Antes, al compartir el enlace no salía imagen: las páginas públicas
+  sobrescribían la de la plantilla. Ahora todas usan `publicPageMetadata`.
+- La dirección de la imagen salía mal formada en local
+  (`http://http/localhost…`) por cómo la plantilla arma la URL; ahora siempre
+  se construye con `NEXT_PUBLIC_APP_URL`.
+
+**Decisiones**
+- Los correos a los clientes no llevan el logo de Uphotox: van con el nombre
+  del estudio.
+- La web pública (`apps/web`) no se tocó; sigue siendo la plantilla y no está
+  publicada.
+
+**Comprobado**: Biome, tipos y 17 pruebas; en el navegador, el logo en login
+(claro, oscuro y móvil) y en el menú; metadatos con título, descripción e
+imagen; icono, icono de iPhone, manifest e imágenes responden 200.
 
 ### 9 oct 2026 · Supabase apunta a la app publicada y envía con Resend
 **Qué se hizo** (lo hizo el usuario en el panel de Supabase): Site URL

@@ -68,6 +68,7 @@ Primitivas HUD en `packages/design-system/components/hud/`:
 | `StudioBackdrop` | `full` solo en login y landing (atmósfera, orbes, 50 partículas, escaneo 3.2s, textura CRT). `calm` dentro de la app: **solo la retícula estática** con desvanecido en los bordes. Va dentro de un contenedor `relative isolate` |
 | `CropMarks` | Esquinas de visor; **firma visual**. Marco de la zona de trabajo (`inset-3`), tarjetas (`size-3`), panel de marca (`size-8`) |
 | `Wordmark` | UPHO + TOX (signal-ink con glow). sm/md/xl, `glitch` |
+| `BrandLogo` (app) | Símbolo (corchetes de visor + «U» con diafragma + punto violeta) + `Wordmark`, gap 2.5. Símbolo `h-7` (sm) / `h-9` (md); en oscuro cambia a la versión de corchetes blancos. Va en el menú lateral y en el login (arriba a la izquierda en escritorio, encima del panel en móvil). El gran «UPHOTOX» del login sigue siendo solo texto |
 | `HudLabel` | `── LABEL ──` (center) o etiqueta + línea (start) |
 | `ScanLine` | Barrido animando solo transform |
 

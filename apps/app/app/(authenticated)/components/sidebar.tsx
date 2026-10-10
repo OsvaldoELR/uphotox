@@ -3,7 +3,6 @@
 import { UserButton } from "@repo/auth/components/user-button";
 import { StudioBackdrop } from "@repo/design-system/components/hud/backdrop";
 import { CropMarks } from "@repo/design-system/components/hud/crop-marks";
-import { Wordmark } from "@repo/design-system/components/hud/wordmark";
 import { ModeToggle } from "@repo/design-system/components/mode-toggle";
 import {
   Sidebar,
@@ -31,6 +30,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { BrandLogo } from "@/components/brand-logo";
 import type { Permission } from "@/lib/permissions";
 import { Search } from "./search";
 
@@ -168,7 +168,7 @@ export const GlobalSidebar = ({
                 size="lg"
               >
                 <Link href="/">
-                  <Wordmark />
+                  <BrandLogo />
                   <span className="w-full truncate font-mono text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
                     {studioName}
                   </span>
