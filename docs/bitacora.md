@@ -143,6 +143,8 @@ ya borrado: el diálogo ordena con flechas y arrastrando, el orden se guarda y
 se ve en el tablero y en la importación de CSV («01 · Solicitud recibida…»);
 el «+» crea la tarjeta la primera (posición 0 frente a 1024); en el móvil el
 «+» se ve en la cabecera. Sin errores en la consola.
+Publicado (app y API en READY, etiqueta `v0.3.0`) y la misma prueba completa
+pasó en `https://uphotox-app.vercel.app` (13 de 13, usuario temporal borrado).
 
 ### 11 oct 2026 · Enlace de «olvidé mi contraseña»: diagnóstico (sin cambios)
 **Qué pasaba**: el usuario vio que el enlace del correo de recuperación «no
