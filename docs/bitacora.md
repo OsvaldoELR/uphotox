@@ -53,6 +53,9 @@ Del usuario:
       sí tiene acceso al equipo, así que no bloquea nada).
 - [ ] Antes de vender a otros estudios: plan Pro de Vercel (el Hobby es solo
       para uso no comercial) y, si se quiere, dominio `app.uphotox.com`.
+- [ ] Opcional: que el enlace de recuperación de contraseña funcione también
+      en otro navegador/dispositivo (cambiar la plantilla del correo; ver
+      Historial, 11 oct). Hoy funciona si se abre en el mismo navegador.
 - [ ] Opcional: activar en Supabase la protección de contraseñas filtradas
       (único aviso del revisor de seguridad).
 - [ ] Opcional: etapa «Solicitud recibida» antes de «Agendado» y apuntar ahí
@@ -76,6 +79,27 @@ paquetes y pagos.
 ---
 
 ## Historial
+
+### 11 oct 2026 · Enlace de «olvidé mi contraseña»: diagnóstico (sin cambios)
+**Qué pasaba**: el usuario vio que el enlace del correo de recuperación «no
+funcionaba».
+
+**Diagnóstico** (reproducido en producción con usuarios temporales, ya
+borrados, construyendo el mismo enlace del correo):
+- Abierto en el **mismo navegador** donde se pidió: funciona entero (abre
+  «Elige una contraseña nueva», guarda la contraseña y se puede entrar con
+  ella).
+- Abierto en **otro navegador o dispositivo** (p. ej. el móvil o la app de
+  Gmail): vuelve al login con «Ese enlace no es válido o ha caducado». Es el
+  diseño de seguridad de Supabase (PKCE): el código del correo solo se puede
+  canjear en el navegador que guardó la clave al pedirlo.
+
+**Solución probada pero no aplicada** (el usuario prefirió dejarlo así):
+cambiar en Supabase → Authentication → Emails → Templates → «Reset password»
+el enlace por
+`{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/update-password`.
+La ruta `/auth/confirm` ya existe en la app y con ella el cambio de contraseña
+funcionó desde otro navegador. No requiere tocar código.
 
 ### 10 oct 2026 · v0.2.0 · Logo, iconos y vista previa del enlace
 **Qué se hizo**
