@@ -25,23 +25,33 @@ import {
 } from "@repo/design-system/components/ui/dropdown-menu";
 import { Input } from "@repo/design-system/components/ui/input";
 import { Label } from "@repo/design-system/components/ui/label";
-import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "lucide-react";
+import {
+  ArrowUpDownIcon,
+  MoreHorizontalIcon,
+  PencilIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { type FormEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { deleteBoard, renameBoard } from "@/app/actions/boards";
+import { StageOrderDialog } from "./stage-order-dialog";
+import type { BoardStage } from "./types";
 
 interface BoardMenuProperties {
   readonly boardId: number;
   readonly boardName: string;
   readonly cardCount: number;
+  readonly stages: BoardStage[];
 }
 
 export const BoardMenu = ({
   boardId,
   boardName,
   cardCount,
+  stages,
 }: BoardMenuProperties) => {
   const [renaming, setRenaming] = useState(false);
+  const [ordering, setOrdering] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -85,6 +95,13 @@ export const BoardMenu = ({
             Renombrar
           </DropdownMenuItem>
           <DropdownMenuItem
+            disabled={stages.length < 2}
+            onSelect={() => setOrdering(true)}
+          >
+            <ArrowUpDownIcon />
+            Ordenar etapas
+          </DropdownMenuItem>
+          <DropdownMenuItem
             className="text-destructive"
             onSelect={() => setDeleting(true)}
           >
@@ -119,6 +136,14 @@ export const BoardMenu = ({
           </form>
         </DialogContent>
       </Dialog>
+
+      {ordering && (
+        <StageOrderDialog
+          boardId={boardId}
+          onOpenChange={setOrdering}
+          stages={stages}
+        />
+      )}
 
       <AlertDialog onOpenChange={setDeleting} open={deleting}>
         <AlertDialogContent>

@@ -244,6 +244,74 @@ export const updateStage = async (
   return { ok: true };
 };
 
+const reorderSchema = z.object({
+  boardId: z.number().int().positive(),
+  stageIds: z.array(z.number().int().positive()).min(1).max(100),
+});
+
+/**
+ * Saves a new stage order (first = leftmost). Every place that lists stages
+ * sorts by position, so the board, «Mover a…», the CSV import and Ajustes
+ * follow automatically.
+ */
+export const reorderStages = async (
+  input: z.input<typeof reorderSchema>
+): Promise<ActionResult> => {
+  const context = await requireStudio();
+
+  if (!context.can("boards.manage")) {
+    return { error: NO_ACCESS };
+  }
+
+  const parsed = reorderSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return { error: "Orden no válido." };
+  }
+
+  const { boardId, stageIds } = parsed.data;
+  const supabase = await createClient();
+  const { data: current } = await supabase
+    .from("board_stages")
+    .select("id")
+    .eq("board_id", boardId);
+
+  // The list must be exactly this board's stages: someone may have added or
+  // removed one since the dialog opened.
+  const currentIds = new Set((current ?? []).map((stage) => stage.id));
+  const sameStages =
+    currentIds.size === stageIds.length &&
+    new Set(stageIds).size === stageIds.length &&
+    stageIds.every((id) => currentIds.has(id));
+
+  if (!sameStages) {
+    return {
+      error:
+        "Las etapas cambiaron mientras ordenabas. Recarga y vuelve a probar.",
+    };
+  }
+
+  const results = await Promise.all(
+    stageIds.map((id, index) =>
+      supabase
+        .from("board_stages")
+        .update({ position: (index + 1) * POSITION_STEP })
+        .eq("id", id)
+        .eq("board_id", boardId)
+        .select("id")
+    )
+  );
+
+  if (results.some(({ error, data }) => error || !data?.length)) {
+    return { error: "No se pudo guardar el orden. Inténtalo de nuevo." };
+  }
+
+  revalidateBoard(boardId);
+  revalidatePath("/ajustes");
+  revalidatePath("/clientes/importar");
+  return { ok: true };
+};
+
 export const deleteStage = async (stageId: number): Promise<ActionResult> => {
   const context = await requireStudio();
 

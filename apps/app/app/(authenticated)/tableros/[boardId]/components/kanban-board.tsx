@@ -199,6 +199,7 @@ export const KanbanBoard = ({
             boardId={boardId}
             boardName={boardName}
             cardCount={cards.length}
+            stages={stages}
           />
         )}
       </div>

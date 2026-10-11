@@ -99,6 +99,14 @@ Patrones de la app:
   sola columna a ancho completo. Cada tarjeta tiene el botón ⇄ «Mover a…» (siempre visible
   en móvil, al pasar el ratón en escritorio) y el panel de detalle un select «Etapa». Al
   mover, el aviso ofrece «Ver etapa».
+- **Añadir arriba**: en la cabecera de cada columna, botón `+` (icon ghost, siempre visible,
+  también en móvil) que abre el mismo formulario rápido encima de las tarjetas y crea la
+  tarjeta la primera. El botón «Añadir cliente» del pie la crea la última.
+- **Ordenar etapas** (menú `…` del tablero): diálogo `sm:max-w-md` con una lista `ol` de filas
+  `bg-popover` con borde: asa de arrastre (texto solo para lector de pantalla), índice mono
+  signal-ink, nombre, icono de correo si avisa, y flechas subir/bajar (para el móvil). Se
+  guarda con «Guardar orden» (deshabilitado si no cambió). La fila arrastrada se pinta con
+  `renderClone` (portal), porque el diálogo está centrado con transform.
 - **Foto de tarjeta**: miniatura `aspect-[16/9] object-cover` arriba de la tarjeta (como
   portada), comprimida en el navegador a ≤ 640 px WebP. Recuadro discontinuo «Añadir foto»
   cuando no hay.

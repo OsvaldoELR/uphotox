@@ -41,6 +41,8 @@ const createCardSchema = z.object({
     .max(120, "Máximo 120 caracteres."),
   clientEmail,
   title: optional(z.string().trim().max(120, "Máximo 120 caracteres.")),
+  /** "start" puts the card on top of the stage (header «+» button). */
+  placement: z.enum(["start", "end"]).default("end"),
 });
 
 export const createCard = async (
@@ -75,13 +77,19 @@ export const createCard = async (
     return { error: "No se pudo guardar el cliente." };
   }
 
-  const { data: last } = await supabase
+  const atStart = parsed.data.placement === "start";
+  const { data: edge } = await supabase
     .from("cards")
     .select("position")
     .eq("stage_id", stageId)
-    .order("position", { ascending: false })
+    .order("position", { ascending: atStart })
     .limit(1)
     .maybeSingle();
+
+  // Positions are floats: before the first card or after the last one.
+  const position = atStart
+    ? (edge?.position ?? POSITION_STEP) - POSITION_STEP
+    : (edge?.position ?? 0) + POSITION_STEP;
 
   const { data: card, error } = await supabase
     .from("cards")
@@ -91,7 +99,7 @@ export const createCard = async (
       stage_id: stageId,
       client_id: client.id,
       title: title ?? clientName,
-      position: (last?.position ?? 0) + POSITION_STEP,
+      position,
       // Restricted members only see their own cards, so they own new ones.
       assigned_to: context.member.onlyAssigned ? context.userId : null,
     })

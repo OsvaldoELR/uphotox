@@ -7,6 +7,19 @@ en `docs/bitacora.md`.
 Numeración: el primer número cambia con cambios grandes que rompen la forma de
 trabajar, el segundo con funciones nuevas y el tercero con arreglos.
 
+## [0.3.0] · 11 oct 2026 · Ordenar etapas
+
+**Añadido**
+- «Ordenar etapas» en el menú `…` del tablero: se arrastran las etapas o se
+  mueven con flechas (cómodo en el móvil). El nuevo orden se ve en el tablero,
+  en «Mover a…», en la importación de CSV, en el panel y en Ajustes.
+- Botón «+» en la cabecera de cada etapa para añadir un cliente arriba del
+  todo, sin bajar hasta el final de la columna.
+
+**Corregido**
+- Las pruebas automáticas fallaban en el PC (no leían `.env.local`); en Vercel
+  no afectaba.
+
 ## [0.2.0] · 10 oct 2026 · Marca
 
 **Añadido**

@@ -15,15 +15,15 @@ Documentos relacionados:
 
 ---
 
-## Estado actual (10 oct 2026 · versión 0.2.0)
+## Estado actual (11 oct 2026 · versión 0.3.0)
 
-Versión publicada: **v0.2.0** (historial de versiones en `CHANGELOG.md`).
+Versión publicada: **v0.3.0** (historial de versiones en `CHANGELOG.md`).
 
 | Módulo | Estado | Dónde |
 | --- | --- | --- |
 | Login, registro y onboarding | Hecho | `/sign-in`, `/sign-up`, `/onboarding` |
 | Panel | Hecho: saludo, avisos de configuración, embudo de cada tablero | `/` |
-| Tableros (tipo Trello) | Hecho: etapas, arrastrar o «Mover a…», foto, avisos por correo, historial | `/tableros` |
+| Tableros (tipo Trello) | Hecho: etapas (se pueden reordenar), arrastrar o «Mover a…», añadir arriba o abajo, foto, avisos por correo, historial | `/tableros` |
 | Clientes | Hecho: lista, ficha, importación CSV | `/clientes`, `/clientes/importar` |
 | Equipo | Hecho: usuarios con rol y permisos tipo GoHighLevel | `/equipo` |
 | Ajustes | Hecho: nombre, WhatsApp, entrada de clientes (webhook) | `/ajustes` |
@@ -58,8 +58,14 @@ Del usuario:
       Historial, 11 oct). Hoy funciona si se abre en el mismo navegador.
 - [ ] Opcional: activar en Supabase la protección de contraseñas filtradas
       (único aviso del revisor de seguridad).
-- [ ] Opcional: etapa «Solicitud recibida» antes de «Agendado» y apuntar ahí
-      el webhook (el correo de «Agendado» dice que la sesión está confirmada).
+- [ ] Crear la etapa «Solicitud recibida» («Nueva etapa», sin aviso al
+      cliente), ponerla la primera con «Ordenar etapas» y elegirla en Ajustes → Entrada de clientes
+      → «Etapa de entrada» (hoy apunta a «Agendado», cuyo correo dice que la
+      sesión está confirmada). Pasos de Make en el Historial, 11 oct (v0.3.0).
+- [ ] Decidir copias de seguridad de la base de datos (Supabase Pro con copias
+      diarias, o una copia semanal automática).
+- [ ] Decidir el siguiente módulo (propuesta: galería de selección; ver
+      Historial, 11 oct).
 - [ ] Responder las preguntas abiertas de `docs/flujo-estudio.md` (paquetes,
       dónde se guardan los RAW, sesiones al mes, editores externos).
 
@@ -79,6 +85,64 @@ paquetes y pagos.
 ---
 
 ## Historial
+
+### 11 oct 2026 · v0.3.0 · Ordenar etapas y añadir clientes arriba
+**Qué se hizo**
+- **Ordenar etapas**: menú `…` del tablero → «Ordenar etapas». Se arrastra cada
+  etapa o se usan las flechas ↑ ↓ (más cómodo en el móvil) y se pulsa «Guardar
+  orden». Todas las pantallas que listan etapas las ordenan por posición, así
+  que el orden nuevo aparece solo en el tablero, «Mover a…», la importación de
+  CSV («Etapa de destino»), el panel y Ajustes (entrada de clientes). Las
+  etapas nuevas también salen en todos esos sitios.
+- **Añadir arriba**: botón «+» en la cabecera de cada etapa; abre el formulario
+  encima de las tarjetas y el cliente queda el primero. «Añadir cliente» del
+  pie sigue añadiendo al final.
+- Arreglo: las pruebas automáticas fallaban en el PC desde la v0.2.0 porque no
+  leían `apps/app/.env.local` (en Vercel sí había variables, por eso la
+  publicación salió bien). Ahora `vitest.config.mts` las carga con `loadEnv`.
+
+**Dónde está el código**
+- Acción `reorderStages` en `apps/app/app/actions/boards.ts`: solo con permiso
+  de gestionar tableros, comprueba que la lista sea exactamente las etapas del
+  tablero (si alguien añadió o borró una mientras tanto, pide recargar) y
+  renumera las posiciones (1024, 2048…).
+- Diálogo `tableros/[boardId]/components/stage-order-dialog.tsx` (abierto desde
+  `board-menu.tsx`).
+- `createCard` en `apps/app/app/actions/cards.ts` acepta `placement`
+  (`start`/`end`); `quick-add.tsx` separa el formulario (`QuickAddForm`) del
+  botón del pie, y `stage-column.tsx` añade el «+» de la cabecera.
+- Sin cambios en la base de datos.
+
+**Entrada automática desde Make (respuesta a la pregunta del usuario)**
+1. En el tablero (en el ordenador): «Nueva etapa» → «Solicitud recibida»
+   (nace con «Avisar al cliente» **apagado**; dejarlo así) y con «Ordenar
+   etapas» subirla la primera.
+2. Ajustes → Entrada de clientes: «Tablero de destino» = el tablero y «Etapa de
+   entrada» = «Solicitud recibida» (al activarla se guardó la primera etapa de
+   entonces, «Agendado»; hay que cambiarla a mano). Copiar la URL: es
+   `https://uphotox-api.vercel.app/webhooks/clients/<código secreto>`.
+3. En Make: Typeform «Watch responses» → HTTP «Make a request»: método POST,
+   cuerpo JSON (Content-Type `application/json`) con `name` (obligatorio),
+   `email`, `phone`, `title` (p. ej. el nombre del niño y el tipo de sesión),
+   `answers` (preguntas y respuestas; van a las notas) y `external_id` = el
+   «Response ID» de Typeform (evita duplicados si Make reintenta).
+4. La entrada **nunca** manda correo al cliente; el aviso sale cuando se mueve
+   la tarjeta a una etapa con aviso (p. ej. «Agendado»).
+
+**Qué falta en esta fase (antes del siguiente módulo)**: copias de seguridad
+de la base de datos, plan Pro de Vercel antes de cobrar a otros estudios,
+conectar Make en producción, y opcionales (plantilla del correo de
+contraseña, protección de contraseñas filtradas, base de datos aparte para
+pruebas). Propuesta para el siguiente módulo: **galería de selección**
+(sustituye a Pixieset y a copiar números a Lightroom; base para la IA de
+preselección y edición), pendiente de que el usuario la confirme.
+
+**Comprobado**: Biome, tipos y 17 pruebas (en modo normal y con
+`NODE_ENV=production` como en Vercel). En el navegador, con un usuario temporal
+ya borrado: el diálogo ordena con flechas y arrastrando, el orden se guarda y
+se ve en el tablero y en la importación de CSV («01 · Solicitud recibida…»);
+el «+» crea la tarjeta la primera (posición 0 frente a 1024); en el móvil el
+«+» se ve en la cabecera. Sin errores en la consola.
 
 ### 11 oct 2026 · Enlace de «olvidé mi contraseña»: diagnóstico (sin cambios)
 **Qué pasaba**: el usuario vio que el enlace del correo de recuperación «no

@@ -3,10 +3,10 @@
 import { Droppable } from "@hello-pangea/dnd";
 import { Button } from "@repo/design-system/components/ui/button";
 import { cn } from "@repo/design-system/lib/utils";
-import { MailIcon, Settings2Icon } from "lucide-react";
+import { MailIcon, PlusIcon, Settings2Icon } from "lucide-react";
 import { useState } from "react";
 import { BoardCard } from "./board-card";
-import { QuickAdd } from "./quick-add";
+import { QuickAdd, QuickAddForm } from "./quick-add";
 import { StageDialog } from "./stage-dialog";
 import type {
   BoardAccess,
@@ -44,6 +44,8 @@ export const StageColumn = ({
   studioName,
 }: StageColumnProperties) => {
   const [configOpen, setConfigOpen] = useState(false);
+  // Header «+»: adds on top, so long stages do not need scrolling down.
+  const [addingOnTop, setAddingOnTop] = useState(false);
 
   return (
     <section
@@ -69,6 +71,19 @@ export const StageColumn = ({
         <span className="tabular font-mono text-[11px] text-muted-foreground">
           {cards.length}
         </span>
+        {access.canCreate && (
+          <Button
+            aria-label={`Añadir cliente arriba en ${stage.name}`}
+            aria-pressed={addingOnTop}
+            className="size-7"
+            onClick={() => setAddingOnTop((open) => !open)}
+            size="icon"
+            title="Añadir cliente arriba"
+            variant="ghost"
+          >
+            <PlusIcon className="size-3.5" />
+          </Button>
+        )}
         {access.canManage && (
           <Button
             aria-label={`Configurar ${stage.name}`}
@@ -81,6 +96,17 @@ export const StageColumn = ({
           </Button>
         )}
       </header>
+
+      {access.canCreate && addingOnTop && (
+        <div className="px-2 pt-2">
+          <QuickAddForm
+            boardId={boardId}
+            onClose={() => setAddingOnTop(false)}
+            placement="start"
+            stageId={stage.id}
+          />
+        </div>
+      )}
 
       <Droppable droppableId={String(stage.id)}>
         {(provided, snapshot) => (

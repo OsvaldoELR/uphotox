@@ -13,22 +13,29 @@ import {
 import { toast } from "sonner";
 import { createCard } from "@/app/actions/cards";
 
-interface QuickAddProperties {
+interface QuickAddFormProperties {
   readonly boardId: number;
+  readonly onClose: () => void;
+  /** "start": on top of the stage (header «+»); "end": below the last card. */
+  readonly placement: "start" | "end";
   readonly stageId: number;
 }
 
-/** Adds a client to a stage without leaving the board. */
-export const QuickAdd = ({ boardId, stageId }: QuickAddProperties) => {
-  const [open, setOpen] = useState(false);
+/** Client name, email and title; stays open to add several in a row. */
+export const QuickAddForm = ({
+  boardId,
+  onClose,
+  placement,
+  stageId,
+}: QuickAddFormProperties) => {
   const [pending, startTransition] = useTransition();
+  const nameRef = useRef<HTMLInputElement>(null);
 
   const closeOnEscape = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape") {
-      setOpen(false);
+      onClose();
     }
   };
-  const nameRef = useRef<HTMLInputElement>(null);
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -39,6 +46,7 @@ export const QuickAdd = ({ boardId, stageId }: QuickAddProperties) => {
       const result = await createCard({
         boardId,
         stageId,
+        placement,
         clientName: String(data.get("clientName") ?? ""),
         clientEmail: String(data.get("clientEmail") ?? ""),
         title: String(data.get("title") ?? ""),
@@ -53,20 +61,6 @@ export const QuickAdd = ({ boardId, stageId }: QuickAddProperties) => {
       nameRef.current?.focus();
     });
   };
-
-  if (!open) {
-    return (
-      <Button
-        className="w-full justify-start text-muted-foreground"
-        onClick={() => setOpen(true)}
-        size="sm"
-        variant="ghost"
-      >
-        <PlusIcon />
-        Añadir cliente
-      </Button>
-    );
-  }
 
   return (
     <form
@@ -102,15 +96,43 @@ export const QuickAdd = ({ boardId, stageId }: QuickAddProperties) => {
         <Button disabled={pending} size="sm" type="submit">
           {pending ? "Añadiendo..." : "Añadir"}
         </Button>
-        <Button
-          onClick={() => setOpen(false)}
-          size="sm"
-          type="button"
-          variant="ghost"
-        >
+        <Button onClick={onClose} size="sm" type="button" variant="ghost">
           Cancelar
         </Button>
       </div>
     </form>
+  );
+};
+
+interface QuickAddProperties {
+  readonly boardId: number;
+  readonly stageId: number;
+}
+
+/** «Añadir cliente» below the last card of a stage. */
+export const QuickAdd = ({ boardId, stageId }: QuickAddProperties) => {
+  const [open, setOpen] = useState(false);
+
+  if (!open) {
+    return (
+      <Button
+        className="w-full justify-start text-muted-foreground"
+        onClick={() => setOpen(true)}
+        size="sm"
+        variant="ghost"
+      >
+        <PlusIcon />
+        Añadir cliente
+      </Button>
+    );
+  }
+
+  return (
+    <QuickAddForm
+      boardId={boardId}
+      onClose={() => setOpen(false)}
+      placement="end"
+      stageId={stageId}
+    />
   );
 };

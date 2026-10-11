@@ -1,14 +1,20 @@
 import path from "node:path";
 import react from "@vitejs/plugin-react";
+import { loadEnv } from "vite";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [react()],
   test: {
     environment: "jsdom",
-    // Vercel builds with NODE_ENV=production, which loads React's production
-    // bundle (no `act`) and breaks component tests. Tests always run as test.
-    env: { NODE_ENV: "test" },
+    env: {
+      // Pages validate env vars on import (env.ts). Locally they live in
+      // .env.local; on Vercel they are already in process.env.
+      ...loadEnv("test", import.meta.dirname, ""),
+      // Vercel builds with NODE_ENV=production, which loads React's
+      // production bundle (no `act`) and breaks component tests.
+      NODE_ENV: "test",
+    },
   },
   resolve: {
     alias: {
