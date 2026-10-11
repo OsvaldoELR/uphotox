@@ -128,6 +128,21 @@ paquetes y pagos.
    «Response ID» de Typeform (evita duplicados si Make reintenta).
 4. La entrada **nunca** manda correo al cliente; el aviso sale cuando se mueve
    la tarjeta a una etapa con aviso (p. ej. «Agendado»).
+5. Detalles aclarados después con el usuario:
+   - Los campos van en inglés: `notes`, no `notas`. Los nombres que la API no
+     conoce se ignoran sin dar error, así que esa nota se perdería sin aviso.
+   - `name` = solo el nombre del cliente (padre/madre/novios): el correo
+     empieza con «Hola, {name}». El nombre del niño va en `title`; si está
+     vacío (bodas), la tarjeta usa el nombre del cliente.
+   - Typeform con varias rutas («Qué oferta desea?» repetida por tipo de
+     sesión): en Make basta poner seguidas todas las versiones de la pregunta
+     en `notes` (`Oferta: {A}{B}{C}…`). Solo una tiene respuesta y las vacías
+     no escriben nada, así que no hace falta un if (alternativa:
+     `ifempty(A; ifempty(B; C))`). Para separar líneas se escribe `\n` dentro
+     del texto.
+   - Si una respuesta trae comillas, el JSON se rompe y la API responde 400 (el
+     error queda en Ajustes → Entrada de clientes); en ese caso, usar el
+     módulo «JSON → Create JSON» de Make.
 
 **Qué falta en esta fase (antes del siguiente módulo)**: copias de seguridad
 de la base de datos, plan Pro de Vercel antes de cobrar a otros estudios,
