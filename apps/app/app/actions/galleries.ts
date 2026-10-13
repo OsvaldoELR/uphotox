@@ -5,8 +5,12 @@ import { createClient } from "@repo/database/server";
 import { isStorageConfigured, objectSize, signedPutUrl } from "@repo/storage";
 import { galleryPhotoKeys } from "@repo/storage/gallery";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
+import { POSITION_STEP } from "@/lib/board-templates";
+import { isEmailEnabled } from "@/lib/email";
 import {
+  GALLERY_LINK_DAYS,
   type GalleryState,
   galleryState,
   isJpegName,
@@ -14,8 +18,9 @@ import {
   MAX_PREVIEW_BYTES,
   packageCountFromNotes,
 } from "@/lib/gallery";
+import { emailGalleryReady } from "@/lib/gallery-notify";
 import { scheduleStorageCleanup } from "@/lib/storage-cleanup";
-import { requireStudio } from "@/lib/studio";
+import { requireStudio, type StudioContext } from "@/lib/studio";
 import type { ActionResult } from "./boards";
 
 const NO_ACCESS = "No tienes permiso para gestionar galerías.";
@@ -471,5 +476,199 @@ export const deleteGallery = async (
 
   scheduleStorageCleanup();
   revalidatePath("/galerias");
+  return { ok: true };
+};
+
+// --- Send and reopen -----------------------------------------------------------
+
+type ServerClient = Awaited<ReturnType<typeof createClient>>;
+
+const DAY_MS = 86_400_000;
+
+/**
+ * Moves the card to its board's stage with this gallery role, first in the
+ * stage. Skipped when the board has none, the card is already there or the
+ * member cannot move cards. No stage email: the gallery sends its own.
+ */
+const moveCardToGalleryStage = async (
+  supabase: ServerClient,
+  context: StudioContext,
+  cardId: number,
+  role: "sent" | "submitted"
+) => {
+  if (!context.can("cards.move")) {
+    return null;
+  }
+
+  const { data: card } = await supabase
+    .from("cards")
+    .select("id, stage_id, board_id")
+    .eq("id", cardId)
+    .maybeSingle();
+
+  if (!card) {
+    return null;
+  }
+
+  const { data: stage } = await supabase
+    .from("board_stages")
+    .select("id")
+    .eq("board_id", card.board_id)
+    .eq("gallery_role", role)
+    .maybeSingle();
+
+  if (!stage || stage.id === card.stage_id) {
+    return null;
+  }
+
+  const { data: first } = await supabase
+    .from("cards")
+    .select("position")
+    .eq("stage_id", stage.id)
+    .order("position", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  const { error } = await supabase
+    .from("cards")
+    .update({
+      stage_id: stage.id,
+      position: (first?.position ?? POSITION_STEP) - POSITION_STEP,
+    })
+    .eq("id", card.id);
+
+  return error ? null : { boardId: card.board_id };
+};
+
+const linkExpiry = () =>
+  new Date(Date.now() + GALLERY_LINK_DAYS * DAY_MS).toISOString();
+
+/**
+ * Opens the gallery to the client (or sends it again, renewing the link for
+ * 60 days): the card moves to the «sent» stage and the client gets an email
+ * with the link. Returns whether that email goes out.
+ */
+export const sendGallery = async (
+  galleryId: number
+): Promise<{ readonly emailed: boolean } | { readonly error: string }> => {
+  const context = await requireManager();
+
+  if (!context) {
+    return { error: NO_ACCESS };
+  }
+
+  const supabase = await createClient();
+  const { data: gallery } = await supabase
+    .from("galleries")
+    .select(
+      "id, status, sent_at, purged_at, card_id, card:cards!galleries_card_id_studio_id_fkey(client:clients(email))"
+    )
+    .eq("id", galleryId)
+    .maybeSingle();
+
+  if (!gallery) {
+    return { error: NOT_FOUND };
+  }
+
+  if (gallery.purged_at) {
+    return { error: "Las fotos de esta galería ya se borraron." };
+  }
+
+  if (gallery.status === "submitted") {
+    return {
+      error:
+        "El cliente ya confirmó su selección. Reábrela si necesita cambiarla.",
+    };
+  }
+
+  const { count } = await supabase
+    .from("gallery_photos")
+    .select("id", { count: "exact", head: true })
+    .eq("gallery_id", galleryId)
+    .not("uploaded_at", "is", null);
+
+  if (!count) {
+    return { error: "Sube al menos una foto antes de enviar la galería." };
+  }
+
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("galleries")
+    .update({
+      status: "open",
+      sent_at: gallery.sent_at ?? now,
+      expires_at: linkExpiry(),
+    })
+    .eq("id", galleryId);
+
+  if (error) {
+    return { error: "No se pudo enviar la galería." };
+  }
+
+  const moved = await moveCardToGalleryStage(
+    supabase,
+    context,
+    gallery.card_id,
+    "sent"
+  );
+  await supabase.from("card_events").insert({
+    studio_id: context.studio.id,
+    card_id: gallery.card_id,
+    kind: "gallery_sent",
+  });
+
+  const emailed = isEmailEnabled() && Boolean(gallery.card?.client?.email);
+
+  if (emailed) {
+    after(() => emailGalleryReady(galleryId, now));
+  }
+
+  revalidateGallery(galleryId);
+  revalidatePath("/");
+
+  if (moved) {
+    revalidatePath(`/tableros/${moved.boardId}`);
+  }
+
+  return { emailed };
+};
+
+/** Lets the client change a confirmed selection (60 more days). */
+export const reopenGallery = async (
+  galleryId: number
+): Promise<ActionResult> => {
+  const context = await requireManager();
+
+  if (!context) {
+    return { error: NO_ACCESS };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("galleries")
+    .update({ status: "open", submitted_at: null, expires_at: linkExpiry() })
+    .eq("id", galleryId)
+    .eq("status", "submitted")
+    .is("purged_at", null)
+    .select("card_id");
+  const cardId = data?.[0]?.card_id;
+
+  if (error || !cardId) {
+    return { error: "No se pudo reabrir la selección." };
+  }
+
+  const moved = await moveCardToGalleryStage(supabase, context, cardId, "sent");
+  await supabase.from("card_events").insert({
+    studio_id: context.studio.id,
+    card_id: cardId,
+    kind: "gallery_reopened",
+  });
+
+  revalidateGallery(galleryId);
+  revalidatePath("/");
+
+  if (moved) {
+    revalidatePath(`/tableros/${moved.boardId}`);
+  }
+
   return { ok: true };
 };

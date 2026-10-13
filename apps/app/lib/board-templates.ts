@@ -34,7 +34,7 @@ export const BOARD_TEMPLATES = {
         notifyClient: true,
         galleryRole: "sent",
         message:
-          "Tus fotos están listas para que elijas tus favoritas.\n\nRevisa tu galería y avísanos con tu selección.",
+          "Tus fotos están listas para que elijas tus favoritas.\n\nMárcalas con el corazón en tu galería y pulsa «Confirmar selección» cuando termines.",
       },
       {
         name: "Escogidas",

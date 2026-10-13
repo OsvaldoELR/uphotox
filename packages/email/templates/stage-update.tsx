@@ -6,15 +6,22 @@ import {
   mono,
   Paragraphs,
   Shell,
+  WhatsappBlock,
 } from "../components/shell";
 
-// WhatsApp's dark green: recognisable and readable on white.
-const whatsappGreen = "#128c4a";
+const primaryButton = {
+  backgroundColor: colors.signal,
+  color: colors.ink,
+  fontFamily: mono,
+  letterSpacing: "0.14em",
+};
 
 interface StageUpdateTemplateProps {
   readonly clientName: string;
   readonly galleryUrl?: string | null;
   readonly message: string;
+  /** Client link of an open selection gallery: «Elegir mis fotos». */
+  readonly selectionUrl?: string | null;
   readonly stageName: string;
   readonly studioName: string;
   /** wa.me link to the studio; the contact block is hidden without it. */
@@ -29,6 +36,7 @@ export const StageUpdateTemplate = ({
   clientName,
   galleryUrl,
   message,
+  selectionUrl,
   stageName,
   studioName,
   whatsappUrl,
@@ -52,44 +60,29 @@ export const StageUpdateTemplate = ({
       Etapa · {stageName}
     </Text>
     <Paragraphs text={message} />
+    {selectionUrl ? (
+      <Section className="mt-2">
+        <Button
+          className="px-6 py-3 font-bold text-[13px] uppercase"
+          href={selectionUrl}
+          style={primaryButton}
+        >
+          Elegir mis fotos
+        </Button>
+      </Section>
+    ) : null}
     {galleryUrl ? (
       <Section className="mt-2">
         <Button
           className="px-6 py-3 font-bold text-[13px] uppercase"
           href={galleryUrl}
-          style={{
-            backgroundColor: colors.signal,
-            color: colors.ink,
-            fontFamily: mono,
-            letterSpacing: "0.14em",
-          }}
+          style={primaryButton}
         >
           Ver mi álbum
         </Button>
       </Section>
     ) : null}
-    {whatsappUrl ? (
-      <Section
-        className="mt-8 pt-6"
-        style={{ borderTop: `1px solid ${colors.border}` }}
-      >
-        <Text className="m-0 mb-3 text-[14px]" style={{ color: colors.muted }}>
-          ¿Tienes alguna duda? Escríbenos por WhatsApp.
-        </Text>
-        <Button
-          className="px-5 py-2.5 font-bold text-[12px] uppercase"
-          href={whatsappUrl}
-          style={{
-            border: `1px solid ${whatsappGreen}`,
-            color: whatsappGreen,
-            fontFamily: mono,
-            letterSpacing: "0.14em",
-          }}
-        >
-          Escribir por WhatsApp
-        </Button>
-      </Section>
-    ) : null}
+    {whatsappUrl ? <WhatsappBlock href={whatsappUrl} /> : null}
   </Shell>
 );
 
@@ -98,8 +91,8 @@ StageUpdateTemplate.PreviewProps = {
   stageName: "Enviadas para escoger",
   studioName: "Estudio Luz",
   message:
-    "Tus fotos están listas para que elijas tus favoritas.\n\nRevisa tu galería y márcalas cuando puedas.",
-  galleryUrl: "https://photos.app.goo.gl/",
+    "Tus fotos están listas para que elijas tus favoritas.\n\nMárcalas con el corazón y confirma tu selección cuando termines.",
+  selectionUrl: "http://localhost:3000/g/ejemplo",
   whatsappUrl: "https://wa.me/34612345678",
 };
 

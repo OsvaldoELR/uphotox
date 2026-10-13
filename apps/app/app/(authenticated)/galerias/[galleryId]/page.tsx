@@ -3,13 +3,16 @@ import { isStorageConfigured, signedGetUrls } from "@repo/storage";
 import { galleryPhotoKeys } from "@repo/storage/gallery";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { isEmailEnabled } from "@/lib/email";
 import {
   compareFileNames,
   galleryState,
   MAX_GALLERY_PHOTOS,
   packageCountFromNotes,
 } from "@/lib/gallery";
+import { clientGalleryUrl } from "@/lib/gallery-notify";
 import { requireStudio } from "@/lib/studio";
+import { clientWhatsappDigits, whatsappUrl } from "@/lib/whatsapp";
 import { Header } from "../../components/header";
 import { GalleryWorkspace } from "./components/gallery-workspace";
 
@@ -41,7 +44,7 @@ const GalleryPage = async ({ params }: GalleryPageProperties) => {
     supabase
       .from("galleries")
       .select(
-        "id, studio_id, status, included_count, extra_price, expires_at, client_note, purged_at, card:cards!galleries_card_id_studio_id_fkey(id, title, board_id, notes, client:clients(full_name))"
+        "id, studio_id, token, status, included_count, extra_price, expires_at, submitted_at, client_note, purged_at, card:cards!galleries_card_id_studio_id_fkey(id, title, board_id, notes, client:clients(full_name, email, phone))"
       )
       .eq("id", galleryId)
       .maybeSingle(),
@@ -75,6 +78,16 @@ const GalleryPage = async ({ params }: GalleryPageProperties) => {
           )
         )
       : [];
+  const { data: sentStage } = await supabase
+    .from("board_stages")
+    .select("name")
+    .eq("board_id", gallery.card.board_id)
+    .eq("gallery_role", "sent")
+    .maybeSingle();
+  const client = gallery.card.client;
+  const firstName = client?.full_name.trim().split(" ")[0] ?? "";
+  const clientUrl = clientGalleryUrl(gallery.token);
+  const clientDigits = clientWhatsappDigits(client?.phone);
   const thumbnails = new Map(
     uploaded.map((photo, index) => [photo.id, thumbnailUrls[index] ?? null])
   );
@@ -115,6 +128,23 @@ const GalleryPage = async ({ params }: GalleryPageProperties) => {
           picked: Boolean(photo.picked_at),
           thumbnailUrl: thumbnails.get(photo.id) ?? null,
         }))}
+        share={{
+          client: {
+            email: client?.email ?? null,
+            firstName,
+            whatsappUrl: clientDigits
+              ? whatsappUrl(
+                  clientDigits,
+                  `Hola${firstName ? ` ${firstName}` : ""}, tus fotos de «${gallery.card.title}» ya están listas para que elijas tus favoritas: ${clientUrl}`
+                )
+              : null,
+          },
+          clientUrl,
+          emailEnabled: isEmailEnabled(),
+          expiresAt: gallery.expires_at,
+          sentStageName: sentStage?.name ?? null,
+          submittedAt: gallery.submitted_at,
+        }}
       />
     </>
   );

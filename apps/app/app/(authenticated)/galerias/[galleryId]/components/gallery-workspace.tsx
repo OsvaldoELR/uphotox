@@ -26,6 +26,7 @@ import {
 } from "@/app/actions/galleries";
 import { GalleryStateChip } from "@/components/gallery-state-chip";
 import { formatMoney, type GalleryState, selectionTotals } from "@/lib/gallery";
+import { ClientShare, type ClientShareProperties } from "./client-share";
 import { type GalleryPhotoItem, PhotoGrid } from "./photo-grid";
 import { PhotoUploader } from "./photo-uploader";
 
@@ -51,6 +52,11 @@ export interface GalleryWorkspaceProperties {
     readonly state: GalleryState;
   };
   readonly photos: readonly GalleryPhotoItem[];
+  /** Sending, sharing and the selection for Lightroom. */
+  readonly share: Omit<
+    ClientShareProperties,
+    "canManage" | "galleryId" | "hasPhotos" | "pickedFileNames" | "state"
+  >;
 }
 
 const sectionLabel =
@@ -236,6 +242,7 @@ export const GalleryWorkspace = ({
   card,
   gallery,
   photos,
+  share,
 }: GalleryWorkspaceProperties) => {
   const uploaded = photos.filter((photo) => photo.uploaded);
   const totals = selectionTotals({
@@ -296,6 +303,19 @@ export const GalleryWorkspace = ({
           </blockquote>
         )}
       </section>
+
+      {gallery.purged ? null : (
+        <ClientShare
+          {...share}
+          canManage={access.canManage}
+          galleryId={gallery.id}
+          hasPhotos={uploaded.length > 0}
+          pickedFileNames={photos
+            .filter((photo) => photo.picked)
+            .map((photo) => photo.fileName)}
+          state={gallery.state}
+        />
+      )}
 
       {access.canManage && !gallery.purged && (
         <section className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">

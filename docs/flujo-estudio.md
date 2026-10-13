@@ -51,6 +51,7 @@ está comprobado todavía.
 | 1 Solicitud | Typeform → Make → webhook de Uphotox: crea cliente y tarjeta con todas las respuestas en las notas (Ajustes → Entrada de clientes). No envía correo al cliente. |
 | 2 Agenda | Fecha de sesión en la tarjeta (sin Google Calendar todavía). Los clientes que ya estaban agendados antes de Uphotox se cargan con **Clientes → Importar CSV** directamente en «Agendado». |
 | 3 Preparación | Correo de etapa al cliente; botón de WhatsApp del estudio en cada correo. |
+| 6–9 | **Galerías** (sin publicar): se suben los JPG de Lightroom a la tarjeta, «Enviar al cliente» le manda el enlace, el cliente elige con corazones (guía la primera vez, extras a $20) y confirma; la tarjeta pasa sola a «Escogidas», llega aviso al estudio y «Copiar para Lightroom» da la lista de nombres para filtrar. |
 | 4–13 | Etapas del tablero «Sesiones» con aviso al cliente en cada una; responsable por tarjeta; foto de la tarjeta (miniatura); álbum de Google Fotos en «Álbum de entrega». |
 
 **Recomendación de etapas.** La tarjeta llega del Typeform *antes* de
@@ -96,7 +97,7 @@ sin duplicados al repetir la importación).
   3 días antes: «coordinemos vestuario»). Requiere número de empresa
   verificado; coste por conversación.
 
-### 3. Galería de selección propia (sustituir Pixieset) — en curso
+### 3. Galería de selección propia (sustituir Pixieset) — hecha en local (13 oct), falta el borrado automático y publicarla
 Módulo **Galerías** (menú propio; «Editor» queda para la edición). Decidido
 con el usuario el 13 oct 2026:
 - Hoy: Pixieset a $10/mes (10 GB), solo para galerías (y una web del estudio

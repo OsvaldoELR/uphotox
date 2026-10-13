@@ -6,6 +6,7 @@ import { StageUpdateTemplate } from "@repo/email/templates/stage-update";
 import { env } from "@/env";
 import { defaultStageMessage } from "./board-templates";
 import { isEmailEnabled, type SendEmailResult, sendEmail } from "./email";
+import { openGalleryUrlForCard } from "./gallery-notify";
 import type { StudioContext } from "./studio";
 import { whatsappUrl } from "./whatsapp";
 
@@ -112,6 +113,8 @@ export const notifyStageEntry = async ({
           `Hola ${studioName}, soy ${client.full_name}. Te escribo por mi sesión «${card.title}».`
         )
       : null;
+    // While the client can still pick, every stage email links the gallery.
+    const selectionUrl = await openGalleryUrlForCard(cardId);
     const result = await sendEmail({
       fromName: studioName,
       to: client.email,
@@ -128,6 +131,7 @@ export const notifyStageEntry = async ({
             toStage.client_message?.trim() ||
             defaultStageMessage(toStage.name, studioName)
           }
+          selectionUrl={selectionUrl}
           stageName={toStage.name}
           studioName={studioName}
           whatsappUrl={whatsapp}

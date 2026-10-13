@@ -134,6 +134,26 @@ Patrones de la app:
 - **Chips de estado** (`Correos activos`, `Ves solo tus tarjetas`): borde, mono 10px
   mayúsculas `tracking-[0.16em]`; signal-ink = activo, flare = requiere atención.
 
+- **Galería del estudio** (`/galerias/<id>`): cabecera con título mono black y chip de
+  estado; fila de datos `dl` con celdas separadas por `gap-px bg-border` (Fotos, Elegidas,
+  Incluidas, Extras); bloque «Cliente» (`border bg-card p-4`) cuyas acciones cambian con el
+  estado; zona de subida = botón con borde discontinuo que acepta arrastrar, barra de
+  progreso y lista de errores en `border-destructive/30`; cuadrícula de miniaturas
+  cuadradas con nombre de archivo mono 10px, corazón signal en las elegidas.
+- **Página del cliente** (`/g/<código>`, sin menú ni retícula, marca del estudio y no de
+  Uphotox): cabecera `bg-card` con el estudio en etiqueta mono signal-ink, sesión en mono
+  black y chips del paquete; fotos **enteras** en filas justificadas (`flex-grow` por
+  proporción, `--row` 7rem móvil / 11rem / 13rem) en orden de archivo; corazón redondo
+  `size-10` abajo a la derecha (`bg-black/40` → `bg-signal` relleno) y anillo signal en las
+  elegidas; barra fija inferior `bg-card/95 backdrop-blur` con progreso de 1px (signal, o
+  flare cuando hay extras), contador mono `5 / 12` y botón «Confirmar»; vista ampliada a
+  pantalla completa sobre `#0b1220` con miniatura debajo de la foto grande, flechas y
+  botón píldora «Elegir esta foto». Es la única pantalla con fondo oscuro fijo.
+- **Guía de primera visita** (driver.js, clase `uphotox-tour`): popover `bg-popover` con
+  borde, radio 6px, título mono 13px mayúsculas, texto sans 15px muted, progreso «2 de 8»
+  mono 10px, «Siguiente» en signal y «Atrás» con borde; capa `#0b1220` al 62 %, recorte
+  con radio 6px. Sin animaciones propias.
+
 ## Movimiento
 
 - Curva `ease-snap` = `cubic-bezier(0.23, 1, 0.32, 1)`. Nunca `ease-in` para entradas.

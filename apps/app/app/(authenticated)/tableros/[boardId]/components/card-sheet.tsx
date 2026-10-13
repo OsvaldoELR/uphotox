@@ -70,7 +70,10 @@ const describeEvent = (event: CardHistoryEntry) => {
     case "created":
       return `${who} la creó en «${event.to ?? "—"}»`;
     case "moved":
-      return `${who} la movió de «${event.from ?? "—"}» a «${event.to ?? "—"}»`;
+      // No actor: moved by the system (e.g. the client confirming photos).
+      return event.actor
+        ? `${who} la movió de «${event.from ?? "—"}» a «${event.to ?? "—"}»`
+        : `Pasó de «${event.from ?? "—"}» a «${event.to ?? "—"}»`;
     case "email_sent":
       return `Correo enviado · ${event.detail ?? ""}`;
     case "email_failed":

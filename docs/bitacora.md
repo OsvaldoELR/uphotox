@@ -29,7 +29,7 @@ Versión publicada: **v0.3.0** (historial de versiones en `CHANGELOG.md`).
 | Equipo | Hecho: usuarios con rol y permisos tipo GoHighLevel | `/equipo` |
 | Ajustes | Hecho: nombre, WhatsApp, entrada de clientes (webhook) | `/ajustes` |
 | Entrada de clientes (Make/Typeform) | Hecho y publicado | `apps/api` |
-| Galerías (selección, sustituye a Pixieset) | En curso: crear galería desde la tarjeta, subir fotos a Cloudflare R2, lista y página de cada galería (en local, sin publicar). Falta la página del cliente, enviar y confirmar | `/galerias` |
+| Galerías (selección, sustituye a Pixieset) | Hecho en local, sin publicar: subir fotos a Cloudflare R2, enviar al cliente, página del cliente con guía de primera visita, confirmar, lista para Lightroom, reabrir. Falta el borrado automático diario | `/galerias`, `/g/<código>` |
 | Editor de imágenes | Pendiente («Pronto» en el menú) | — |
 
 Publicado en Vercel (equipo «Upgradix's projects», plan Hobby):
@@ -78,20 +78,25 @@ Del usuario:
       externos).
 
 De Galerías (por programar, en este orden):
-- [ ] Página del cliente `/g/<código>` (móvil primero): corazones, contador
-      con extras a $20, «Ver mis favoritas», confirmar con comentario.
-- [ ] Al enviar/confirmar: mover la tarjeta (`gallery_role`), botón «Elegir
-      mis fotos» en el correo, aviso a la dueña y al responsable, «Copiar
-      para Lightroom», «Reabrir selección», WhatsApp con el enlace. Cambiar
-      el texto de «Enviadas para escoger» (hoy dice «avísanos con tu
-      selección»).
 - [ ] Tarea diaria en `apps/api`: borrar fotos a los 60 días de confirmar
       o caducar (`purged_at`), filas sin terminar de más de un día y lo que
       quede en `storage_deletions`. Añadir `R2_*` al proyecto `uphotox-api`
       de Vercel y `@repo/storage` a la API.
 - [ ] Ajustes: campo «Precio por foto extra» (hoy $20 fijo por defecto).
-- [ ] Publicar como v0.4.0 cuando el cliente pueda elegir (versión, CHANGELOG,
-      etiqueta).
+- [ ] Publicar como v0.4.0 (versión, CHANGELOG, etiqueta) y probar en
+      producción con una galería real antes de cancelar Pixieset.
+- [ ] Opcional: estado de la galería en la tarjeta del tablero (chip «Esperando
+      · 5/12», «Selección recibida»).
+
+Detectado al probar (no es de Galerías):
+- [ ] Si se borra un usuario con la sesión abierta (p. ej. un miembro del
+      equipo), su navegador entra en un bucle de redirecciones hasta que caduca
+      la sesión (≈1 h): el proxy ve la sesión válida, la página no encuentra el
+      usuario y manda a /sign-in, que a su vez devuelve a /. Se resolvió en la
+      prueba borrando las cookies.
+- [ ] En desarrollo, el primer tablero que se abre tras iniciar sesión (o el
+      mismo tablero cargado dos veces a la vez) da un aviso de hidratación de
+      React (ids distintos). No aparece al recargar y no es de este cambio.
 
 Ideas para los siguientes módulos (detalle en `docs/flujo-estudio.md`):
 Google Calendar, recordatorios por WhatsApp, plugin de Lightroom y galería de
@@ -109,6 +114,89 @@ editar, paquetes y pagos.
 ---
 
 ## Historial
+
+### 13 oct 2026 · Galerías: página del cliente, guía de primera visita, enviar y confirmar (sin publicar)
+**Qué se hizo**
+- **Enviar al cliente** (bloque «Cliente» en la página de la galería): abre
+  la galería 60 días, mueve la tarjeta a la etapa marcada como «envío»
+  («Enviadas para escoger») y manda al cliente el correo «Tus fotos están
+  listas para elegir» (paquete, precio del extra, fecha límite y botón
+  «Elegir mis fotos»). Según el estado, el bloque ofrece «Copiar enlace»,
+  «WhatsApp» (mensaje ya escrito al teléfono del cliente, si trae código de
+  país), «Ver como cliente», «Enviar de nuevo» / «Renovar y enviar de nuevo»
+  (renueva 60 días) y, cuando el cliente confirma, la **lista para Lightroom**
+  con «Copiar para Lightroom» y «Reabrir selección» (vuelve a la etapa de
+  envío, sin correo).
+- **Página del cliente** `/g/<código>` (sin cuenta; el código es la llave):
+  cabecera con el estudio, la sesión, el paquete, el precio del extra y la
+  fecha límite; pestañas «Todas / Mis favoritas»; fotos enteras en filas
+  justificadas, en el orden de los archivos (dos por fila en el móvil);
+  corazón en cada foto (se guarda al instante y vuelve atrás con aviso si
+  falla); vista ampliada con deslizar, flechas, teclado y «Elegir esta foto»
+  (muestra la miniatura al momento y la foto grande al llegar); barra fija
+  abajo con «5 / 12», lo que falta o los extras con su importe, y
+  «Confirmar». Al confirmar: resumen, comentario opcional y aviso de que ya no
+  se puede cambiar; después la página muestra «¡Listo! Recibimos tu
+  selección» con sus fotos. Caducada, sin enviar o borrada: mensaje claro con
+  el WhatsApp del estudio; código inexistente: «Este enlace no existe» (404).
+  Al compartir el enlace se ve el nombre del estudio y una foto de la sesión
+  (no la imagen de Uphotox) y la página no aparece en buscadores.
+- **Guía de primera visita** con **driver.js** 1.8.0 (MIT, ~25 KB, solo se
+  descarga en esta página): oscurece la página y resalta, en 8 pasos, el
+  saludo, el paquete, cómo ampliar una foto, el corazón, el contador (y que
+  todo se guarda solo), «Mis favoritas», «Confirmar» y el botón «?» para verla
+  otra vez. Sale sola la primera vez en cada dispositivo (se recuerda en el
+  navegador) y no deja tocar la página mientras explica. Estilo de la app en
+  `gallery-tour.css`.
+- **Al confirmar** (función `submit_gallery_selection`, una sola transacción):
+  cierra la galería, guarda el comentario, mueve la tarjeta a la etapa de
+  «recibida» («Escogidas») y lo apunta en el historial («6 fotos (3
+  extras)»). Después: correo de esa etapa al cliente (si avisa) y «Selección
+  recibida» a la dueña y a la responsable de la tarjeta (con extras,
+  comentario y botón a la galería).
+- Correos de etapa: mientras la galería espera al cliente, cualquier correo de
+  etapa lleva también el botón «Elegir mis fotos».
+- Texto por defecto de «Enviadas para escoger» cambiado (ya no pide
+  «avísanos con tu selección»); migración que lo actualiza en los tableros
+  que tenían el texto original (el tablero 6 lo tenía; el otro usa el texto
+  automático).
+- Historial: un movimiento sin persona (el del cliente) se lee «Pasó de… a…».
+
+**Dónde está el código**: página del cliente en `apps/app/app/g/[token]/`
+(`data.ts`, `page.tsx`, `not-found.tsx`, `components/client-gallery.tsx`,
+`photo-viewer.tsx`, `gallery-tour.ts` + `.css`, `gallery-unavailable.tsx`);
+acciones del cliente en `app/actions/client-gallery.ts` (servicio, acotadas a
+la galería del código); enviar/reabrir en `app/actions/galleries.ts`; correos
+en `lib/gallery-notify.tsx` y `packages/email/templates/gallery-ready.tsx`,
+`selection-received.tsx` (bloque de WhatsApp compartido en `shell.tsx`);
+bloque «Cliente» en `galerias/[galleryId]/components/client-share.tsx`;
+`/g` público en `apps/app/proxy.ts`; migraciones
+`20261013190350_gallery_selection.sql` y `20261013191439_gallery_stage_message.sql`.
+
+**Comprobado** en el navegador con un estudio temporal (borrado después, sin
+restos en la base de datos ni en R2): crear galería (paquete de 3 leído de las
+notas) y subir 8 fotos; «Enviar al cliente» → tarjeta en «Enviadas para
+escoger», correo aceptado por Resend y caducidad a 60 días; como cliente, la
+guía sale sola y recorre los 8 pasos (también a 390 px), elegir 5 → «5 / 3 · 2
+extras · $40», vista ampliada (siguiente, elegir, cerrar) → «6 / 3 · 3 extras
+· $60», «Mis favoritas» con 6; confirmar con comentario → página «¡Listo!»,
+tarjeta en «Escogidas», historial «6 fotos (3 extras)» y dos correos
+aceptados (cliente y equipo); en el estudio, la lista para Lightroom
+`IMG_0003, …, IMG_0018`, «Copiar enlace» (con clic real) y el enlace de
+WhatsApp; «Reabrir selección» → vuelve a «Enviadas para escoger» conservando
+las favoritas; caducada → la página del cliente avisa y «Renovar y enviar de
+nuevo» la reabre; código inexistente → 404 en español; título, vista previa
+y `noindex` correctos. Biome, tipos, 31 pruebas de la app y 8 de la API, y
+compilación de app y API. Revisor de Supabase sin avisos nuevos.
+
+**Decisiones**
+- Al enviar, el correo es el de la galería (no el de la etapa) para no mandar
+  dos; la dueña no recibe aviso por ese movimiento.
+- Reabrir no escribe al cliente: el estudio le avisa por WhatsApp.
+- El cliente ve el nombre de archivo (IMG_0012) en la vista ampliada, para
+  que pueda referirse a una foto al escribir al estudio.
+- Si el navegador bloquea el almacenamiento local, la guía sale en cada
+  visita (se puede cerrar).
 
 ### 13 oct 2026 · Galerías: Cloudflare R2 y subida de fotos (sin publicar)
 **Qué se hizo**

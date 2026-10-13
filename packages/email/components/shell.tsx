@@ -1,5 +1,6 @@
 import {
   Body,
+  Button,
   Container,
   Head,
   Html,
@@ -20,6 +21,9 @@ export const colors = {
   signalInk: "#0b6f8a",
   signal: "#22d3ee",
 };
+
+// WhatsApp's dark green: recognisable and readable on white.
+const whatsappGreen = "#128c4a";
 
 const PARAGRAPH_BREAK = /\n{2,}/;
 
@@ -113,4 +117,28 @@ export const Paragraphs = ({ text }: { readonly text: string }) => (
         </Text>
       ))}
   </>
+);
+
+/** Contact block for client emails: WhatsApp, never "reply to this email". */
+export const WhatsappBlock = ({ href }: { readonly href: string }) => (
+  <Section
+    className="mt-8 pt-6"
+    style={{ borderTop: `1px solid ${colors.border}` }}
+  >
+    <Text className="m-0 mb-3 text-[14px]" style={{ color: colors.muted }}>
+      ¿Tienes alguna duda? Escríbenos por WhatsApp.
+    </Text>
+    <Button
+      className="px-5 py-2.5 font-bold text-[12px] uppercase"
+      href={href}
+      style={{
+        border: `1px solid ${whatsappGreen}`,
+        color: whatsappGreen,
+        fontFamily: mono,
+        letterSpacing: "0.14em",
+      }}
+    >
+      Escribir por WhatsApp
+    </Button>
+  </Section>
 );

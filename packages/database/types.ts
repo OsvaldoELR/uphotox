@@ -657,6 +657,10 @@ export type Database = {
         }
         Returns: Json
       }
+      submit_gallery_selection: {
+        Args: { p_client_note?: string; p_gallery_id: number }
+        Returns: Json
+      }
     }
     Enums: {
       studio_role: "owner" | "photographer" | "editor" | "assistant"

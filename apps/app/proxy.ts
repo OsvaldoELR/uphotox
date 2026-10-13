@@ -4,7 +4,11 @@ import type { NextProxy, NextRequest } from "next/server";
 
 const securityHeaders = securityMiddleware(noseconeOptions);
 
-const auth = authMiddleware();
+// /g/<token> is the client's selection gallery: no account, the token is
+// the credential (checked by the page and its actions).
+const auth = authMiddleware({
+  publicRoutes: ["/auth", "/.well-known", "/g"],
+});
 
 // Refresh the Supabase session (and guard routes), then add security headers
 // to whatever response auth decided on.
