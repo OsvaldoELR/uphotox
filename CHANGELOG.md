@@ -7,6 +7,30 @@ en `docs/bitacora.md`.
 Numeración: el primer número cambia con cambios grandes que rompen la forma de
 trabajar, el segundo con funciones nuevas y el tercero con arreglos.
 
+## [0.4.0] · 13 oct 2026 · Galerías de selección
+
+**Añadido**
+- Módulo **Galerías** (menú propio): sustituye a Pixieset para que el cliente
+  elija sus fotos.
+  - Desde la tarjeta del cliente, «Crear galería» y subir los JPG exportados
+    de Lightroom (se guardan en Cloudflare R2; las repetidas se saltan).
+  - «Enviar al cliente»: correo con «Elegir mis fotos», su paquete, el precio
+    de cada foto extra ($20) y 60 días para elegir; la tarjeta pasa a
+    «Enviadas para escoger». También «Copiar enlace» y WhatsApp.
+  - Página del cliente sin cuenta: fotos enteras, corazones, vista ampliada,
+    «Mis favoritas», contador con extras y «Confirmar» con comentario.
+  - Guía de primera visita que resalta cada parte de la página y explica qué
+    tocar (se puede volver a ver con «?»).
+  - Al confirmar, la tarjeta pasa sola a «Escogidas», el estudio recibe aviso
+    y aparece «Copiar para Lightroom» con los nombres de archivo para filtrar.
+  - «Reabrir selección» y «Renovar y enviar de nuevo» si el enlace caduca.
+- Permisos nuevos «Galerías» en Equipo (ver y gestionar).
+
+**Cambiado**
+- El texto por defecto de «Enviadas para escoger» ya no pide al cliente que
+  avise con su selección.
+- En el historial, los movimientos que hace el sistema se leen «Pasó de… a…».
+
 ## [0.3.0] · 11 oct 2026 · Ordenar etapas
 
 **Añadido**

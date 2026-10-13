@@ -16,9 +16,9 @@ Documentos relacionados:
 
 ---
 
-## Estado actual (13 oct 2026 · versión 0.3.0)
+## Estado actual (13 oct 2026 · versión 0.4.0)
 
-Versión publicada: **v0.3.0** (historial de versiones en `CHANGELOG.md`).
+Versión publicada: **v0.4.0** (historial de versiones en `CHANGELOG.md`).
 
 | Módulo | Estado | Dónde |
 | --- | --- | --- |
@@ -29,7 +29,7 @@ Versión publicada: **v0.3.0** (historial de versiones en `CHANGELOG.md`).
 | Equipo | Hecho: usuarios con rol y permisos tipo GoHighLevel | `/equipo` |
 | Ajustes | Hecho: nombre, WhatsApp, entrada de clientes (webhook) | `/ajustes` |
 | Entrada de clientes (Make/Typeform) | Hecho y publicado | `apps/api` |
-| Galerías (selección, sustituye a Pixieset) | Hecho en local, sin publicar: subir fotos a Cloudflare R2, enviar al cliente, página del cliente con guía de primera visita, confirmar, lista para Lightroom, reabrir. Falta el borrado automático diario | `/galerias`, `/g/<código>` |
+| Galerías (selección, sustituye a Pixieset) | Publicado (v0.4.0): subir fotos a Cloudflare R2, enviar al cliente, página del cliente con guía de primera visita, confirmar, lista para Lightroom, reabrir. Falta el borrado automático diario | `/galerias`, `/g/<código>` |
 | Editor de imágenes | Pendiente («Pronto» en el menú) | — |
 
 Publicado en Vercel (equipo «Upgradix's projects», plan Hobby):
@@ -50,7 +50,7 @@ Configuración:
 ## Pendientes
 
 Del usuario:
-- [ ] Cuando Galerías esté publicada: activar «Galerías» a la fotógrafa en
+- [ ] Galerías ya está publicada: activar «Galerías» a la fotógrafa en
       Equipo (los usuarios ya creados no lo tienen) y probar una galería real
       antes de cancelar Pixieset. Decidir antes qué hacer con la web del
       estudio, que también está en Pixieset.
@@ -83,8 +83,7 @@ De Galerías (por programar, en este orden):
       quede en `storage_deletions`. Añadir `R2_*` al proyecto `uphotox-api`
       de Vercel y `@repo/storage` a la API.
 - [ ] Ajustes: campo «Precio por foto extra» (hoy $20 fijo por defecto).
-- [ ] Publicar como v0.4.0 (versión, CHANGELOG, etiqueta) y probar en
-      producción con una galería real antes de cancelar Pixieset.
+- [ ] Probar en producción con una galería real antes de cancelar Pixieset.
 - [ ] Opcional: estado de la galería en la tarjeta del tablero (chip «Esperando
       · 5/12», «Selección recibida»).
 
