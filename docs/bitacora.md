@@ -114,6 +114,27 @@ editar, paquetes y pagos.
 
 ## Historial
 
+### 13 oct 2026 · v0.4.0 publicada y comprobada en producción
+**Qué se hizo**: versión 0.4.0 (`package.json`, `CHANGELOG.md`, etiqueta
+`v0.4.0`) subida a GitHub; Vercel publicó la app y la API (ambas READY). Las
+migraciones ya estaban aplicadas y las variables `R2_*` ya estaban en el
+proyecto `uphotox-app`.
+
+**Comprobado en https://uphotox-app.vercel.app**
+- La API responde (`/health` 200); `/g/<código inexistente>` da 404 con «Este
+  enlace no existe» sin pedir sesión; `/galerias` sin sesión manda al login;
+  la página lleva `Cross-Origin-Embedder-Policy: require-corp`.
+- Con un estudio temporal (ya borrado, sin restos en la base de datos ni en
+  R2) y una galería de 4 fotos preparada por script: la página del cliente
+  carga las 4 fotos desde R2 (CORS correcto para el dominio publicado),
+  título «Elige tus fotos · <estudio>», la guía sale sola; elegir 3 con
+  paquete de 2 → «3 / 2 · 1 extra · $20»; confirmar con comentario → página
+  «¡Listo!», galería confirmada, tarjeta en «Escogidas», historial «3 fotos (1
+  extra)» y aviso al equipo enviado.
+- La parte del estudio (crear, subir, enviar) no se repitió en producción: el
+  navegador tenía abierta la sesión real de «Lente Libre Photography» y no se
+  tocó. Quedó probada en local el mismo día.
+
 ### 13 oct 2026 · Galerías: página del cliente, guía de primera visita, enviar y confirmar (sin publicar)
 **Qué se hizo**
 - **Enviar al cliente** (bloque «Cliente» en la página de la galería): abre
