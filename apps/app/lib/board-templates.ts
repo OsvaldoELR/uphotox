@@ -1,4 +1,6 @@
 export interface StageTemplate {
+  /** The card moves here when its gallery is sent / the client confirms. */
+  readonly galleryRole?: "sent" | "submitted";
   readonly message: string | null;
   readonly name: string;
   readonly notifyClient: boolean;
@@ -30,12 +32,14 @@ export const BOARD_TEMPLATES = {
       {
         name: "Enviadas para escoger",
         notifyClient: true,
+        galleryRole: "sent",
         message:
           "Tus fotos están listas para que elijas tus favoritas.\n\nRevisa tu galería y avísanos con tu selección.",
       },
       {
         name: "Escogidas",
         notifyClient: true,
+        galleryRole: "submitted",
         message:
           "Recibimos tu selección. En breve empezamos a editar tus fotos.",
       },

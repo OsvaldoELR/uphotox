@@ -5,6 +5,7 @@ import {
   BOARD_TEMPLATES,
   type BoardTemplateId,
   POSITION_STEP,
+  type StageTemplate,
 } from "./board-templates";
 
 type ServerClient = Awaited<ReturnType<typeof createClient>>;
@@ -26,14 +27,17 @@ export const createBoardFromTemplate = async (
     return { error: error.message } as const;
   }
 
-  const stages = BOARD_TEMPLATES[templateId].stages.map((stage, index) => ({
-    board_id: board.id,
-    studio_id: studioId,
-    name: stage.name,
-    position: (index + 1) * POSITION_STEP,
-    notify_client: stage.notifyClient,
-    client_message: stage.message,
-  }));
+  const stages = BOARD_TEMPLATES[templateId].stages.map(
+    (stage: StageTemplate, index) => ({
+      board_id: board.id,
+      studio_id: studioId,
+      name: stage.name,
+      position: (index + 1) * POSITION_STEP,
+      notify_client: stage.notifyClient,
+      client_message: stage.message,
+      gallery_role: stage.galleryRole ?? null,
+    })
+  );
 
   const { error: stagesError } = await supabase
     .from("board_stages")

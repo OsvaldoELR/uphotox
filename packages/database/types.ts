@@ -19,6 +19,7 @@ export type Database = {
           board_id: number
           client_message: string | null
           created_at: string
+          gallery_role: string | null
           id: number
           name: string
           notify_client: boolean
@@ -30,6 +31,7 @@ export type Database = {
           board_id: number
           client_message?: string | null
           created_at?: string
+          gallery_role?: string | null
           id?: never
           name: string
           notify_client?: boolean
@@ -41,6 +43,7 @@ export type Database = {
           board_id?: number
           client_message?: string | null
           created_at?: string
+          gallery_role?: string | null
           id?: never
           name?: string
           notify_client?: boolean
@@ -325,6 +328,129 @@ export type Database = {
           },
         ]
       }
+      galleries: {
+        Row: {
+          card_id: number
+          client_note: string | null
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          extra_price: number
+          id: number
+          included_count: number | null
+          purged_at: string | null
+          sent_at: string | null
+          status: string
+          studio_id: number
+          submitted_at: string | null
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          card_id: number
+          client_note?: string | null
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          extra_price: number
+          id?: never
+          included_count?: number | null
+          purged_at?: string | null
+          sent_at?: string | null
+          status?: string
+          studio_id: number
+          submitted_at?: string | null
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          card_id?: number
+          client_note?: string | null
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          extra_price?: number
+          id?: never
+          included_count?: number | null
+          purged_at?: string | null
+          sent_at?: string | null
+          status?: string
+          studio_id?: number
+          submitted_at?: string | null
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "galleries_card_id_studio_id_fkey"
+            columns: ["card_id", "studio_id"]
+            isOneToOne: false
+            referencedRelation: "cards"
+            referencedColumns: ["id", "studio_id"]
+          },
+          {
+            foreignKeyName: "galleries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "galleries_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gallery_photos: {
+        Row: {
+          bytes: number
+          created_at: string
+          file_name: string
+          gallery_id: number
+          height: number | null
+          id: number
+          picked_at: string | null
+          studio_id: number
+          uploaded_at: string | null
+          width: number | null
+        }
+        Insert: {
+          bytes: number
+          created_at?: string
+          file_name: string
+          gallery_id: number
+          height?: number | null
+          id?: never
+          picked_at?: string | null
+          studio_id: number
+          uploaded_at?: string | null
+          width?: number | null
+        }
+        Update: {
+          bytes?: number
+          created_at?: string
+          file_name?: string
+          gallery_id?: number
+          height?: number | null
+          id?: never
+          picked_at?: string | null
+          studio_id?: number
+          uploaded_at?: string | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gallery_photos_gallery_id_studio_id_fkey"
+            columns: ["gallery_id", "studio_id"]
+            isOneToOne: false
+            referencedRelation: "galleries"
+            referencedColumns: ["id", "studio_id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -349,6 +475,24 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      storage_deletions: {
+        Row: {
+          created_at: string
+          id: number
+          object_key: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          object_key: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          object_key?: string
         }
         Relationships: []
       }
@@ -464,6 +608,7 @@ export type Database = {
       studios: {
         Row: {
           created_at: string
+          extra_photo_price: number
           id: number
           name: string
           owner_id: string
@@ -472,6 +617,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          extra_photo_price?: number
           id?: never
           name: string
           owner_id: string
@@ -480,6 +626,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          extra_photo_price?: number
           id?: never
           name?: string
           owner_id?: string

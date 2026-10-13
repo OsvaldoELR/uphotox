@@ -72,8 +72,14 @@ const describeEvent = (event: CardHistoryEntry) => {
       return `${who} la movió de «${event.from ?? "—"}» a «${event.to ?? "—"}»`;
     case "email_sent":
       return `Correo enviado · ${event.detail ?? ""}`;
-    default:
+    case "email_failed":
       return `Correo fallido · ${event.detail ?? ""}`;
+    case "gallery_sent":
+      return `${who} envió la galería al cliente`;
+    case "gallery_submitted":
+      return `El cliente confirmó su selección · ${event.detail ?? ""}`;
+    default:
+      return `${who} reabrió la selección`;
   }
 };
 

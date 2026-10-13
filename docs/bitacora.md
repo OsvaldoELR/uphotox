@@ -7,6 +7,7 @@ actualiza al terminar cada tarea. Para retomar en otra sesión, lee primero
 Documentos relacionados:
 - `CHANGELOG.md`: versiones publicadas.
 - `docs/deploy-vercel.md`: cómo publicar la app y la API en Vercel.
+- `docs/cloudflare-r2.md`: almacenamiento de las fotos de las galerías.
 - `docs/brand/README.md`: logo, iconos, colores y textos para compartir.
 - `CLAUDE.md`: reglas técnicas del proyecto (base de datos, permisos, correo…).
 - `docs/flujo-estudio.md`: cómo trabaja el estudio, análisis del formulario de
@@ -15,7 +16,7 @@ Documentos relacionados:
 
 ---
 
-## Estado actual (11 oct 2026 · versión 0.3.0)
+## Estado actual (13 oct 2026 · versión 0.3.0)
 
 Versión publicada: **v0.3.0** (historial de versiones en `CHANGELOG.md`).
 
@@ -28,6 +29,7 @@ Versión publicada: **v0.3.0** (historial de versiones en `CHANGELOG.md`).
 | Equipo | Hecho: usuarios con rol y permisos tipo GoHighLevel | `/equipo` |
 | Ajustes | Hecho: nombre, WhatsApp, entrada de clientes (webhook) | `/ajustes` |
 | Entrada de clientes (Make/Typeform) | Hecho y publicado | `apps/api` |
+| Galerías (selección, sustituye a Pixieset) | En curso: base de datos lista; falta Cloudflare R2, subida, página del cliente | `/galerias` (por hacer) |
 | Editor de imágenes | Pendiente («Pronto» en el menú) | — |
 
 Publicado en Vercel (equipo «Upgradix's projects», plan Hobby):
@@ -45,6 +47,14 @@ Configuración:
 ## Pendientes
 
 Del usuario:
+- [ ] **Cloudflare R2**: crear la cuenta, el bucket `uphotox-galerias` (con
+      CORS) y la clave, y pegar las 4 variables `R2_*` en
+      `apps/app/.env.local` (pasos en `docs/cloudflare-r2.md`). Avisar con
+      «listo»; las claves no se pegan en el chat.
+- [ ] Cuando Galerías esté publicada: activar «Galerías» a la fotógrafa en
+      Equipo (los usuarios ya creados no lo tienen) y probar una galería real
+      antes de cancelar Pixieset. Decidir antes qué hacer con la web del
+      estudio, que también está en Pixieset.
 - [ ] Importar el CSV real de clientes agendados (Clientes → Importar CSV).
 - [ ] En Make, pegar la URL definitiva del webhook (Ajustes → Entrada de
       clientes en la app publicada; empieza por `https://uphotox-api.vercel.app`).
@@ -64,15 +74,30 @@ Del usuario:
       sesión está confirmada). Pasos de Make en el Historial, 11 oct (v0.3.0).
 - [ ] Decidir copias de seguridad de la base de datos (Supabase Pro con copias
       diarias, o una copia semanal automática).
-- [ ] Decidir el siguiente módulo (propuesta: galería de selección; ver
-      Historial, 11 oct).
-- [ ] Responder las preguntas abiertas de `docs/flujo-estudio.md` (paquetes,
-      dónde se guardan los RAW, sesiones al mes, editores externos).
+- [ ] Responder las preguntas abiertas de `docs/flujo-estudio.md` (fotos de
+      cada paquete, dónde se guardan los RAW, sesiones al mes, editores
+      externos).
+
+De Galerías (por programar, en este orden):
+- [ ] Conexión con R2 (claves en `keys.ts`, enlaces firmados) y subir las
+      variables a Vercel (app y API).
+- [ ] Subida desde la ficha de la tarjeta (miniatura en el navegador, subida
+      directa a R2 de 4 en 4, reintento sin duplicar) y página `/galerias`
+      en el menú.
+- [ ] Página del cliente `/g/<código>` (móvil primero): corazones, contador
+      con extras a $20, «Ver mis favoritas», confirmar con comentario.
+- [ ] Al enviar/confirmar: mover la tarjeta (`gallery_role`), botón «Elegir
+      mis fotos» en el correo, aviso a la dueña y al responsable, «Copiar
+      para Lightroom», «Reabrir selección», WhatsApp con el enlace. Cambiar
+      el texto de «Enviadas para escoger» (hoy dice «avísanos con tu
+      selección»).
+- [ ] Tarea diaria: caducar enlaces, borrar fotos a los 60 días y vaciar
+      `storage_deletions`; borrar de R2 al eliminar tarjeta, tablero o cliente.
 
 Ideas para los siguientes módulos (detalle en `docs/flujo-estudio.md`):
-Google Calendar, recordatorios por WhatsApp, galería de selección propia (en
-lugar de Pixieset) con plugin de Lightroom, IA para preseleccionar y editar,
-paquetes y pagos.
+Google Calendar, recordatorios por WhatsApp, plugin de Lightroom y galería de
+entrega, Google Drive para los DNG de los editores, IA para preseleccionar y
+editar, paquetes y pagos.
 
 ## Cómo retomar
 
@@ -85,6 +110,64 @@ paquetes y pagos.
 ---
 
 ## Historial
+
+### 13 oct 2026 · Módulo Galerías: plan y base de datos
+**Decisiones (con el usuario)**
+- Es un módulo propio, **Galerías**; «Editor» sigue «Pronto» para la edición
+  (editores externos, IA). Primera versión: galería de selección que
+  sustituye a Pixieset ($10/mes, 10 GB, solo se usa para galerías y una web
+  del estudio desactualizada).
+- Volumen: 100–200 fotos por sesión de ~200 KB (ya salen de Lightroom en baja
+  calidad, con marca de agua y el nombre original `IMG_1234.jpg`): ~30 MB por
+  galería con miniaturas. La marca de agua se sigue poniendo en Lightroom.
+- El cliente puede elegir extras: siempre **$20** por foto (ajuste del
+  estudio que se copia a cada galería); se cobra fuera de Uphotox.
+- Plazos: el enlace caduca a los **60 días** sin elegir y las fotos se borran
+  **60 días** después de confirmar (o de caducar); se conserva la lista.
+- Almacenamiento: **Cloudflare R2** (10 GB gratis y descargas sin coste: $0 al
+  mes hasta más de 100 sesiones al mes). Supabase sigue en el plan gratis.
+  Descartados: Supabase Storage (1 GB gratis no alcanza, Pro $25/mes), Google
+  Drive (desde 2024 Google bloquea las imágenes de Drive en otras webs, habría
+  que pasarlas por el servidor y depende de la cuenta; útil más adelante para
+  los DNG de los editores y la entrega) y Amazon Photos (sin API desde 2023).
+- No cancelar Pixieset hasta probar una galería real; con él se va también la
+  web del estudio.
+
+**Qué se hizo**
+- Migración `20261013174108_galleries.sql`, aplicada:
+  - Permisos `galleries.view` («Ver galerías y copiar la selección para
+    Lightroom») y `galleries.manage` («Crear galerías, subir fotos y
+    enviarlas al cliente»). Vienen marcados al crear un Photographer o un
+    Editor; a los usuarios existentes hay que activárselos en Equipo.
+  - `studios.extra_photo_price` (20 por defecto).
+  - `board_stages.gallery_role` (`sent` / `submitted`): etapa a la que pasa la
+    tarjeta al enviar la galería y al confirmar el cliente. Los dos tableros
+    existentes quedaron marcados por nombre («Enviadas para escoger» y
+    «Escogidas») y la plantilla «Flujo completo» lo trae al crear tableros.
+  - Tablas `galleries` (una por tarjeta: código secreto del enlace, estado
+    borrador/abierta/confirmada, fotos incluidas, precio del extra, fechas,
+    comentario del cliente, fecha de borrado de las fotos) y
+    `gallery_photos` (nombre del archivo, tamaño, subida, favorita). Una
+    galería solo se ve si se ve su tarjeta.
+  - `storage_deletions`: cola de rutas de R2 por borrar; la llena un trigger
+    al borrar fotos, también en cascada al borrar galería, tarjeta, tablero o
+    cliente.
+  - Historial de la tarjeta: «envió la galería», «el cliente confirmó su
+    selección», «reabrió la selección» (ya con su texto en la ficha).
+- Pasos de Cloudflare dados al usuario y guardados en `docs/cloudflare-r2.md`
+  (bucket privado `uphotox-galerias`, clase Standard, CORS para la app y
+  localhost, clave «Object Read & Write» solo de ese bucket).
+- `CLAUDE.md` y `docs/flujo-estudio.md` actualizados.
+
+**Dónde está el código**: la migración, `packages/database/types.ts`
+(regenerado), `apps/app/lib/permissions.ts`, `apps/app/lib/board-templates.ts`
++ `lib/boards.ts` (`gallery_role`), `apps/app/app/actions/cards.ts` y
+`card-sheet.tsx` (historial).
+
+**Comprobado**: migración aplicada; revisor de Supabase sin avisos nuevos
+(solo el conocido de contraseñas filtradas); leídos los datos: etapas
+marcadas en los dos tableros y extra = 20 en los dos estudios; Biome, tipos y
+17 pruebas OK. Sin publicar (no cambia nada visible todavía).
 
 ### 11 oct 2026 · v0.3.0 · Ordenar etapas y añadir clientes arriba
 **Qué se hizo**

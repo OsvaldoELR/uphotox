@@ -337,7 +337,14 @@ export interface CardHistoryEntry {
   readonly detail: string | null;
   readonly from: string | null;
   readonly id: number;
-  readonly kind: "created" | "moved" | "email_sent" | "email_failed";
+  readonly kind:
+    | "created"
+    | "moved"
+    | "email_sent"
+    | "email_failed"
+    | "gallery_sent"
+    | "gallery_submitted"
+    | "gallery_reopened";
   readonly to: string | null;
 }
 

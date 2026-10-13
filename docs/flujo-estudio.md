@@ -96,15 +96,32 @@ sin duplicados al repetir la importación).
   3 días antes: «coordinemos vestuario»). Requiere número de empresa
   verificado; coste por conversación.
 
-### 3. Galería de selección propia (sustituir Pixieset)
-- Subir las previsualizaciones con marca de agua a Uphotox; el cliente abre un
-  enlace privado y marca favoritas con un límite según su paquete, con opción
-  de comprar extras.
-- Al confirmar: la tarjeta pasa sola a «Escogidas» y se genera la **lista de
-  nombres de archivo** para Lightroom (por verificar el mejor formato para el
-  filtro de texto de Lightroom Classic).
-- **Plugin de Lightroom Classic** (SDK en Lua): importar esa lista y crear una
-  colección con las elegidas, sin copiar números a mano.
+### 3. Galería de selección propia (sustituir Pixieset) — en curso
+Módulo **Galerías** (menú propio; «Editor» queda para la edición). Decidido
+con el usuario el 13 oct 2026:
+- Hoy: Pixieset a $10/mes (10 GB), solo para galerías (y una web del estudio
+  desactualizada, que se pierde al cancelarlo).
+- Se suben las fotos tal como salen de Lightroom: 100–200 por sesión, ~200 KB
+  cada una, con la marca de agua de Lightroom y el **nombre original**
+  (IMG_1234.jpg). Uphotox solo hace la miniatura.
+- El cliente abre un enlace privado (sin cuenta), marca favoritas y confirma.
+  Puede pasar del paquete: cada extra cuesta **$20** (ajuste del estudio); el
+  cobro va fuera de Uphotox.
+- Al enviar, la tarjeta pasa a «Enviadas para escoger» y al confirmar a
+  «Escogidas» (etapas configurables por tablero); la dueña y el responsable
+  reciben aviso.
+- **Lista para Lightroom**: nombres sin extensión separados por comas
+  (`IMG_0012, IMG_0045`), para Biblioteca → Filtro de texto → Nombre de archivo
+  → Contiene. Así encuentra el RAW/DNG del catálogo.
+- Plazos: el enlace caduca a los 60 días sin elegir; las fotos se borran 60
+  días después de confirmar o caducar. Se guarda qué se preseleccionó y qué
+  eligió el cliente (dato para la IA).
+- Fotos en **Cloudflare R2** ($0/mes con este volumen; guía en
+  `docs/cloudflare-r2.md`). Descartados: Supabase Storage (1 GB gratis no
+  alcanza; Pro $25/mes), Google Drive (desde 2024 no sirve imágenes a otras
+  webs y dependería de la cuenta de Google) y Amazon Photos (sin API).
+- Después: **plugin de Lightroom Classic** (SDK en Lua) que cree una colección
+  con las elegidas, y galería de **entrega** en alta calidad.
 
 ### 4. IA en la preselección (culling)
 - Descartar automáticamente: desenfocadas, ojos cerrados, duplicados y
@@ -191,8 +208,11 @@ siempre llegan vacías.
 - Antes y después de la edición final (para aprender el estilo).
 
 ## Preguntas abiertas
-- Paquetes: cuántas fotos incluye cada uno y precio de los extras.
+- Paquetes: cuántas fotos incluye cada uno (el extra ya está decidido: $20).
 - Dónde se guardan los RAW/DNG (disco, NAS, nube) y cuánto ocupan por sesión.
-- Sesiones al mes (dimensiona almacenamiento y coste de IA).
+  Idea: Google Drive (la cuenta tiene ~2 TB) para mandar los DNG a los
+  editores externos y para la entrega final.
+- Sesiones al mes (dimensiona el coste de IA; para las galerías ya no hace
+  falta: R2 gratis aguanta más de 100 sesiones al mes).
 - ¿Los editores externos tendrán usuario en Uphotox?
 - Criterios de selección del estudio (base para la IA de preselección).

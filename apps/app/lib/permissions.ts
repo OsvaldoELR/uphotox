@@ -29,6 +29,20 @@ export const PERMISSION_GROUPS = [
     ],
   },
   {
+    id: "galleries",
+    label: "Galerías",
+    permissions: [
+      {
+        key: "galleries.view",
+        label: "Ver galerías y copiar la selección para Lightroom",
+      },
+      {
+        key: "galleries.manage",
+        label: "Crear galerías, subir fotos y enviarlas al cliente",
+      },
+    ],
+  },
+  {
     id: "editor",
     label: "Editor de imágenes",
     permissions: [{ key: "editor.access", label: "Usar el editor" }],
@@ -96,8 +110,16 @@ export const ROLE_DEFAULTS: Record<MemberRole, Permission[]> = {
     "cards.edit",
     "cards.move",
     "clients.view",
+    "galleries.view",
+    "galleries.manage",
   ],
-  editor: ["boards.view", "cards.move", "editor.access"],
+  editor: [
+    "boards.view",
+    "cards.move",
+    "galleries.view",
+    "galleries.manage",
+    "editor.access",
+  ],
   assistant: [
     "boards.view",
     "cards.create",
