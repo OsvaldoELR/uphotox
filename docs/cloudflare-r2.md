@@ -39,6 +39,8 @@ los 60 días) cuesta $0. Las fotos de las tarjetas siguen en Supabase.
    *Forever*, sin filtro de IP (Vercel no tiene IP fija). La clave secreta se
    ve una sola vez.
 
+Estado (13 oct 2026): cuenta, bucket, CORS y clave creados y comprobados.
+
 ## Variables de entorno
 
 En `apps/app/.env.local` (y en el proyecto `uphotox-app` de Vercel como

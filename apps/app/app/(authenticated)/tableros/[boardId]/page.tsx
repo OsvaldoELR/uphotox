@@ -1,4 +1,5 @@
 import { createClient } from "@repo/database/server";
+import { isStorageConfigured } from "@repo/storage";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { isEmailEnabled } from "@/lib/email";
@@ -93,6 +94,10 @@ const BoardPage = async ({ params, searchParams }: BoardPageProperties) => {
           canMove: context.can("cards.move"),
           canDelete: context.can("cards.delete"),
           canManage: context.can("boards.manage"),
+          canViewGalleries:
+            context.can("galleries.view") || context.can("galleries.manage"),
+          canManageGalleries: context.can("galleries.manage"),
+          galleriesReady: isStorageConfigured(),
           onlyAssigned: context.member.onlyAssigned,
         }}
         boardId={boardId}

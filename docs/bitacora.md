@@ -29,7 +29,7 @@ Versión publicada: **v0.3.0** (historial de versiones en `CHANGELOG.md`).
 | Equipo | Hecho: usuarios con rol y permisos tipo GoHighLevel | `/equipo` |
 | Ajustes | Hecho: nombre, WhatsApp, entrada de clientes (webhook) | `/ajustes` |
 | Entrada de clientes (Make/Typeform) | Hecho y publicado | `apps/api` |
-| Galerías (selección, sustituye a Pixieset) | En curso: base de datos lista; falta Cloudflare R2, subida, página del cliente | `/galerias` (por hacer) |
+| Galerías (selección, sustituye a Pixieset) | En curso: crear galería desde la tarjeta, subir fotos a Cloudflare R2, lista y página de cada galería (en local, sin publicar). Falta la página del cliente, enviar y confirmar | `/galerias` |
 | Editor de imágenes | Pendiente («Pronto» en el menú) | — |
 
 Publicado en Vercel (equipo «Upgradix's projects», plan Hobby):
@@ -40,6 +40,9 @@ Publicado en Vercel (equipo «Upgradix's projects», plan Hobby):
 
 Configuración:
 - **Supabase**: proyecto enlazado (`cdkosqookglkyrjazmho`), migraciones al día.
+- **Cloudflare R2**: bucket privado `uphotox-galerias` con CORS para la app y
+  localhost; claves `R2_*` en `apps/app/.env.local` y en Vercel (`uphotox-app`).
+  Guía: `docs/cloudflare-r2.md`.
 - **Resend**: configurado en `apps/app/.env.local`, así que **los correos salen
   de verdad** al mover tarjetas. Para probar, usar solo `delivered+algo@resend.dev`.
 - **GitHub**: https://github.com/OsvaldoELR/uphotox (rama `main`).
@@ -47,10 +50,6 @@ Configuración:
 ## Pendientes
 
 Del usuario:
-- [ ] **Cloudflare R2**: crear la cuenta, el bucket `uphotox-galerias` (con
-      CORS) y la clave, y pegar las 4 variables `R2_*` en
-      `apps/app/.env.local` (pasos en `docs/cloudflare-r2.md`). Avisar con
-      «listo»; las claves no se pegan en el chat.
 - [ ] Cuando Galerías esté publicada: activar «Galerías» a la fotógrafa en
       Equipo (los usuarios ya creados no lo tienen) y probar una galería real
       antes de cancelar Pixieset. Decidir antes qué hacer con la web del
@@ -79,11 +78,6 @@ Del usuario:
       externos).
 
 De Galerías (por programar, en este orden):
-- [ ] Conexión con R2 (claves en `keys.ts`, enlaces firmados) y subir las
-      variables a Vercel (app y API).
-- [ ] Subida desde la ficha de la tarjeta (miniatura en el navegador, subida
-      directa a R2 de 4 en 4, reintento sin duplicar) y página `/galerias`
-      en el menú.
 - [ ] Página del cliente `/g/<código>` (móvil primero): corazones, contador
       con extras a $20, «Ver mis favoritas», confirmar con comentario.
 - [ ] Al enviar/confirmar: mover la tarjeta (`gallery_role`), botón «Elegir
@@ -91,8 +85,13 @@ De Galerías (por programar, en este orden):
       para Lightroom», «Reabrir selección», WhatsApp con el enlace. Cambiar
       el texto de «Enviadas para escoger» (hoy dice «avísanos con tu
       selección»).
-- [ ] Tarea diaria: caducar enlaces, borrar fotos a los 60 días y vaciar
-      `storage_deletions`; borrar de R2 al eliminar tarjeta, tablero o cliente.
+- [ ] Tarea diaria en `apps/api`: borrar fotos a los 60 días de confirmar
+      o caducar (`purged_at`), filas sin terminar de más de un día y lo que
+      quede en `storage_deletions`. Añadir `R2_*` al proyecto `uphotox-api`
+      de Vercel y `@repo/storage` a la API.
+- [ ] Ajustes: campo «Precio por foto extra» (hoy $20 fijo por defecto).
+- [ ] Publicar como v0.4.0 cuando el cliente pueda elegir (versión, CHANGELOG,
+      etiqueta).
 
 Ideas para los siguientes módulos (detalle en `docs/flujo-estudio.md`):
 Google Calendar, recordatorios por WhatsApp, plugin de Lightroom y galería de
@@ -110,6 +109,66 @@ editar, paquetes y pagos.
 ---
 
 ## Historial
+
+### 13 oct 2026 · Galerías: Cloudflare R2 y subida de fotos (sin publicar)
+**Qué se hizo**
+- El usuario creó la cuenta de Cloudflare, el bucket `uphotox-galerias` con su
+  CORS y la clave «Object Read & Write» solo de ese bucket. Comprobado: sube,
+  lee con enlace firmado, borra en bloque y rechaza lo que no va firmado; el
+  CORS deja entrar a la app y a `localhost:3000` y rechaza otras webs. Las 4
+  variables `R2_*` están en `apps/app/.env.local` y en Vercel (`uphotox-app`,
+  producción y preview; la clave y el secreto como *Sensitive*).
+- Paquete nuevo `@repo/storage` (`packages/storage`): conexión con R2 por su
+  API S3 con `aws4fetch` (enlaces firmados de subida y de descarga, tamaño de
+  un archivo, borrado en bloque), rutas de cada foto (`gallery.ts`) y
+  `flushStorageDeletions` (vacía la cola `storage_deletions` borrando en R2).
+  Los enlaces de descarga se firman desde el inicio del día y duran 2 días:
+  la misma foto tiene la misma dirección todo el día y el navegador la guarda.
+- **Menú «Galerías»** (`/galerias`): lista con estado, fotos, elegidas y
+  fecha. Se ve con cualquiera de los dos permisos de galerías.
+- **Ficha de la tarjeta**: bloque «Galería de selección» con el estado y
+  «Abrir galería», o «Crear galería» (rellena las fotos incluidas leyendo
+  «12 FOTOS» de las notas y copia el precio del extra del estudio).
+- **Página de la galería** (`/galerias/<id>`): resumen (fotos, elegidas,
+  incluidas, extras y su importe), comentario del cliente, zona para
+  arrastrar las fotos con barra de progreso, paquete editable, cuadrícula de
+  miniaturas con nombre de archivo, corazón en las elegidas, filtros
+  «Todas / Elegidas / Sin terminar», quitar una foto, quitar todas y
+  eliminar la galería.
+- **Subida**: el navegador lee cada JPG, hace la miniatura (600 px, ~32 KB) y
+  deja la foto tal cual si pesa menos de 1,5 MB y no pasa de 3000 px (si no,
+  la reduce a 2048 px). Registra las fotos de 24 en 24, las sube directo a
+  R2 de 4 en 4 y el servidor confirma que llegaron enteras. Las repetidas se
+  saltan, lo que no es JPG se rechaza con su motivo y lo fallido se reintenta
+  arrastrándolo otra vez. Avisa si se intenta cerrar la página a medias.
+- **Borrado**: al quitar fotos o eliminar galería, tarjeta, tablero o cliente,
+  el servidor vacía la cola y borra los archivos de R2 justo después de
+  responder (`lib/storage-cleanup.ts`).
+- Reglas puras en `apps/app/lib/gallery.ts` con 14 pruebas: estado de la
+  galería, paquete leído de las notas, lista para Lightroom, extras, nombres.
+
+**Dónde está el código**: `packages/storage/`, `apps/app/app/actions/galleries.ts`,
+`apps/app/app/(authenticated)/galerias/` (lista, página, subida y
+cuadrícula), `tableros/[boardId]/components/card-gallery.tsx`,
+`apps/app/components/gallery-state-chip.tsx`, `apps/app/lib/gallery.ts` y
+`lib/storage-cleanup.ts`; el menú en `components/sidebar.tsx` (un elemento
+puede pedir uno de varios permisos).
+
+**Comprobado** en el navegador con un usuario temporal (ya borrado, sin
+restos en la base de datos ni en R2): crear la galería desde la tarjeta (12
+incluidas leídas de las notas); subir 32 archivos → «30 subidas · 1 ya estaba
+· 1 con error» (el PNG), 62 archivos en R2; la foto de 6000 px quedó en 2048 px
+(112 KB); miniaturas visibles sin errores de CORS; con 14 elegidas (marcadas
+a mano en la base de datos) salen los corazones, el filtro y «2 · $40» de
+extras, y con 15 incluidas pasa a 0; la lista y la ficha muestran «30 fotos ·
+14 elegidas»; quitar una foto, quitar todas, eliminar la galería y eliminar
+la tarjeta dejan R2 y la cola vacíos. Biome, tipos, 31 pruebas de la app y 8
+de la API, y la compilación de app y API. Un aviso de hidratación que aparece
+al cargar dos veces el mismo tablero a la vez en desarrollo también sale sin
+el bloque de galería (no es de este cambio).
+
+**Sin publicar**: no se ha hecho `git push`; se publicará como v0.4.0 cuando
+el cliente pueda elegir sus fotos.
 
 ### 13 oct 2026 · Módulo Galerías: plan y base de datos
 **Decisiones (con el usuario)**

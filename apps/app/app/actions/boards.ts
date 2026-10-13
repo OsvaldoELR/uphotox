@@ -10,6 +10,7 @@ import {
   POSITION_STEP,
 } from "@/lib/board-templates";
 import { createBoardFromTemplate } from "@/lib/boards";
+import { scheduleStorageCleanup } from "@/lib/storage-cleanup";
 import { requireStudio } from "@/lib/studio";
 
 export type ActionResult = { ok: true } | { error: string };
@@ -148,6 +149,9 @@ export const deleteBoard = async (boardId: number): Promise<ActionResult> => {
   if (coverPaths.length) {
     await supabase.storage.from("card-covers").remove(coverPaths);
   }
+
+  // Gallery photos of its cards were queued for deletion by the cascade.
+  scheduleStorageCleanup();
 
   revalidatePath("/tableros");
   revalidatePath("/");

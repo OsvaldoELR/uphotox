@@ -4,6 +4,7 @@ import { createClient } from "@repo/database/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { MAX_IMPORT_ROWS } from "@/lib/client-import";
+import { scheduleStorageCleanup } from "@/lib/storage-cleanup";
 import { requireStudio } from "@/lib/studio";
 import type { ActionResult } from "./boards";
 
@@ -213,6 +214,9 @@ export const deleteClient = async (clientId: number): Promise<ActionResult> => {
     if (covers.length) {
       await supabase.storage.from("card-covers").remove(covers);
     }
+
+    // Gallery photos of those cards were queued by the cascade.
+    scheduleStorageCleanup();
   }
 
   const { data, error } = await supabase

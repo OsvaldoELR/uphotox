@@ -44,6 +44,10 @@ export interface BoardAccess {
   readonly canDelete: boolean;
   readonly canEdit: boolean;
   readonly canManage: boolean;
+  readonly canManageGalleries: boolean;
   readonly canMove: boolean;
+  readonly canViewGalleries: boolean;
+  /** The photo storage (R2) is configured, so galleries can be created. */
+  readonly galleriesReady: boolean;
   readonly onlyAssigned: boolean;
 }

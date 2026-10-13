@@ -39,6 +39,7 @@ import {
   updateCard,
 } from "@/app/actions/cards";
 import { ROLES } from "@/lib/permissions";
+import { CardGallery } from "./card-gallery";
 import { CoverField } from "./cover-field";
 import {
   formatDateTime,
@@ -220,8 +221,8 @@ export const CardSheet = ({
               </SheetDescription>
             </SheetHeader>
 
-            {/* Applied immediately, outside the form: moving and the photo do
-                not wait for "Guardar". */}
+            {/* Applied immediately, outside the form: moving, the photo and
+                the gallery do not wait for "Guardar". */}
             <section className="grid gap-5 border-b p-4">
               {access.canMove && stages.length > 1 && (
                 <div className="grid gap-2">
@@ -254,6 +255,13 @@ export const CardSheet = ({
                 coverUrl={card.cover_url}
                 editable={access.canEdit}
               />
+              {access.canViewGalleries && (
+                <CardGallery
+                  canManage={access.canManageGalleries}
+                  cardId={card.id}
+                  storageReady={access.galleriesReady}
+                />
+              )}
             </section>
 
             <form className="grid gap-5 p-4" key={card.id} onSubmit={save}>

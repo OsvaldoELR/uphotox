@@ -20,6 +20,7 @@ import {
 } from "@repo/design-system/components/ui/sidebar";
 import {
   ApertureIcon,
+  ImagesIcon,
   KanbanIcon,
   LayoutDashboardIcon,
   type LucideIcon,
@@ -47,8 +48,8 @@ interface GlobalSidebarProperties {
 
 interface NavItem {
   readonly icon: LucideIcon;
-  /** Hidden unless the member has this permission. */
-  readonly permission?: Permission;
+  /** Hidden unless the member has this permission (or any of these). */
+  readonly permission?: Permission | readonly Permission[];
   readonly title: string;
   /** Without a url the module is planned but not built yet. */
   readonly url?: string;
@@ -67,6 +68,12 @@ const studio: NavItem[] = [
     url: "/clientes",
     icon: UsersIcon,
     permission: "clients.view",
+  },
+  {
+    title: "Galerías",
+    url: "/galerias",
+    icon: ImagesIcon,
+    permission: ["galleries.view", "galleries.manage"],
   },
   { title: "Editor", icon: ApertureIcon, permission: "editor.access" },
 ];
@@ -150,10 +157,15 @@ export const GlobalSidebar = ({
   user,
 }: GlobalSidebarProperties) => {
   const pathname = usePathname();
-  const visible = (items: NavItem[]) =>
-    items.filter(
-      (item) => !item.permission || permissions.includes(item.permission)
-    );
+  const allowed = ({ permission }: NavItem) => {
+    if (!permission) {
+      return true;
+    }
+
+    const anyOf = typeof permission === "string" ? [permission] : permission;
+    return anyOf.some((key) => permissions.includes(key));
+  };
+  const visible = (items: NavItem[]) => items.filter(allowed);
   const adminItems = visible(admin);
 
   return (

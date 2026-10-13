@@ -6,6 +6,7 @@ import { after } from "next/server";
 import { z } from "zod";
 import { POSITION_STEP } from "@/lib/board-templates";
 import { notifyStageEntry } from "@/lib/notify";
+import { scheduleStorageCleanup } from "@/lib/storage-cleanup";
 import { requireStudio } from "@/lib/studio";
 import type { ActionResult } from "./boards";
 
@@ -325,6 +326,8 @@ export const deleteCard = async (cardId: number): Promise<ActionResult> => {
     await supabase.storage.from("card-covers").remove([coverPath]);
   }
 
+  // Its gallery photos (if any) were queued for deletion by the cascade.
+  scheduleStorageCleanup();
   revalidateBoard(boardId);
   return { ok: true };
 };
