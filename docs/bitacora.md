@@ -62,9 +62,11 @@ Del usuario:
       sí tiene acceso al equipo, así que no bloquea nada).
 - [ ] Antes de vender a otros estudios: plan Pro de Vercel (el Hobby es solo
       para uso no comercial) y, si se quiere, dominio `app.uphotox.com`.
-- [ ] Opcional: que el enlace de recuperación de contraseña funcione también
-      en otro navegador/dispositivo (cambiar la plantilla del correo; ver
-      Historial, 11 oct). Hoy funciona si se abre en el mismo navegador.
+- [ ] **Recomendado (ya afectó a un usuario real, 15 oct)**: que el enlace de
+      recuperación de contraseña y el de confirmar cuenta funcionen en otro
+      navegador/dispositivo (cambiar las plantillas «Reset password» y
+      «Confirm signup» de Supabase a `/auth/confirm?token_hash=…`; ver
+      Historial, 11 y 15 oct). Hoy solo funcionan en el mismo navegador.
 - [ ] Opcional: activar en Supabase la protección de contraseñas filtradas
       (único aviso del revisor de seguridad).
 - [ ] Crear la etapa «Solicitud recibida» («Nueva etapa», sin aviso al
@@ -119,6 +121,39 @@ editar, paquetes y pagos.
 ---
 
 ## Historial
+
+### 15 oct 2026 · «No llega el correo» al crear cuenta y error al recuperar contraseña (diagnóstico, sin cambios)
+**Qué pasaba**: el usuario creó una cuenta y no le llegó el correo; además,
+un usuario (lis…@gmail.com) no podía entrar.
+
+**Diagnóstico** (registros de Auth de Supabase y pruebas en producción):
+- Crear cuenta con un correo **que ya tiene cuenta**: Supabase responde «OK»
+  pero no envía nada (lo registra como `user_repeated_signup`), para no
+  revelar qué correos existen. La app igual dice «Revisa tu correo», así que
+  parece roto. Fue el caso de los dos intentos de hoy. Con un correo nuevo el
+  correo sale bien (probado con `delivered+…@resend.dev`; usuario borrado).
+- lis…@gmail.com: cuenta creada el 14 oct sin estudio. La madrugada del 15
+  falló la contraseña, pidió recuperarla varias veces (dos veces «espera N
+  segundos»: Supabase solo deja un correo por minuto), abrió un enlace viejo
+  («caducado») y al abrir el bueno Supabase devolvió «code challenge does not
+  match previously saved code verifier»: el enlace se abrió en otro navegador
+  o era de un correo anterior. Es el problema de PKCE del 11 oct.
+- Prueba en producción hoy: el enlace actual funciona en el mismo navegador y
+  falla en otro; el enlace con `/auth/confirm?token_hash=…` funciona en
+  cualquier navegador y no se puede usar dos veces.
+- Si esa persona debía ser del equipo del estudio, no tenía que registrarse:
+  se crea desde Equipo. Como su correo ya tiene cuenta, Equipo dirá que está
+  ocupado hasta borrar esa cuenta sin estudio.
+
+**Mejoras propuestas** (pendientes de que el usuario diga sí): cambiar las
+plantillas de Supabase (y de paso pasarlas al español), y que el registro
+avise «Ese correo ya tiene cuenta» cuando `user.identities` viene vacío.
+
+**Cómo se leen los registros de Auth ahora**: la API `logs.all` desapareció;
+se usa `GET /v1/projects/<ref>/analytics/endpoints/logs` con SQL de
+ClickHouse: `FROM logs WHERE source = 'auth_logs'` y los campos en
+`log_attributes['path']`, `['status']`, `['error']`,
+`['auth_event.action']`, `['auth_event.actor_username']`.
 
 ### 13 oct 2026 · v0.4.0 publicada y comprobada en producción
 **Qué se hizo**: versión 0.4.0 (`package.json`, `CHANGELOG.md`, etiqueta
