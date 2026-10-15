@@ -96,6 +96,12 @@ Detectado al probar (no es de Galerías):
 - [ ] En desarrollo, el primer tablero que se abre tras iniciar sesión (o el
       mismo tablero cargado dos veces a la vez) da un aviso de hidratación de
       React (ids distintos). No aparece al recargar y no es de este cambio.
+- [ ] Al apagar «Avisar al cliente» en «Configurar etapa» y guardar, se borra
+      el «Mensaje al cliente»: el cuadro queda deshabilitado y un campo
+      deshabilitado no viaja en el formulario, así que se guarda vacío
+      (`stage-dialog.tsx`, `disabled={!notify}`). Arreglo: usar `readOnly` o
+      mandar el texto aunque esté apagado. Detectado el 15 oct; el usuario
+      pidió no tocar código de momento (se le dieron textos para cada etapa).
 
 Ideas para los siguientes módulos (detalle en `docs/flujo-estudio.md`):
 Google Calendar, recordatorios por WhatsApp, plugin de Lightroom y galería de
