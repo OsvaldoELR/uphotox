@@ -143,8 +143,9 @@ con Uphotox. Lightroom Classic; hoy la limpieza va después del color, pero
 puede ir antes.
 - **Regla clave:** la IA nunca entrega a las personas. Se recortan con un
   modelo local (MODNet; BiRefNet en servidor), la IA trabaja sobre una copia
-  de 2048 px y el montaje a resolución completa (40 MP) solo usa píxeles de la
-  IA en las zonas de problemas; personas y decorados se quedan originales.
+  de 2048 px y el montaje a resolución completa (40 MP) toma de la IA todo el
+  fondo menos las personas y los decorados, que se quedan originales (usar
+  solo las zonas de problemas dejaba parches en fondos lisos).
 - **Agentes:** analista (qué arreglar y qué respetar) → localizador
   (recuadros, «quitar» o «suavizar») → editor (varios modelos, del barato al
   caro) → montaje (código, sin IA) → revisor (nota y fallos) → aprobación

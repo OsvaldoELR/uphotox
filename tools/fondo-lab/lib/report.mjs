@@ -5,7 +5,10 @@ import path from "node:path";
  * Local HTML report (never published: client photos). Blind comparison:
  * options A/B/C in a different order per photo, vote per photo, reveal at
  * the end. Votes stay in this browser (localStorage) and can be copied.
+ * Each voting round has its own vote key and option order.
  */
+
+const ROUND = 2;
 
 const escapeHtml = (value) =>
   String(value ?? "")
@@ -61,7 +64,7 @@ const summary = (photos, variants) =>
   });
 
 const card = (photo, variants) => {
-  const order = seededOrder(Object.keys(variants), photo.id);
+  const order = seededOrder(Object.keys(variants), `${photo.id}:${ROUND}`);
   const letters = ["A", "B", "C", "D", "E"];
   const fixes = photo.analysis.fixes
     .map((fix) => `<li>${escapeHtml(fix)}</li>`)
@@ -70,10 +73,11 @@ const card = (photo, variants) => {
     .map((variant, index) => {
       const r = photo.results[variant];
       const letter = letters[index];
+      const files = `${photo.id}/${r?.base ?? variant}`;
 
       if (r?.final?.rejected) {
         return `<figure class="option failed" data-variant="${variant}">
-          <img alt="Opción ${letter} (rechazada)" loading="lazy" src="${photo.id}/${variant}-web.jpg">
+          <img alt="Opción ${letter} (rechazada)" loading="lazy" src="${files}-web.jpg">
           <figcaption><b>${letter}</b><span class="muted">Rechazada automáticamente: la IA cambió el encuadre.</span><span class="reveal">${escapeHtml(variants[variant])} · ${money(r.edit.cost)}</span></figcaption>
         </figure>`;
       }
@@ -86,12 +90,12 @@ const card = (photo, variants) => {
       }
 
       return `<figure class="option" data-variant="${variant}">
-        <img alt="Opción ${letter}" data-final="${photo.id}/${variant}-web.jpg" data-zones="${photo.id}/${variant}-zonas.jpg" data-original="${photo.id}/original-web.jpg" loading="lazy" src="${photo.id}/${variant}-web.jpg">
+        <img alt="Opción ${letter}" data-final="${files}-web.jpg" data-zones="${files}-zonas.jpg" data-original="${photo.id}/original-web.jpg" loading="lazy" src="${files}-web.jpg">
         <figcaption>
           <b>${letter}</b>
           <button class="vote" data-photo="${photo.id}" data-variant="${variant}" type="button">Me quedo con esta</button>
           <button class="zones" type="button">Ver zonas</button>
-          <a href="${photo.id}/${variant}-final.jpg" target="_blank">Tamaño real</a>
+          <a href="${files}-final.jpg" target="_blank">Tamaño real</a>
           <span class="reveal"><b>${escapeHtml(variants[variant])}</b> · ${money(r.edit.cost)} · ${r.edit.seconds.toFixed(0)} s · IA en el ${(r.final.changedShare * 100).toFixed(0)} % de la foto<br>
           Revisor IA: <b>${r.review.score}/10</b> · ${escapeHtml(r.review.comment)}</span>
         </figcaption>
@@ -168,8 +172,8 @@ body:not(.revealed) td.hidden-label::before { content: "?"; }
 body.revealed #export { display: block; }
 </style></head>
 <body><main>
-<h1>Limpieza de fondos con IA</h1>
-<p class="lead">${photos.length} fotos del estudio · ${Object.keys(variants).length} modelos. En cada foto hay tres opciones (A, B, C) en un orden distinto cada vez; no sabes qué modelo es cada una. Pulsa <b>«Me quedo con esta»</b> en la mejor. <b>Mantén pulsada una imagen</b> para ver la original en el mismo sitio, <b>«Ver zonas»</b> marca en azul dónde actuó la IA y <b>«Tamaño real»</b> abre la foto completa (40 MP) para mirar detalles. La cara y el cuerpo de las personas nunca vienen de la IA. Cuando termines, pulsa <b>«Revelar modelos»</b>.</p>
+<h1>Limpieza de fondos con IA · ronda ${ROUND}</h1>
+<p class="lead">${photos.length} fotos del estudio · ${Object.keys(variants).length} modelos. En cada foto hay tres opciones (A, B, C) en un orden distinto cada vez; no sabes qué modelo es cada una. Pulsa <b>«Me quedo con esta»</b> en la mejor. <b>Mantén pulsada una imagen</b> para ver la original en el mismo sitio, <b>«Ver zonas»</b> marca en azul dónde actuó la IA y <b>«Tamaño real»</b> abre la foto completa (40 MP) para mirar detalles. La cara y el cuerpo de las personas nunca vienen de la IA; ahora el resto del fondo viene entero de la IA (salvo los decorados), sin parches por zonas. Cuando termines, pulsa <b>«Revelar modelos»</b>.</p>
 <table><thead><tr><th class="reveal-cell">Modelo</th><th>Fotos</th><th>Coste por foto</th><th>Tiempo por foto</th><th>Nota revisor IA</th><th>Tus votos</th></tr></thead><tbody>${rows}</tbody></table>
 <p class="lead">Coste total de esta prueba (análisis, zonas, edición y revisión): <b>${money(total)}</b>.</p>
 <div class="toolbar"><button class="primary" id="reveal" type="button">Revelar modelos</button><button id="reset" type="button">Borrar mis votos</button><span class="muted" id="count"></span></div>
@@ -177,7 +181,7 @@ body.revealed #export { display: block; }
 ${photos.map((photo) => card(photo, variants)).join("\n")}
 </main>
 <script>
-const KEY = "fondo-lab-votos";
+const KEY = "fondo-lab-votos-${ROUND}";
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; } };
 const save = (votes) => { try { localStorage.setItem(KEY, JSON.stringify(votes)); } catch {} };
 const render = () => {

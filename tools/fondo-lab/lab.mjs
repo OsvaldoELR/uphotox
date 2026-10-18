@@ -3,12 +3,16 @@
  *
  *   npm run lab -- --fotos "D:/.../FOTOS PARA PRUEBA DE EDICON" [--solo DSCF6279,DSCF7317]
  *                  [--variantes nb2,nbpro,gpt2] [--rehacer paso,paso] [--concurrencia 3]
+ *                  [--modo completo|zonas]
  *
  * Reads <fotos>/sin editar/*.jpg (and <fotos>/editadas/ for reference) and
  * writes everything to <fotos>/resultados-ia/, ending with informe.html.
  *
  * Per photo: analysis → zones → person mask → edit with each model →
  * full-resolution composite (people always original) → AI review.
+ * Composite mode (--modo): "completo" (default) takes the whole background
+ * from the model except people and the props to keep; "zonas" only the
+ * problem boxes (patchy on plain backdrops: seams where boxes end).
  * Every step is cached on disk; --rehacer analysis,zones,mask,edit,final,review
  * redoes the listed steps.
  */
@@ -232,6 +236,7 @@ const processPhoto = async ({ args, name, outDir, redo, variants }) => {
       .map((zone) => zone.box_2d),
     keep: zones.keep.map((zone) => zone.box_2d),
   };
+  const mode = args.modo === "zonas" ? "zonas" : "completo";
 
   const maskFile = path.join(folder, "mask.png");
   await cached(maskFile, redo.has("mask"), async () => {
@@ -279,9 +284,11 @@ const processPhoto = async ({ args, name, outDir, redo, variants }) => {
       }
 
       const output = path.join(folder, `${variant}.png`);
-      const finalFile = path.join(folder, `${variant}-final.jpg`);
+      // Each mode has its own files, so both can be compared.
+      const base = mode === "completo" ? `${variant}-completo` : variant;
+      const finalFile = path.join(folder, `${base}-final.jpg`);
       const final = await cached(
-        path.join(folder, `${variant}-final.json`),
+        path.join(folder, `${base}-final.json`),
         redo.has("final"),
         async () => {
           const alignment = await estimateAlignment(inputFile, output);
@@ -293,8 +300,8 @@ const processPhoto = async ({ args, name, outDir, redo, variants }) => {
             Math.abs(alignment.dx) > MAX_REFRAME ||
             Math.abs(alignment.dy) > MAX_REFRAME
           ) {
-            await web(output, path.join(folder, `${variant}-web.jpg`));
-            await web(output, path.join(folder, `${variant}-zonas.jpg`));
+            await web(output, path.join(folder, `${base}-web.jpg`));
+            await web(output, path.join(folder, `${base}-zonas.jpg`));
             return {
               alignment,
               rejected: `La IA cambió el encuadre (escala ${alignment.s.toFixed(3)}); se descarta y se reintentaría.`,
@@ -306,6 +313,7 @@ const processPhoto = async ({ args, name, outDir, redo, variants }) => {
           const { result, seconds } = await timed(async () => {
             const composite = await compositeBackground({
               alignment,
+              mode,
               original: source,
               workingCopy: inputFile,
               output,
@@ -314,7 +322,7 @@ const processPhoto = async ({ args, name, outDir, redo, variants }) => {
             });
             await writeFile(finalFile, composite.final);
             await sharp(composite.changeMask).toFile(
-              path.join(folder, `${variant}-cambios.png`)
+              path.join(folder, `${base}-cambios.png`)
             );
             return {
               alignment,
@@ -322,18 +330,18 @@ const processPhoto = async ({ args, name, outDir, redo, variants }) => {
               offsets: composite.offsets,
             };
           });
-          await web(finalFile, path.join(folder, `${variant}-web.jpg`));
+          await web(finalFile, path.join(folder, `${base}-web.jpg`));
           await tintedPreview(
-            path.join(folder, `${variant}-web.jpg`),
-            path.join(folder, `${variant}-cambios.png`),
-            path.join(folder, `${variant}-zonas.jpg`)
+            path.join(folder, `${base}-web.jpg`),
+            path.join(folder, `${base}-cambios.png`),
+            path.join(folder, `${base}-zonas.jpg`)
           );
           return { ...result, seconds };
         }
       );
 
       const verdict = await cached(
-        path.join(folder, `${variant}-review.json`),
+        path.join(folder, `${base}-review.json`),
         redo.has("review"),
         async () => {
           if (final.rejected) {
@@ -358,11 +366,11 @@ const processPhoto = async ({ args, name, outDir, redo, variants }) => {
         }
       );
 
-      results[variant] = { edit, final, review: verdict };
+      results[variant] = { base, edit, final, review: verdict };
     })
   );
 
-  return { id, name, portrait, analysis, zones, results };
+  return { id, name, portrait, mode, analysis, zones, results };
 };
 
 const main = async () => {
@@ -403,7 +411,9 @@ const main = async () => {
             : `${variant} ERROR`;
         })
         .join(" · ");
-      console.log(`${photo.name} · ${photo.analysis.scene} · ${line}`);
+      console.log(
+        `${photo.name} · ${photo.mode} · ${photo.analysis.scene} · ${line}`
+      );
     }
   };
 

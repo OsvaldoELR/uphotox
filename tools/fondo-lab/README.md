@@ -16,11 +16,18 @@ construir el módulo.
 4. **Edición** con cada modelo (Nano Banana 2, Nano Banana Pro, GPT Image 2)
    sobre una copia de 2048 px.
 5. **Montaje a resolución completa** (`lib/composite.mjs`): se alinea la
-   salida del modelo con la original, se iguala el color y solo se usan
-   píxeles de la IA dentro de los recuadros de problemas y donde de verdad
-   cambió algo; en las zonas de «suavizar» se usa la IA entera. **Las personas
-   siempre son los píxeles originales** y los decorados también, salvo que
-   cambien mucho de color (p. ej. una franja azul pintada encima).
+   salida del modelo con la original y se iguala el color. **Las personas
+   siempre son los píxeles originales** (las de la foto y las que dibujó la
+   IA, para que no aparezca un borde fantasma) y los decorados también, salvo
+   que cambien mucho de color (p. ej. una franja azul pintada encima). Dos
+   modos:
+   - `completo` (por defecto): todo el resto del fondo viene de la IA, con un
+     ajuste de color suave que conserva la luz de la original para que no se
+     note el borde alrededor de las personas.
+   - `zonas`: solo píxeles de la IA dentro de los recuadros de problemas y
+     donde de verdad cambió algo (en «suavizar», la IA entera). En fondos
+     lisos deja parches con bordes rectos (DSCF7325), por eso ya no es el
+     modo por defecto.
 6. **Revisor** (Gemini Flash): compara original y resultado y pone nota.
 7. **Informe** `resultados-ia/informe.html` para votar a ciegas.
 
@@ -42,6 +49,7 @@ La carpeta de fotos necesita `sin editar/` (JPG) y, para comparar,
 clientes y no se suben a ningún sitio salvo a las APIs de los modelos.
 
 Opciones: `--solo DSCF6279,DSCF7317`, `--variantes nb2,nbpro,gpt2`,
+`--modo completo|zonas` (cada modo guarda sus propios archivos),
 `--concurrencia 3`, `--rehacer analysis,zones,mask,edit,final,review` (cada
 paso queda guardado y no se repite si no se pide).
 

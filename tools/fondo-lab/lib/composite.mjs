@@ -1,11 +1,18 @@
 import sharp from "sharp";
+import { personMask as segmentPeople } from "./segment.mjs";
 
 /**
- * Full-resolution result that never takes the people from the model:
+ * Full-resolution result that never takes the people from the model.
+ * Two modes:
  *
- *   final = original, except where the model really changed the background
- *           (stains, strips, stands…), which come from the model output,
- *           scaled up, aligned and colour-matched; people always original.
+ * - "zonas": final = original, except where the model really changed the
+ *   background inside the problem boxes (stains, strips, stands…), which
+ *   come from the model output, scaled up, aligned and colour-matched.
+ * - "completo" (plain backdrops): the whole background comes from the
+ *   model; only the people (the original ones and the ones the model drew,
+ *   so no ghost edge) and the props it merely redrew stay original. A
+ *   low-frequency colour match keeps the original light, so the edge around
+ *   the people does not show.
  *
  * The decision is taken on the small working copy (the model input size)
  * and applied to the full-size original with libvips (sharp).
@@ -28,6 +35,13 @@ const BOX_MARGIN = 15; // grow fix boxes by this many thousandths
 // "smooth" zones (wrinkles, seams, stains…) are small, spread-out changes the
 // thresholds would discard: there the model output is taken as a whole.
 const SMOOTH_FEATHER_SIGMA = 10;
+// "completo" mode.
+const PROTECT_GROW_SIGMA = 3; // keeps a thin band of original around people
+const PROTECT_FEATHER_SIGMA = 3;
+const MATCH_CELL = 8; // colour match grid cell, in working pixels
+const MATCH_SIGMA = 0.05; // colour match smoothing, share of the long edge
+const MATCH_LIMIT = 28; // larger differences are real changes, not light
+const MATCH_PRIOR = 4; // pulls empty grid areas to the global offset
 
 const raw = async (pipeline) => {
   const { data, info } = await pipeline
@@ -254,23 +268,161 @@ const addSmoothZones = async (
   }
 };
 
+const maskAt = (png, width, height) =>
+  sharp(png)
+    .resize(width, height, { fit: "fill" })
+    .extractChannel(0)
+    .raw()
+    .toBuffer();
+
+/**
+ * People in the original or in the model output, grown a little and
+ * feathered: the model's own (slightly different) silhouette never shows.
+ */
+const protectPeople = async (personMask, modelPeople, width, height) => {
+  const union = Buffer.alloc(width * height);
+
+  for (let i = 0; i < union.length; i += 1) {
+    union[i] = Math.max(personMask[i], modelPeople[i]);
+  }
+
+  const grown = await blurBand(union, width, height, PROTECT_GROW_SIGMA);
+
+  for (let i = 0; i < grown.length; i += 1) {
+    grown[i] = grown[i] > 25 ? 255 : 0;
+  }
+
+  const soft = await blurBand(grown, width, height, PROTECT_FEATHER_SIGMA);
+
+  for (let i = 0; i < soft.length; i += 1) {
+    soft[i] = Math.max(soft[i], union[i]);
+  }
+
+  return soft;
+};
+
+/** Everything but kept props (feathered); people are subtracted later. */
+const wholeBackground = (images, offsets, areas, width, height) => {
+  const take = Buffer.alloc(width * height, 255);
+
+  for (let i = 0; i < take.length; i += 1) {
+    if (isKeptProp(images, offsets, areas.inProp, i)) {
+      take[i] = 0;
+    }
+  }
+
+  return blurBand(take, width, height, FEATHER_SIGMA);
+};
+
+/** Separable Gaussian blur of a float grid (in place). */
+const blurGrid = (grid, width, height, sigma) => {
+  const radius = Math.ceil(sigma * 3);
+  const kernel = Float32Array.from({ length: radius * 2 + 1 }, (_, k) =>
+    Math.exp(-((k - radius) ** 2) / (2 * sigma * sigma))
+  );
+  const line = new Float32Array(Math.max(width, height));
+  const pass = (count, length, index) => {
+    for (let a = 0; a < count; a += 1) {
+      for (let b = 0; b < length; b += 1) {
+        line[b] = grid[index(a, b)];
+      }
+
+      for (let b = 0; b < length; b += 1) {
+        let sum = 0;
+
+        for (let k = -radius; k <= radius; k += 1) {
+          const at = Math.min(length - 1, Math.max(0, b + k));
+          sum += line[at] * kernel[k + radius];
+        }
+
+        grid[index(a, b)] = sum;
+      }
+    }
+  };
+
+  pass(height, width, (y, x) => y * width + x);
+  pass(width, height, (x, y) => y * width + x);
+};
+
+/**
+ * Low-frequency colour match (original minus model), estimated only on
+ * background the model kept (small differences), as a coarse RGB grid
+ * stored as offset + 128. Removed objects get the light of their
+ * surroundings; empty areas fall back to the global offset.
+ */
+const colourField = (images, offsets, keepOut, width, height) => {
+  const gridWidth = Math.ceil(width / MATCH_CELL);
+  const gridHeight = Math.ceil(height / MATCH_CELL);
+  const cells = gridWidth * gridHeight;
+  const weight = new Float32Array(cells);
+  const sums = [0, 1, 2].map(() => new Float32Array(cells));
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const i = y * width + x;
+      const d = [0, 1, 2].map(
+        (c) => images.origLow[i * 3 + c] - images.aiLow[i * 3 + c]
+      );
+      const kept =
+        keepOut[i] < 20 &&
+        d.every((value, c) => Math.abs(value - offsets[c]) < MATCH_LIMIT);
+
+      if (kept) {
+        const cell =
+          Math.floor(y / MATCH_CELL) * gridWidth + Math.floor(x / MATCH_CELL);
+        weight[cell] += 1;
+
+        for (let c = 0; c < 3; c += 1) {
+          sums[c][cell] += d[c];
+        }
+      }
+    }
+  }
+
+  const sigma = (MATCH_SIGMA * Math.max(width, height)) / MATCH_CELL;
+  blurGrid(weight, gridWidth, gridHeight, sigma);
+
+  for (const sum of sums) {
+    blurGrid(sum, gridWidth, gridHeight, sigma);
+  }
+
+  const data = Buffer.alloc(cells * 3);
+
+  for (let cell = 0; cell < cells; cell += 1) {
+    for (let c = 0; c < 3; c += 1) {
+      const value =
+        (sums[c][cell] + MATCH_PRIOR * offsets[c]) /
+        (weight[cell] + MATCH_PRIOR);
+      data[cell * 3 + c] = Math.min(255, Math.max(0, Math.round(value + 128)));
+    }
+  }
+
+  return { data, width: gridWidth, height: gridHeight };
+};
+
 /**
  * Decides, on the working copy, where to use model pixels. Returns the
- * colour offset for the model output and the change mask (one band, PNG).
+ * colour offset for the model output (plus a colour field in "completo"
+ * mode) and the change mask (one band, PNG).
  * zones (optional): { fixes: [box], smooth: [box], keep: [box] } in 0–1000
  * units; "smooth" boxes are also fix boxes.
  */
-const decide = async ({ aligned, original, person, width, height, zones }) => {
+const decide = async ({
+  aligned,
+  mode,
+  modelPeople,
+  original,
+  person,
+  width,
+  height,
+  zones,
+}) => {
   const [orig, ai, origLow, aiLow, personMask] = await Promise.all([
     rgb(original, width, height),
     rgb(aligned, width, height),
     rgb(original, width, height, PROP_SIGMA),
     rgb(aligned, width, height, PROP_SIGMA),
-    sharp(person)
-      .resize(width, height, { fit: "fill" })
-      .extractChannel(0)
-      .raw()
-      .toBuffer(),
+    maskAt(person, width, height),
   ]);
   const images = { orig, ai, origLow, aiLow, personMask };
   const offsets = colourOffsets(orig, ai, personMask, width * height);
@@ -281,32 +433,83 @@ const decide = async ({ aligned, original, person, width, height, zones }) => {
     inProp: boxMask(zones?.keep ?? [], width, height),
   };
 
-  const mask = await changeRegions(images, offsets, areas, width, height);
-  await addSmoothZones(
-    mask,
-    images,
-    offsets,
-    areas,
-    zones?.smooth,
-    width,
-    height
-  );
+  let mask;
+  let people = personMask;
+  let field;
+
+  if (mode === "completo") {
+    people = await protectPeople(
+      personMask,
+      await maskAt(modelPeople, width, height),
+      width,
+      height
+    );
+    mask = await wholeBackground(images, offsets, areas, width, height);
+    field = colourField(images, offsets, people, width, height);
+  } else {
+    mask = await changeRegions(images, offsets, areas, width, height);
+    await addSmoothZones(
+      mask,
+      images,
+      offsets,
+      areas,
+      zones?.smooth,
+      width,
+      height
+    );
+  }
 
   // People always win: subtract the (soft) person mask.
   let changed = 0;
 
   for (let i = 0; i < mask.length; i += 1) {
-    mask[i] = Math.round((mask[i] * (255 - personMask[i])) / 255);
+    mask[i] = Math.round((mask[i] * (255 - people[i])) / 255);
     changed += mask[i] > 127 ? 1 : 0;
   }
 
   return {
     offsets,
+    field,
     changedShare: changed / mask.length,
     mask: await sharp(mask, { raw: { width, height, channels: 1 } })
       .png()
       .toBuffer(),
   };
+};
+
+/** Model output at full size with the colour correction applied. */
+const correctedColour = async (output, width, height, alignment, decision) => {
+  const image = await warp(output, width, height, alignment);
+
+  if (!decision.field) {
+    return sharp(image).linear([1, 1, 1], decision.offsets).raw().toBuffer();
+  }
+
+  const [colour, field] = await Promise.all([
+    sharp(image).raw().toBuffer(),
+    sharp(decision.field.data, {
+      raw: {
+        width: decision.field.width,
+        height: decision.field.height,
+        channels: 3,
+      },
+    })
+      .resize(width, height, { fit: "fill", kernel: "cubic" })
+      .raw()
+      .toBuffer(),
+  ]);
+  // A clamped view: values past 0–255 saturate instead of wrapping.
+  const out = new Uint8ClampedArray(
+    colour.buffer,
+    colour.byteOffset,
+    colour.length
+  );
+
+  for (let i = 0; i < out.length; i += 1) {
+    out[i] = colour[i] + field[i] - 128;
+  }
+
+  return colour;
 };
 
 /**
@@ -316,10 +519,12 @@ const decide = async ({ aligned, original, person, width, height, zones }) => {
  * @param person person mask PNG (any size)
  * @param alignment { s, dx, dy } from estimateAlignment
  * @param zones optional { fixes, smooth, keep } boxes from the zones step
+ * @param mode "zonas" (default) or "completo" (whole background from the model)
  * @returns { final (JPEG, full size), changeMask (PNG, working size), offsets, changedShare }
  */
 export const compositeBackground = async ({
   alignment,
+  mode = "zonas",
   original,
   output,
   person,
@@ -327,8 +532,11 @@ export const compositeBackground = async ({
   zones,
 }) => {
   const working = await sharp(workingCopy).metadata();
+  const aligned = await warp(output, working.width, working.height, alignment);
   const decision = await decide({
-    aligned: await warp(output, working.width, working.height, alignment),
+    aligned,
+    mode,
+    modelPeople: mode === "completo" ? await segmentPeople(aligned) : undefined,
     original: await sharp(workingCopy).png().toBuffer(),
     person,
     width: working.width,
@@ -340,9 +548,7 @@ export const compositeBackground = async ({
   const width = full.autoOrient?.width ?? full.width;
   const height = full.autoOrient?.height ?? full.height;
   const [colour, alpha] = await Promise.all([
-    warp(output, width, height, alignment).then((image) =>
-      sharp(image).linear([1, 1, 1], decision.offsets).raw().toBuffer()
-    ),
+    correctedColour(output, width, height, alignment, decision),
     sharp(decision.mask)
       .resize(width, height, { fit: "fill", kernel: "cubic" })
       .extractChannel(0)

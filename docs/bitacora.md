@@ -50,11 +50,13 @@ Configuración:
 ## Pendientes
 
 Del usuario:
-- [ ] **Editor · votar la prueba de fondos**: abrir con doble clic
-      `D:\PROGRAMACION\uphotox\FOTOS PARA PRUEBA DE EDICON\resultados-ia\informe.html`
-      (mejor tu esposa), votar la mejor opción de cada foto sin saber el modelo,
-      pulsar «Revelar modelos» y pasarme el texto de votos que aparece. Decir
-      también si quitar la mano de un adulto que sujeta al bebé es habitual.
+- [ ] **Editor · votar la ronda 2 de fondos** (fondo completo): abrir con
+      doble clic
+      `D:\PROGRAMACION\uphotox\FOTOS PARA PRUEBA DE EDICON\resultados-ia\informe.html`,
+      votar otra vez cada foto (las opciones cambiaron de orden y los votos
+      empiezan de cero), pulsar «Revelar modelos» y pasarme el texto de votos.
+      Decir también si quitar la mano de un adulto que sujeta al bebé es
+      habitual (DSCF6322).
 - [ ] Galerías ya está publicada: activar «Galerías» a la fotógrafa en
       Equipo (los usuarios ya creados no lo tienen) y probar una galería real
       antes de cancelar Pixieset. Decidir antes qué hacer con la web del
@@ -124,6 +126,52 @@ editar, paquetes y pagos.
 ---
 
 ## Historial
+
+### 18 oct 2026 · Editor: modo «fondo completo» en el montaje
+**Votos de la ronda 1** (11 fotos): Nano Banana 2 4, GPT Image 2 4, Nano
+Banana Pro 3. Empate: ningún modelo gana claramente. En DSCF7325 (papel beige
+liso) **los tres salieron mal**.
+
+**Por qué falló DSCF7325**: la IA limpió bien la foto entera, pero el montaje
+solo tomaba sus píxeles dentro de los recuadros del localizador (franja de
+arriba, bordes de la derecha y suelo). El centro del fondo quedaba original y
+se veían bordes rectos y saltos de tono donde acababa cada recuadro.
+
+**Decisión** (el usuario lo dejó a mi criterio): tomar de la IA **todo lo que
+no sea persona ni decorado**, como propuso el usuario. Es el nuevo modo por
+defecto, `completo`; el anterior sigue como `--modo zonas`.
+- Se protegen las personas de la original **y** las que dibujó la IA (se
+  recorta también su salida), con un margen fino: la silueta algo distinta
+  de la IA nunca aparece como borde fantasma.
+- Un ajuste de color de baja frecuencia (calculado solo en el fondo que la
+  IA no cambió mucho) conserva la luz de la original y evita un halo de otro
+  tono alrededor de las personas. Lo que la IA quitó (focos, pies de luz)
+  toma la luz de su entorno.
+- Los decorados siguen protegidos como antes (solo se acepta un cambio
+  grande de color).
+
+**Resultado** (revisor IA, ronda 1 → ahora): DSCF7325 pasa de 5/5/4 a 7/6/7
+(NB2/Pro/GPT); DSCF7758 de 9/8/10 a 10/10/10; el resto igual o un punto
+arriba o abajo (el revisor varía entre ejecuciones). Visto a tamaño real:
+caras y pelo idénticos, sin halo, y desaparece la costura del suelo. Dentro
+de las personas la diferencia con la original es de 0,4–0,65 sobre 255
+(solo la recompresión JPEG) en los tres modelos. En paredes con molduras el
+fondo viene de la copia de 2K de la IA: a tamaño real es algo más suave que
+el original; a tamaño de web no se nota.
+
+**Dónde**: `tools/fondo-lab/lib/composite.mjs` (`protectPeople`,
+`wholeBackground`, `colourField`, `correctedColour`); modo en `lab.mjs`
+(archivos `<modelo>-completo-*`); el informe es la **ronda 2** (votos y orden
+nuevos) en `lib/report.mjs`.
+
+**Comprobado**: montaje rehecho en las 12 fotos sin coste de edición (solo
+revisión, ~$0,10); hojas de contacto y recortes a tamaño real de DSCF7325,
+DSCF7339, DSCF7047 y DSCF6279; diferencia medida dentro de las personas en
+todas; el informe enlaza 212 imágenes sin faltar ninguna; Biome sin avisos.
+
+**Siguiente**: ronda 2 de votos → reintento automático cuando un modelo no
+cambia nada (Nano Banana Pro en DSCF7339) o mueve el encuadre (NB2 en
+DSCF6298) → separar a cada persona para quitar manos de ayuda (DSCF6322).
 
 ### 18 oct 2026 · Editor: prueba de concepto de limpieza de fondos con IA
 **Decisiones (con el usuario)**
