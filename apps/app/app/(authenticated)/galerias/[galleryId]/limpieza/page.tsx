@@ -56,9 +56,12 @@ const NO_LINKS = {
   beforeUrl: null,
   zonesUrl: null,
   fullUrl: null,
+  originalUrl: null,
 };
 
-/** Four signed links per finished photo: after, before, zones, full size. */
+const LINKS_PER_PHOTO = 5;
+
+/** Signed links per finished photo: after, before, zones, full size, original. */
 const photoLinks = async (
   studioId: number,
   galleryId: number,
@@ -68,7 +71,13 @@ const photoLinks = async (
     ? await signedGetUrls(
         photoIds.flatMap((id) => {
           const keys = editPhotoKeys({ studioId, galleryId, id });
-          return [keys.preview, keys.before, keys.zones, keys.result];
+          return [
+            keys.preview,
+            keys.before,
+            keys.zones,
+            keys.result,
+            keys.original,
+          ];
         })
       )
     : [];
@@ -77,10 +86,11 @@ const photoLinks = async (
     photoIds.map((id, index) => [
       id,
       {
-        previewUrl: urls[index * 4] ?? null,
-        beforeUrl: urls[index * 4 + 1] ?? null,
-        zonesUrl: urls[index * 4 + 2] ?? null,
-        fullUrl: urls[index * 4 + 3] ?? null,
+        previewUrl: urls[index * LINKS_PER_PHOTO] ?? null,
+        beforeUrl: urls[index * LINKS_PER_PHOTO + 1] ?? null,
+        zonesUrl: urls[index * LINKS_PER_PHOTO + 2] ?? null,
+        fullUrl: urls[index * LINKS_PER_PHOTO + 3] ?? null,
+        originalUrl: urls[index * LINKS_PER_PHOTO + 4] ?? null,
       },
     ])
   );

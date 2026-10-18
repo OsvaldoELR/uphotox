@@ -17,9 +17,9 @@ Documentos relacionados:
 
 ---
 
-## Estado actual (18 oct 2026 · versión 0.6.0)
+## Estado actual (18 oct 2026 · versión 0.6.1)
 
-Versión publicada: **v0.6.0** (historial de versiones en `CHANGELOG.md`).
+Versión publicada: **v0.6.1** (historial de versiones en `CHANGELOG.md`).
 
 | Módulo | Estado | Dónde |
 | --- | --- | --- |
@@ -146,6 +146,25 @@ editar, paquetes y pagos.
 ---
 
 ## Historial
+
+### 18 oct 2026 · Editor: visor a pantalla completa · v0.6.1
+**Pedido del usuario**: en la v0.6.0 la foto mostraba la lupa pero al
+pulsarla no pasaba nada (antes se abría en otra pestaña); mejor que se
+amplíe ahí mismo.
+
+**Qué se hizo**: `edit-photo-viewer.tsx`, como el visor de la galería del
+cliente: un clic corto en la tarjeta abre la foto en grande (mantener
+pulsado sigue mostrando la original); un clic en el visor carga el archivo a
+tamaño real y lo centra en el punto pulsado (`focusOf` descuenta las bandas
+de `object-contain`), otro clic vuelve. «Ver original» (a tamaño real usa
+`original.jpg`, firmado también en la página), «Zonas», las acciones de
+revisión (`ReviewActions` exportado) y flechas o ← → entre fotos. Además,
+las fotos sin `before.jpg` (limpiadas antes de la v0.6.0) ya no muestran una
+imagen rota.
+
+**Comprobado**: 52 pruebas y `npm run build` de la app; Biome sin avisos.
+El visor no se pudo probar en el navegador (la página necesita la sesión del
+usuario).
 
 ### 18 oct 2026 · Editor: fase 3 (revisar, descargar, ajustes) · v0.6.0
 **Primera prueba real (v0.5.1)**: 7 fotos de la galería 7, todas

@@ -40,6 +40,8 @@ export interface EditPhotoItem {
   readonly fullUrl: string | null;
   readonly id: number;
   readonly note: string | null;
+  /** Signed URL of the full-size original (to compare when zoomed in). */
+  readonly originalUrl: string | null;
   /** Signed URL of the cleaned preview; null until it is done. */
   readonly previewUrl: string | null;
   readonly reviewStatus: ReviewStatus;
@@ -132,7 +134,7 @@ const RedoDialog = ({
   );
 };
 
-const ReviewActions = ({
+export const ReviewActions = ({
   galleryId,
   photo,
 }: {
@@ -204,17 +206,23 @@ const ReviewActions = ({
   );
 };
 
-/** The cleaned photo; hold it to see the original, «Zonas» shows the AI's areas. */
+/**
+ * The cleaned photo: a click opens it large, holding it shows the original,
+ * «Zonas» shows the AI's areas.
+ */
 const Picture = ({
+  onHold,
+  onOpen,
   photo,
   view,
-  onHold,
 }: {
   readonly onHold: (holding: boolean) => void;
+  readonly onOpen: () => void;
   readonly photo: EditPhotoItem;
   readonly view: View;
 }) => {
   const timer = useRef<number | undefined>(undefined);
+  const held = useRef(false);
   // Photos cleaned before v0.6.0 have no before.jpg: show the result.
   const [broken, setBroken] = useState<ReadonlySet<View>>(new Set());
   const sources: Record<View, string | null> = {
@@ -242,6 +250,24 @@ const Picture = ({
     onHold(false);
   };
 
+  // A short press opens the viewer; a long one only showed the original.
+  const press = () => {
+    held.current = false;
+    timer.current = window.setTimeout(() => {
+      held.current = true;
+      onHold(true);
+    }, HOLD_MS);
+  };
+
+  const lift = () => {
+    const wasHeld = held.current;
+    release();
+
+    if (!wasHeld) {
+      onOpen();
+    }
+  };
+
   return (
     <>
       <Image
@@ -258,11 +284,9 @@ const Picture = ({
           }
         }}
         onPointerCancel={release}
-        onPointerDown={() => {
-          timer.current = window.setTimeout(() => onHold(true), HOLD_MS);
-        }}
+        onPointerDown={press}
         onPointerLeave={release}
-        onPointerUp={release}
+        onPointerUp={lift}
         src={source}
         unoptimized
         width={400}
@@ -354,9 +378,12 @@ const Links = ({
 
 export const EditPhotoCard = ({
   galleryId,
+  onOpen,
   photo,
 }: {
   readonly galleryId: number;
+  /** Opens this photo in the full-screen viewer. */
+  readonly onOpen: () => void;
   readonly photo: EditPhotoItem;
 }) => {
   const [holding, setHolding] = useState(false);
@@ -379,6 +406,7 @@ export const EditPhotoCard = ({
       >
         <Picture
           onHold={setHolding}
+          onOpen={onOpen}
           photo={photo}
           view={viewFor(holding, zones)}
         />

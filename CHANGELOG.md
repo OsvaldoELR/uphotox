@@ -7,6 +7,18 @@ en `docs/bitacora.md`.
 Numeración: el primer número cambia con cambios grandes que rompen la forma de
 trabajar, el segundo con funciones nuevas y el tercero con arreglos.
 
+## [0.6.1] · 18 oct 2026 · Editor: ver las fotos en grande
+
+**Añadido**
+- Un clic en una foto limpia la abre **en grande en la misma página**; otro
+  clic la amplía a **tamaño real** justo donde se pulsó (y se recorre
+  arrastrando o con la rueda). Con «Ver original», «Zonas», aprobar,
+  rehacer o descartar ahí mismo, y flechas (o ← →) para pasar de foto.
+
+**Corregido**
+- Las fotos limpiadas antes de la v0.6.0 no tienen vista de la original:
+  al mantenerlas pulsadas ya no sale una imagen rota.
+
 ## [0.6.0] · 18 oct 2026 · Editor: revisar, descargar y ajustes
 
 **Añadido**

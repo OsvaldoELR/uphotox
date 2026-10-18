@@ -26,6 +26,7 @@ import {
 import { EDIT_STATE_LABELS, type EditState } from "@/lib/editor";
 import { DownloadPanel } from "./download-panel";
 import { EditPhotoCard, type EditPhotoItem } from "./edit-photo-card";
+import { EditPhotoViewer } from "./edit-photo-viewer";
 
 export type { EditPhotoItem } from "./edit-photo-card";
 
@@ -243,6 +244,7 @@ export const EditPhotoList = ({
 }: EditPhotoListProperties) => {
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>("all");
+  const [viewing, setViewing] = useState<number | null>(null);
   const inProgress = photos.some(
     (photo) => photo.state === "queued" || photo.state === "processing"
   );
@@ -351,10 +353,25 @@ export const EditPhotoList = ({
       </p>
 
       <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
-        {visible.map((photo) => (
-          <EditPhotoCard galleryId={galleryId} key={photo.id} photo={photo} />
+        {visible.map((photo, index) => (
+          <EditPhotoCard
+            galleryId={galleryId}
+            key={photo.id}
+            onOpen={() => setViewing(index)}
+            photo={photo}
+          />
         ))}
       </ul>
+
+      {viewing !== null && (
+        <EditPhotoViewer
+          galleryId={galleryId}
+          index={Math.min(viewing, visible.length - 1)}
+          onClose={() => setViewing(null)}
+          onIndexChange={setViewing}
+          photos={visible}
+        />
+      )}
     </div>
   );
 };
