@@ -113,6 +113,10 @@ Del Editor (por programar):
 - [ ] Encuadre con los recortes reales del estudio como ejemplos (hoy usa
       sus recortes medios, sin IA): llegará con el plugin de Lightroom.
 - [ ] Fase 5: plugin de Lightroom Classic (`docs/plan-editor.md`).
+- [ ] **Edición completa** (pedido del usuario y su esposa): todo menos las
+      caras, con nivel de exigencia y elección de modelo. Prototipo hecho
+      (ver Historial); falta que el usuario confirme el diseño y construir la
+      pantalla.
 
 Detectado al probar (no es de Galerías):
 - [ ] Si se borra un usuario con la sesión abierta (p. ej. un miembro del
@@ -146,6 +150,37 @@ editar, paquetes y pagos.
 ---
 
 ## Historial
+
+### 18 oct 2026 · Editor: cara flotante y prototipo de edición completa
+**Cara flotante** (DSCF2845, al rehacer con la nota «quita a la persona…»):
+la IA quitó a la madre, pero el localizador marcó también su cara como
+«cara a proteger» y el montaje la dejó original, flotando. Arreglo en
+`composite.mjs` (`facesThatStay`): una cara solo se protege si en la salida
+de la IA sigue habiendo una persona ahí. Reproducido con las mismas zonas de
+producción (3 caras): ya no queda la cara. Pendiente de publicar.
+
+**El prompt**: el usuario preguntó qué se manda a la API. Es `editPrompt`
+(`services/editor/engine/lib/prompts.mjs`): «retoca SOLO fondo y suelo», la
+lista de arreglos del analista más la nota del estudio, «en general» quitar
+equipo y extender el fondo, y «conserva exactamente» los decorados y a cada
+persona (salvo la mano o la persona que se pide quitar).
+
+**Edición completa** (pedido: limpiar piel, ropa, decoración, fondo, todo
+menos la cara; modelos caros y perfeccionistas; nivel de exigencia):
+- Motor: modo de montaje `rostros` (todo de la IA salvo las caras de quienes
+  se quedan, con borde suave) y `fullEditPrompt` / `fullReviewPrompt`.
+- Resolución: GPT Image 2 acepta tamaños propios hasta ~8 MP (probado
+  2336×3504); Nano Banana Pro 4K devuelve 3392×5056 (17 MP).
+- Prototipo con DSCF6322 y DSCF7325 (entrada de 3072 px):
+  GPT Image 2 8 MP $0,48 y ~80 s; Nano Banana Pro 4K $0,24 y ~30 s; las
+  cuatro con nota 7. A tamaño real: caras idénticas y sin costura; piel y
+  ropa con textura natural; Nano Banana Pro algo más nítido (deja una línea
+  suave en una pared); GPT limpia mejor los brillos del suelo. Resultados en
+  `FOTOS PARA PRUEBA DE EDICON\resultados-edicion-completa\`.
+- Propuesta de pantalla (por confirmar): modo «Solo fondo» / «Edición
+  completa»; exigencia 1 (un modelo a elegir), 2 (los dos modelos, gana el
+  mejor según el revisor), 3 (además, segunda pasada con lo que el revisor
+  vio mal).
 
 ### 18 oct 2026 · Editor: visor a pantalla completa · v0.6.1
 **Pedido del usuario**: en la v0.6.0 la foto mostraba la lupa pero al

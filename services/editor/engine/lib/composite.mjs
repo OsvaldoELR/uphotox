@@ -14,7 +14,11 @@ import { personMask as segmentPeople } from "./segment.mjs";
  *   low-frequency colour match keeps the original light, so the edge around
  *   the people does not show.
  *
- * In both modes a helper's hand or arm holding a child, or a whole person
+ * - "rostros" (full edit): everything comes from the model (skin, clothes,
+ *   hair, props, backdrop) except the faces of the people who stay, which
+ *   are always the original pixels; the same colour match keeps the light.
+ *
+ * In every mode a helper's hand or arm holding a child, or a whole person
  * the studio asked to remove (a "helper" box), is the one part of a person
  * taken from the model.
  *
@@ -46,7 +50,11 @@ const MATCH_CELL = 8; // colour match grid cell, in working pixels
 const MATCH_SIGMA = 0.05; // colour match smoothing, share of the long edge
 const MATCH_LIMIT = 28; // larger differences are real changes, not light
 const MATCH_PRIOR = 4; // pulls empty grid areas to the global offset
-// Helper hands (a parent's hand holding the child), both modes.
+// «rostros» mode: faces are kept with this margin and soft edge (shares
+// of the long edge), so hairline and chin blend into the model's retouch.
+const FACE_KEEP_MARGIN = 0.012;
+const FACE_FEATHER = 0.008;
+// Helper hands (a parent's hand holding the child), every mode.
 const HELPER_MARGIN = 20; // grow helper boxes by this many thousandths
 const HELPER_SEED_SIGMA = 4; // ignores thin slivers where the masks disagree
 const HELPER_CHANGE = 24; // person pixels the model clearly redrew
@@ -55,6 +63,9 @@ const HELPER_CHANGE = 24; // person pixels the model clearly redrew
 const HELPER_GROW = 0.012; // share of the long edge (blur sigma)
 const HELPER_FEATHER_SIGMA = 6;
 const FACE_MARGIN = 10; // faces never come from the model (thousandths)
+// A face box whose person the model removed (less than this share of it is
+// still a person in the output) belonged to the person being removed.
+const KEPT_FACE_SHARE = 0.35;
 
 const raw = async (pipeline) => {
   const { data, info } = await pipeline
@@ -327,6 +338,43 @@ const protectPeople = async (personMask, modelPeople, width, height) => {
 };
 
 /**
+ * «rostros» mode: the faces (their boxes, grown a little, where the
+ * original has a person) are the only original pixels, softly blended.
+ */
+const keepFaces = ({ faces, height, personMask, width }) => {
+  const long = Math.max(width, height);
+  const area = boxMask(faces, width, height, FACE_KEEP_MARGIN * 1000);
+  const face = Buffer.alloc(width * height);
+
+  for (let i = 0; i < face.length; i += 1) {
+    face[i] = area[i] && personMask[i] > 64 ? 255 : 0;
+  }
+
+  return blurBand(face, width, height, FACE_FEATHER * long);
+};
+
+/**
+ * Faces to protect: those still on a person in the model output. When the
+ * model removed the person (the studio asked to remove them), keeping their
+ * face would leave it floating.
+ */
+const facesThatStay = (faces, modelPeople, width, height) =>
+  faces.filter((face) => {
+    const area = boxMask([face], width, height);
+    let inside = 0;
+    let person = 0;
+
+    for (let i = 0; i < area.length; i += 1) {
+      if (area[i]) {
+        inside += 1;
+        person += modelPeople[i] > 128 ? 1 : 0;
+      }
+    }
+
+    return inside === 0 || person / inside >= KEPT_FACE_SHARE;
+  });
+
+/**
  * A helper's hand or arm holding the child is the one part of a person that
  * goes. Inside its box: the person pixels that vanished in the model output,
  * plus the connected person pixels the model clearly redrew (the child's
@@ -369,7 +417,12 @@ const helperRegions = async ({
     height,
     HELPER_GROW * Math.max(width, height)
   );
-  const inFace = boxMask(faces, width, height, FACE_MARGIN);
+  const inFace = boxMask(
+    facesThatStay(faces, modelPeople, width, height),
+    width,
+    height,
+    FACE_MARGIN
+  );
 
   for (let i = 0; i < size; i += 1) {
     grown[i] = (grown[i] > 20 || region[i]) && inBox[i] && !inFace[i] ? 255 : 0;
@@ -537,7 +590,15 @@ const decide = async ({
   let people = personMask;
   let field;
 
-  if (mode === "completo") {
+  if (mode === "rostros") {
+    people = await keepFaces({
+      faces: facesThatStay(zones?.faces ?? [], modelMask, width, height),
+      height,
+      personMask,
+      width,
+    });
+    mask = Buffer.alloc(width * height, 255);
+  } else if (mode === "completo") {
     people = await protectPeople(personMask, modelMask, width, height);
     mask = await wholeBackground(images, offsets, areas, width, height);
   } else {
@@ -563,7 +624,7 @@ const decide = async ({
     }
   }
 
-  if (mode === "completo") {
+  if (mode === "completo" || mode === "rostros") {
     field = colourField(images, offsets, people, width, height);
   }
 
@@ -627,7 +688,8 @@ const correctedColour = async (output, width, height, alignment, decision) => {
  * @param person person mask PNG (any size)
  * @param alignment { s, dx, dy } from estimateAlignment
  * @param zones optional { fixes, smooth, helpers, keep, faces } boxes from the zones step
- * @param mode "zonas" (default) or "completo" (whole background from the model)
+ * @param mode "zonas" (default), "completo" (whole background from the
+ *   model) or "rostros" (everything but the faces from the model)
  * @returns { final (JPEG, full size), changeMask (PNG, working size), offsets, changedShare }
  */
 export const compositeBackground = async ({
@@ -645,7 +707,7 @@ export const compositeBackground = async ({
     aligned,
     mode,
     modelPeople:
-      mode === "completo" || zones?.helpers?.length
+      mode !== "zonas" || zones?.helpers?.length
         ? await segmentPeople(aligned)
         : undefined,
     original: await sharp(workingCopy).png().toBuffer(),

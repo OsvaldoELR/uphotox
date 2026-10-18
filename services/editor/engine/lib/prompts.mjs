@@ -151,3 +151,40 @@ export const FRAMING_SCHEMA = {
   properties: { box_2d: box },
   required: ["box_2d"],
 };
+
+/**
+ * Full edit («edición completa»): retouch everything like a demanding
+ * retoucher; only the faces come back from the original afterwards, so
+ * the model is told not to touch them (no seams at the hairline).
+ */
+export const fullEditPrompt = ({ fixes, keep }) =>
+  `This is a professional studio portrait. Retouch the WHOLE photo like the most demanding high-end portrait retoucher, ready to deliver to the client.
+
+Do all of this:
+- Backdrop and floor: remove photography equipment (stands, umbrellas, softboxes, cables, clamps, tape), another backdrop or the room visible at an edge (extend the main backdrop seamlessly), and every wrinkle, crease, seam, stain, scuff, dust and stray reflection.
+- Props and decoration: clean dust, lint, stains, scratches and damage; make flowers, fabrics and rugs look fresh and tidy; keep every prop where it is.
+- Clothes: remove lint, stains and loose threads, soften distracting wrinkles; keep the cut, color and fabric texture.
+- Skin outside the faces (neck, shoulders, arms, hands, legs, feet): even out redness, marks, bruises, scratches and blemishes naturally, keeping real skin texture (no plastic look).
+- Hair: tidy stray flyaways that stick out from the hair outline.
+${list(fixes.length ? fixes : ["Clean the backdrop and floor."])}
+
+Keep these props: ${keep.length ? keep.join("; ") : "(none)"}.
+
+Do NOT change:
+- the faces at all (eyes, mouth, expression, facial skin): they will be kept from the original;
+- who the people are, their body shape, pose and the position of their hands and feet;
+- the framing, camera angle, composition, colors, exposure and lighting of the photo;
+- natural shadows and reflections of people and props.
+Keep the exact same framing and image proportions. Do not crop, zoom or shift.`;
+
+/** Reviewer for a full edit: the whole retouch, not only the backdrop. */
+export const fullReviewPrompt = (fixes) =>
+  `Image 1 is an unedited studio portrait. Image 2 is the same photo after an automatic full retouch (backdrop, floor, props, clothes, skin outside the faces, flyaways; faces kept original). Also requested:
+${fixes.map((fix) => `- ${fix}`).join("\n")}
+
+Judge it as the most demanding studio owner would, ready to deliver or not:
+- what is still to fix (backdrop, floor, props, clothes, skin, hair),
+- artifacts: blur or soft patches, smears, plastic skin, changed body shapes or hands, seams around faces or hairlines, props that changed or vanished, colour patches,
+- whether the people look like themselves.
+
+Return JSON: "score" 1-10 (10 = ready to deliver), "remaining" (list, English), "artifacts" (list, English), "comment" (one or two sentences in Spanish for the studio).`;
