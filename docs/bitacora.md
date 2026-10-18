@@ -17,9 +17,9 @@ Documentos relacionados:
 
 ---
 
-## Estado actual (18 oct 2026 · versión 0.6.1)
+## Estado actual (18 oct 2026 · versión 0.6.2)
 
-Versión publicada: **v0.6.1** (historial de versiones en `CHANGELOG.md`).
+Versión publicada: **v0.6.2** (historial de versiones en `CHANGELOG.md`).
 
 | Módulo | Estado | Dónde |
 | --- | --- | --- |
@@ -157,7 +157,7 @@ la IA quitó a la madre, pero el localizador marcó también su cara como
 «cara a proteger» y el montaje la dejó original, flotando. Arreglo en
 `composite.mjs` (`facesThatStay`): una cara solo se protege si en la salida
 de la IA sigue habiendo una persona ahí. Reproducido con las mismas zonas de
-producción (3 caras): ya no queda la cara. Pendiente de publicar.
+producción (3 caras): ya no queda la cara. Publicado como v0.6.2.
 
 **El prompt**: el usuario preguntó qué se manda a la API. Es `editPrompt`
 (`services/editor/engine/lib/prompts.mjs`): «retoca SOLO fondo y suelo», la

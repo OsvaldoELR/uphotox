@@ -7,6 +7,12 @@ en `docs/bitacora.md`.
 Numeración: el primer número cambia con cambios grandes que rompen la forma de
 trabajar, el segundo con funciones nuevas y el tercero con arreglos.
 
+## [0.6.2] · 18 oct 2026 · Editor: sin caras flotantes
+
+**Corregido**
+- Al quitar a una persona entera con una nota, a veces su cara se quedaba
+  flotando: ahora solo se protegen las caras de quienes siguen en la foto.
+
 ## [0.6.1] · 18 oct 2026 · Editor: ver las fotos en grande
 
 **Añadido**
