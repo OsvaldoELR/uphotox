@@ -14,8 +14,12 @@ trabajar, el segundo con funciones nuevas y el tercero con arreglos.
   clic la amplía a **tamaño real** justo donde se pulsó (y se recorre
   arrastrando o con la rueda). Con «Ver original», «Zonas», aprobar,
   rehacer o descartar ahí mismo, y flechas (o ← →) para pasar de foto.
+- **Quitar a una persona entera** pidiéndolo en la nota de «Rehacer» (por
+  ejemplo, la madre que sujeta a la niña): se quita y se rehace el fondo,
+  y las caras de quienes se quedan siguen intactas.
 
 **Corregido**
+- Una foto aprobada o descartada ya no sigue marcada como «Revisar».
 - Las fotos limpiadas antes de la v0.6.0 no tienen vista de la original:
   al mantenerlas pulsadas ya no sale una imagen rota.
 

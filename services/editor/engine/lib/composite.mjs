@@ -14,8 +14,9 @@ import { personMask as segmentPeople } from "./segment.mjs";
  *   low-frequency colour match keeps the original light, so the edge around
  *   the people does not show.
  *
- * In both modes a helper's hand or arm holding a child (a "helper" box) is
- * the one part of a person taken from the model.
+ * In both modes a helper's hand or arm holding a child, or a whole person
+ * the studio asked to remove (a "helper" box), is the one part of a person
+ * taken from the model.
  *
  * The decision is taken on the small working copy (the model input size)
  * and applied to the full-size original with libvips (sharp).

@@ -162,9 +162,22 @@ revisión (`ReviewActions` exportado) y flechas o ← → entre fotos. Además,
 las fotos sin `before.jpg` (limpiadas antes de la v0.6.0) ya no muestran una
 imagen rota.
 
-**Comprobado**: 52 pruebas y `npm run build` de la app; Biome sin avisos.
-El visor no se pudo probar en el navegador (la página necesita la sesión del
-usuario).
+**Además (pedidos del usuario al probar la v0.6.0)**
+- Una foto aprobada seguía con la etiqueta «Revisar» (el aviso del revisor):
+  ahora, aprobada o descartada, cuenta como respondida (página de limpieza y
+  `/editor`).
+- **Quitar a una persona entera**: el usuario pidió en una nota de DSCF2845
+  «quita a la persona que está sosteniendo la niña… deja solo las 2 niñas».
+  Antes el montaje protegía a todas las personas (nota 3). Ahora el
+  localizador marca como `helper` también a una persona que los arreglos
+  piden quitar, las cajas de caras son solo de quienes se quedan, y las
+  instrucciones de edición lo permiten. Probado en este PC con esa foto y
+  esa nota: la madre desaparece entera, las niñas intactas, nota 7; GPT
+  movió el encuadre al primer intento y se reintentó solo ($0,37).
+
+**Comprobado**: 52 pruebas y `npm run build` de la app; tipos del Worker;
+Biome sin avisos. El visor no se pudo probar en el navegador (la página
+necesita la sesión del usuario).
 
 ### 18 oct 2026 · Editor: fase 3 (revisar, descargar, ajustes) · v0.6.0
 **Primera prueba real (v0.5.1)**: 7 fotos de la galería 7, todas

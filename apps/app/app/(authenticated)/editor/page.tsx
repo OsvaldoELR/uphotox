@@ -84,6 +84,7 @@ const groupByGallery = (
       readonly id: number;
     } | null;
     readonly needs_review: boolean;
+    readonly review_status: string;
     readonly status: string;
   }[]
 ) => {
@@ -103,7 +104,10 @@ const groupByGallery = (
       failed: 0,
     };
     const status = photo.status as EditStatus;
-    const state = editState({ status, needsReview: photo.needs_review });
+    const state = editState({
+      status,
+      needsReview: photo.needs_review && photo.review_status === "pending",
+    });
     galleries.set(row.id, {
       ...row,
       done: row.done + (state === "done" ? 1 : 0),
@@ -129,7 +133,7 @@ const EditorPage = async () => {
       supabase
         .from("edit_photos")
         .select(
-          "status, needs_review, gallery:galleries!edit_photos_gallery_id_studio_id_fkey(id, card:cards!galleries_card_id_studio_id_fkey(title))"
+          "status, needs_review, review_status, gallery:galleries!edit_photos_gallery_id_studio_id_fkey(id, card:cards!galleries_card_id_studio_id_fkey(title))"
         ),
       supabase
         .from("galleries")

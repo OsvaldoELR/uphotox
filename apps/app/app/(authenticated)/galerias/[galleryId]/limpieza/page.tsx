@@ -191,9 +191,10 @@ const CleanupPage = async ({ params }: CleanupPageProperties) => {
     .map((row) => ({
       id: row.id,
       fileName: row.file_name,
+      // Once approved or discarded, the reviewer's warning is answered.
       state: editState({
         status: row.status as EditStatus,
-        needsReview: row.needs_review,
+        needsReview: row.needs_review && row.review_status === "pending",
       }),
       score: row.score,
       comment: row.review_comment,

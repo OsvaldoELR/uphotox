@@ -41,9 +41,9 @@ ${fixes.map((fix, index) => `${index + 1}. ${fix}`).join("\n")}
 Props to keep:
 ${keep.map((item, index) => `${index + 1}. ${item}`).join("\n") || "(none)"}
 
-For each problem also give "kind": "remove" for objects, strips, gaps or areas to extend (light stands, another backdrop visible, the room floor), "smooth" for surface work (wrinkles, creases, seams, stains, scuffs, dust, reflections, uneven tone), "helper" for the hand or arm of a helper (parent or assistant) holding or steadying a child; its box must cover the whole visible hand and arm, including where it touches the child.
+For each problem also give "kind": "remove" for objects, strips, gaps or areas to extend (light stands, another backdrop visible, the room floor), "smooth" for surface work (wrinkles, creases, seams, stains, scuffs, dust, reflections, uneven tone), "helper" for the hand or arm of a helper (parent or assistant) holding or steadying a child, and also for a whole person that a problem above asks to remove; its box must cover all of that hand, arm or person, including where it touches the child.
 
-Also give "faces": one box per visible face of any person in the photo (faces are never retouched).
+Also give "faces": one box per visible face of the people who stay in the photo, not of a helper or person to remove (those faces are never retouched).
 
 Return JSON {"fixes": [{"index", "box_2d", "kind"}], "keep": [{"index", "box_2d"}], "faces": [{"box_2d"}]} with the same numbering.`;
 
@@ -118,7 +118,7 @@ ${list(fixes.length ? fixes : ["Remove wrinkles, creases, seams, stains, scuffs 
 - In general: remove photography equipment (light stands, umbrellas, softboxes, cables, clamps, tape) and, where another backdrop, wall or the room floor shows at an edge, extend the main backdrop seamlessly so it fills the frame.
 
 Keep exactly as they are:
-${list([...keep, "every person: faces, skin, hair, bodies, hands, clothes and poses (except a helper's hand or arm listed above: remove it and rebuild the child's skin and clothes where it touched them)", "natural shadows and reflections of people and props on the floor"])}
+${list([...keep, "every person: faces, skin, hair, bodies, hands, clothes and poses (except a helper's hand or arm, or a person, that the fixes above ask to remove: remove them and rebuild the backdrop, and the child's skin and clothes where they touched them)", "natural shadows and reflections of people and props on the floor"])}
 
 Keep the backdrop's own color, gradient, lighting and texture natural and consistent.
 Keep the exact same framing, camera angle, composition and image proportions. Do not crop, zoom, shift, add or remove anything else. Do not change colors or exposure of the rest of the photo.`;
