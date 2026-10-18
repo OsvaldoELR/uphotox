@@ -145,7 +145,9 @@ puede ir antes.
   modelo local (MODNet; BiRefNet en servidor), la IA trabaja sobre una copia
   de 2048 px y el montaje a resolución completa (40 MP) toma de la IA todo el
   fondo menos las personas y los decorados, que se quedan originales (usar
-  solo las zonas de problemas dejaba parches en fondos lisos).
+  solo las zonas de problemas dejaba parches en fondos lisos). Única
+  excepción: la mano o el brazo de quien sujeta al niño se quita (es
+  habitual); las caras nunca se tocan.
 - **Agentes:** analista (qué arreglar y qué respetar) → localizador
   (recuadros, «quitar» o «suavizar») → editor (varios modelos, del barato al
   caro) → montaje (código, sin IA) → revisor (nota y fallos) → aprobación
@@ -153,7 +155,9 @@ puede ir antes.
 - **Modelos probados:** Nano Banana 2 (~$0,10), Nano Banana Pro (~$0,14) y
   GPT Image 2 alta (~$0,18) por foto, más ~$0,01 de análisis y revisión.
   Gemini mantiene el encuadre; GPT Image 2 lo mueve un 1–2 % (hay que
-  alinearlo).
+  alinearlo). **Voto a ciegas del estudio: gana GPT Image 2** (8 de 12 fotos).
+  Limpiar solo las fotos que el cliente elige en la galería baja mucho el
+  coste por sesión.
 - **Prueba de concepto:** `tools/fondo-lab` (informe para votar a ciegas en
   la carpeta de fotos). Siguiente paso: votos del estudio → elegir modelos →
   módulo en Uphotox con cola en paralelo y revisión antes/después → plugin de

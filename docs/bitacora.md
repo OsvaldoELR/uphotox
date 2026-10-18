@@ -50,13 +50,9 @@ Configuración:
 ## Pendientes
 
 Del usuario:
-- [ ] **Editor · votar la ronda 2 de fondos** (fondo completo): abrir con
-      doble clic
-      `D:\PROGRAMACION\uphotox\FOTOS PARA PRUEBA DE EDICON\resultados-ia\informe.html`,
-      votar otra vez cada foto (las opciones cambiaron de orden y los votos
-      empiezan de cero), pulsar «Revelar modelos» y pasarme el texto de votos.
-      Decir también si quitar la mano de un adulto que sujeta al bebé es
-      habitual (DSCF6322).
+- [ ] **Editor · decidir**: ¿limpiar todas las fotos de la sesión o solo
+      las que el cliente elige en la galería? ¿GPT Image 2 en todas
+      (~$0,18 por foto) o Nano Banana 2 (~$0,10) como opción barata?
 - [ ] Galerías ya está publicada: activar «Galerías» a la fotógrafa en
       Equipo (los usuarios ya creados no lo tienen) y probar una galería real
       antes de cancelar Pixieset. Decidir antes qué hacer con la web del
@@ -94,6 +90,15 @@ De Galerías (por programar, en este orden):
 - [ ] Opcional: estado de la galería en la tarjeta del tablero (chip «Esperando
       · 5/12», «Selección recibida»).
 
+Del Editor (por programar):
+- [ ] Reintento automático cuando el modelo no cambia nada (Nano Banana Pro
+      en DSCF7339) o mueve el encuadre (Nano Banana 2 en DSCF6298).
+- [ ] Probar las manos de ayuda y la protección de caras con más fotos
+      (solo hubo un caso, DSCF6322).
+- [ ] Diseñar el módulo en Uphotox: cola en paralelo, revisión
+      antes/después, recorte BiRefNet en servidor, subida directa como en
+      Galerías → plugin de Lightroom Classic.
+
 Detectado al probar (no es de Galerías):
 - [ ] Si se borra un usuario con la sesión abierta (p. ej. un miembro del
       equipo), su navegador entra en un bucle de redirecciones hasta que caduca
@@ -126,6 +131,43 @@ editar, paquetes y pagos.
 ---
 
 ## Historial
+
+### 18 oct 2026 · Editor: gana GPT Image 2 y se quitan las manos de ayuda
+**Votos de la ronda 2** (12 fotos, fondo completo): **GPT Image 2 8**, Nano
+Banana 2 3, Nano Banana Pro 1. En la ronda 1 hubo empate (4/4/3): con el
+fondo completo gana claramente GPT Image 2 (~$0,18 y ~70 s por foto).
+
+**Manos de ayuda** (el usuario confirma que quitarlas es habitual): la mano
+o el brazo de un padre o asistente que entra en la foto para sujetar al niño
+es la **única parte de una persona que se quita**.
+- El analista la anota como arreglo («Remove the helper's…») y el
+  localizador le da un recuadro de tipo `helper`. El localizador también
+  devuelve ahora el recuadro de cada cara: **las caras nunca vienen de la
+  IA**, aunque estén cerca de la mano.
+- Dentro del recuadro, el montaje toma de la IA lo que era persona en la
+  original y dejó de serlo (el brazo), más lo que la IA redibujó a su lado.
+  Lo amplía lo suficiente para traer entera la mano del niño que sujetaba la
+  del adulto: GPT la redibuja un poco más abajo y, sin ampliar, salían **dos
+  puños**.
+- Las instrucciones de edición dicen ahora que se quite esa mano y se
+  rehaga la piel o la ropa del niño donde la tocaba.
+
+**Resultado en DSCF6322**: brazo quitado en los tres modelos, con un solo
+puño y el brazo del niño natural. Revisor IA: de 3/4/3 a 7/5/7 (NB2/Pro/GPT).
+Diferencia en la cara del bebé respecto a la original: 0,5–0,6 sobre 255
+(solo la recompresión JPEG).
+
+**Dónde**: `tools/fondo-lab/lib/composite.mjs` (`helperRegions`, `flood`,
+`growAndFeather`), `lib/prompts.mjs` (tipo `helper`, `faces`) y `lab.mjs`.
+Las ediciones de DSCF6322 son las de antes (el arreglo ya pedía quitar el
+brazo); solo se rehicieron zonas, montaje y revisión (~$0,03).
+
+**Comprobado**: recortes a tamaño real de la mano y del brazo del niño en
+los tres modelos; cara medida; informe completo regenerado (12 fotos, 212
+imágenes, ninguna falta); Biome sin avisos.
+
+**Coste**: la prueba entera va por **~$5,30** (ediciones, análisis y zonas
+~$5,07, más las revisiones de cada ronda).
 
 ### 18 oct 2026 · Editor: modo «fondo completo» en el montaje
 **Votos de la ronda 1** (11 fotos): Nano Banana 2 4, GPT Image 2 4, Nano

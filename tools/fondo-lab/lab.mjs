@@ -234,7 +234,12 @@ const processPhoto = async ({ args, name, outDir, redo, variants }) => {
     smooth: zones.fixes
       .filter((zone) => zone.kind === "smooth")
       .map((zone) => zone.box_2d),
+    // A parent's hand holding the child: removed, even over the child.
+    helpers: zones.fixes
+      .filter((zone) => zone.kind === "helper")
+      .map((zone) => zone.box_2d),
     keep: zones.keep.map((zone) => zone.box_2d),
+    faces: (zones.faces ?? []).map((face) => face.box_2d),
   };
   const mode = args.modo === "zonas" ? "zonas" : "completo";
 

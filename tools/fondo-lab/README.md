@@ -11,7 +11,8 @@ construir el módulo.
    arreglar del fondo (franjas de otro fondo, focos, arrugas, costuras…) y qué
    decorados hay que respetar.
 2. **Localizador** (Gemini Flash, ~$0,005): devuelve un recuadro por cada
-   problema y cada decorado, y si el problema es de «quitar» o de «suavizar».
+   problema, cada decorado y cada cara, y si el problema es de «quitar», de
+   «suavizar» o una mano de ayuda (`helper`).
 3. **Recorte de personas** (MODNet, local, gratis): máscara de las personas.
 4. **Edición** con cada modelo (Nano Banana 2, Nano Banana Pro, GPT Image 2)
    sobre una copia de 2048 px.
@@ -19,8 +20,10 @@ construir el módulo.
    salida del modelo con la original y se iguala el color. **Las personas
    siempre son los píxeles originales** (las de la foto y las que dibujó la
    IA, para que no aparezca un borde fantasma) y los decorados también, salvo
-   que cambien mucho de color (p. ej. una franja azul pintada encima). Dos
-   modos:
+   que cambien mucho de color (p. ej. una franja azul pintada encima).
+   Única excepción: **la mano o el brazo de quien sujeta al niño** se quita,
+   junto con la mano del niño que la agarraba (entera, para que no salgan dos
+   puños); las caras nunca. Dos modos:
    - `completo` (por defecto): todo el resto del fondo viene de la IA, con un
      ajuste de color suave que conserva la luz de la original para que no se
      note el borde alrededor de las personas.

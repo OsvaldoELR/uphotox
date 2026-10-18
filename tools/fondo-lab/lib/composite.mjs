@@ -8,11 +8,14 @@ import { personMask as segmentPeople } from "./segment.mjs";
  * - "zonas": final = original, except where the model really changed the
  *   background inside the problem boxes (stains, strips, stands…), which
  *   come from the model output, scaled up, aligned and colour-matched.
- * - "completo" (plain backdrops): the whole background comes from the
+ * - "completo" (default in the lab): the whole background comes from the
  *   model; only the people (the original ones and the ones the model drew,
  *   so no ghost edge) and the props it merely redrew stay original. A
  *   low-frequency colour match keeps the original light, so the edge around
  *   the people does not show.
+ *
+ * In both modes a helper's hand or arm holding a child (a "helper" box) is
+ * the one part of a person taken from the model.
  *
  * The decision is taken on the small working copy (the model input size)
  * and applied to the full-size original with libvips (sharp).
@@ -42,6 +45,15 @@ const MATCH_CELL = 8; // colour match grid cell, in working pixels
 const MATCH_SIGMA = 0.05; // colour match smoothing, share of the long edge
 const MATCH_LIMIT = 28; // larger differences are real changes, not light
 const MATCH_PRIOR = 4; // pulls empty grid areas to the global offset
+// Helper hands (a parent's hand holding the child), both modes.
+const HELPER_MARGIN = 20; // grow helper boxes by this many thousandths
+const HELPER_SEED_SIGMA = 4; // ignores thin slivers where the masks disagree
+const HELPER_CHANGE = 24; // person pixels the model clearly redrew
+// The model redraws the child's hand that held the helper a little
+// elsewhere: grow far enough to take that hand whole (no double hand).
+const HELPER_GROW = 0.012; // share of the long edge (blur sigma)
+const HELPER_FEATHER_SIGMA = 6;
+const FACE_MARGIN = 10; // faces never come from the model (thousandths)
 
 const raw = async (pipeline) => {
   const { data, info } = await pipeline
@@ -122,15 +134,18 @@ const rgb = async (buffer, width, height, sigma = 1) => {
   return data;
 };
 
-/** Keeps weak changes only when connected to a strong one (flood fill). */
-const hysteresis = (diff, width, height) => {
-  const out = new Uint8Array(width * height);
-  const queue = new Int32Array(width * height);
+/**
+ * Flood fill from the pixels where `isSeed` holds, through the 4-connected
+ * pixels where `canEnter` holds. Returns a 0/255 band.
+ */
+const flood = (size, width, isSeed, canEnter) => {
+  const out = new Uint8Array(size);
+  const queue = new Int32Array(size);
   let head = 0;
   let tail = 0;
 
-  for (let i = 0; i < diff.length; i += 1) {
-    if (diff[i] >= STRONG) {
+  for (let i = 0; i < size; i += 1) {
+    if (isSeed(i)) {
       out[i] = 255;
       queue[tail] = i;
       tail += 1;
@@ -149,7 +164,7 @@ const hysteresis = (diff, width, height) => {
     ];
 
     for (const n of neighbours) {
-      if (n >= 0 && n < diff.length && out[n] === 0 && diff[n] >= WEAK) {
+      if (n >= 0 && n < size && out[n] === 0 && canEnter(n)) {
         out[n] = 255;
         queue[tail] = n;
         tail += 1;
@@ -158,6 +173,26 @@ const hysteresis = (diff, width, height) => {
   }
 
   return Buffer.from(out.buffer);
+};
+
+/** Keeps weak changes only when connected to a strong one. */
+const hysteresis = (diff, width, height) =>
+  flood(
+    width * height,
+    width,
+    (i) => diff[i] >= STRONG,
+    (i) => diff[i] >= WEAK
+  );
+
+/** Grows a 0/255 band a little past its edge and feathers it. */
+const growAndFeather = async (band, width, height) => {
+  const grown = await blurBand(band, width, height, GROW_SIGMA);
+
+  for (let i = 0; i < grown.length; i += 1) {
+    grown[i] = grown[i] > 40 ? 255 : 0;
+  }
+
+  return blurBand(grown, width, height, FEATHER_SIGMA);
 };
 
 /** Binary mask (0/1 per pixel) of the union of boxes in 0–1000 units. */
@@ -230,18 +265,7 @@ const changeRegions = async (images, offsets, areas, width, height) => {
   }
 
   const smooth = await blurBand(diff, width, height, NOISE_SIGMA);
-  const grown = await blurBand(
-    hysteresis(smooth, width, height),
-    width,
-    height,
-    GROW_SIGMA
-  );
-
-  for (let i = 0; i < grown.length; i += 1) {
-    grown[i] = grown[i] > 40 ? 255 : 0;
-  }
-
-  return blurBand(grown, width, height, FEATHER_SIGMA);
+  return growAndFeather(hysteresis(smooth, width, height), width, height);
 };
 
 /** "smooth" zones are taken whole (feathered), props excepted. */
@@ -296,6 +320,64 @@ const protectPeople = async (personMask, modelPeople, width, height) => {
 
   for (let i = 0; i < soft.length; i += 1) {
     soft[i] = Math.max(soft[i], union[i]);
+  }
+
+  return soft;
+};
+
+/**
+ * A helper's hand or arm holding the child is the one part of a person that
+ * goes. Inside its box: the person pixels that vanished in the model output,
+ * plus the connected person pixels the model clearly redrew (the child's
+ * skin or clothes under the hand), grown so the child's hand that held it
+ * comes whole from the model. Faces always stay original.
+ */
+const helperRegions = async ({
+  boxes,
+  faces,
+  height,
+  images,
+  modelPeople,
+  offsets,
+  width,
+}) => {
+  const size = width * height;
+  const inBox = boxMask(boxes, width, height, HELPER_MARGIN);
+  const vanished = Buffer.alloc(size);
+
+  for (let i = 0; i < size; i += 1) {
+    if (inBox[i] && images.personMask[i] > 128 && modelPeople[i] < 64) {
+      vanished[i] = 255;
+    }
+  }
+
+  const seeds = await blurBand(vanished, width, height, HELPER_SEED_SIGMA);
+  const region = flood(
+    size,
+    width,
+    (i) => seeds[i] > 160,
+    (i) =>
+      inBox[i] === 1 &&
+      (images.personMask[i] > 64 || modelPeople[i] > 64) &&
+      maxChannelDiff(images.origLow, images.aiLow, offsets, i) >= HELPER_CHANGE
+  );
+
+  const grown = await blurBand(
+    region,
+    width,
+    height,
+    HELPER_GROW * Math.max(width, height)
+  );
+  const inFace = boxMask(faces, width, height, FACE_MARGIN);
+
+  for (let i = 0; i < size; i += 1) {
+    grown[i] = (grown[i] > 20 || region[i]) && inBox[i] && !inFace[i] ? 255 : 0;
+  }
+
+  const soft = await blurBand(grown, width, height, HELPER_FEATHER_SIGMA);
+
+  for (let i = 0; i < size; i += 1) {
+    soft[i] = inFace[i] ? 0 : soft[i];
   }
 
   return soft;
@@ -404,8 +486,9 @@ const colourField = (images, offsets, keepOut, width, height) => {
  * Decides, on the working copy, where to use model pixels. Returns the
  * colour offset for the model output (plus a colour field in "completo"
  * mode) and the change mask (one band, PNG).
- * zones (optional): { fixes: [box], smooth: [box], keep: [box] } in 0–1000
- * units; "smooth" boxes are also fix boxes.
+ * zones (optional): { fixes: [box], smooth: [box], helpers: [box],
+ * keep: [box], faces: [box] } in 0–1000 units; "smooth" and "helper" boxes
+ * are also fix boxes.
  */
 const decide = async ({
   aligned,
@@ -433,19 +516,29 @@ const decide = async ({
     inProp: boxMask(zones?.keep ?? [], width, height),
   };
 
+  const modelMask = modelPeople
+    ? await maskAt(modelPeople, width, height)
+    : undefined;
+  const helper =
+    zones?.helpers?.length && modelMask
+      ? await helperRegions({
+          boxes: zones.helpers,
+          faces: zones.faces ?? [],
+          height,
+          images,
+          modelPeople: modelMask,
+          offsets,
+          width,
+        })
+      : undefined;
+
   let mask;
   let people = personMask;
   let field;
 
   if (mode === "completo") {
-    people = await protectPeople(
-      personMask,
-      await maskAt(modelPeople, width, height),
-      width,
-      height
-    );
+    people = await protectPeople(personMask, modelMask, width, height);
     mask = await wholeBackground(images, offsets, areas, width, height);
-    field = colourField(images, offsets, people, width, height);
   } else {
     mask = await changeRegions(images, offsets, areas, width, height);
     await addSmoothZones(
@@ -457,6 +550,20 @@ const decide = async ({
       width,
       height
     );
+  }
+
+  // A helper's hand comes from the model, even over the child.
+  if (helper) {
+    people = Buffer.from(people);
+
+    for (let i = 0; i < mask.length; i += 1) {
+      people[i] = Math.round((people[i] * (255 - helper[i])) / 255);
+      mask[i] = Math.max(mask[i], helper[i]);
+    }
+  }
+
+  if (mode === "completo") {
+    field = colourField(images, offsets, people, width, height);
   }
 
   // People always win: subtract the (soft) person mask.
@@ -518,7 +625,7 @@ const correctedColour = async (output, width, height, alignment, decision) => {
  * @param output model output (path or buffer)
  * @param person person mask PNG (any size)
  * @param alignment { s, dx, dy } from estimateAlignment
- * @param zones optional { fixes, smooth, keep } boxes from the zones step
+ * @param zones optional { fixes, smooth, helpers, keep, faces } boxes from the zones step
  * @param mode "zonas" (default) or "completo" (whole background from the model)
  * @returns { final (JPEG, full size), changeMask (PNG, working size), offsets, changedShare }
  */
@@ -536,7 +643,10 @@ export const compositeBackground = async ({
   const decision = await decide({
     aligned,
     mode,
-    modelPeople: mode === "completo" ? await segmentPeople(aligned) : undefined,
+    modelPeople:
+      mode === "completo" || zones?.helpers?.length
+        ? await segmentPeople(aligned)
+        : undefined,
     original: await sharp(workingCopy).png().toBuffer(),
     person,
     width: working.width,

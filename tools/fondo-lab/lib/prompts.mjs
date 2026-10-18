@@ -13,7 +13,8 @@ Return JSON with:
 - "keep": list (in English) of props and decorations that are part of the scene and must stay exactly as they are (furniture, flowers, plants, balloons, toys, cake, fabrics, signs, lights in the set).
 - "risk": one of "low", "medium", "high": how hard it is to edit the backdrop without touching people or props.
 
-Never list anything about the people (skin, hair, clothes, poses): they are out of scope.`;
+Never list anything about the people (skin, hair, clothes, poses): they are out of scope.
+The one exception: a hand or arm of a helper (a parent or assistant who is not otherwise in the photo) entering the frame to hold or steady a child. List it as a fix that starts with "Remove the helper's", e.g. "Remove the helper's hand holding the baby's back from the left edge".`;
 
 export const ANALYSIS_SCHEMA = {
   type: "object",
@@ -40,9 +41,11 @@ ${fixes.map((fix, index) => `${index + 1}. ${fix}`).join("\n")}
 Props to keep:
 ${keep.map((item, index) => `${index + 1}. ${item}`).join("\n") || "(none)"}
 
-For each problem also give "kind": "remove" for objects, strips, gaps or areas to extend (light stands, another backdrop visible, the room floor), "smooth" for surface work (wrinkles, creases, seams, stains, scuffs, dust, reflections, uneven tone).
+For each problem also give "kind": "remove" for objects, strips, gaps or areas to extend (light stands, another backdrop visible, the room floor), "smooth" for surface work (wrinkles, creases, seams, stains, scuffs, dust, reflections, uneven tone), "helper" for the hand or arm of a helper (parent or assistant) holding or steadying a child; its box must cover the whole visible hand and arm, including where it touches the child.
 
-Return JSON {"fixes": [{"index", "box_2d", "kind"}], "keep": [{"index", "box_2d"}]} with the same numbering.`;
+Also give "faces": one box per visible face of any person in the photo (faces are never retouched).
+
+Return JSON {"fixes": [{"index", "box_2d", "kind"}], "keep": [{"index", "box_2d"}], "faces": [{"box_2d"}]} with the same numbering.`;
 
 const box = { type: "array", items: { type: "number" } };
 
@@ -56,7 +59,7 @@ export const ZONES_SCHEMA = {
         properties: {
           index: { type: "integer" },
           box_2d: box,
-          kind: { type: "string", enum: ["remove", "smooth"] },
+          kind: { type: "string", enum: ["remove", "smooth", "helper"] },
         },
         required: ["index", "box_2d", "kind"],
       },
@@ -69,8 +72,16 @@ export const ZONES_SCHEMA = {
         required: ["index", "box_2d"],
       },
     },
+    faces: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { box_2d: box },
+        required: ["box_2d"],
+      },
+    },
   },
-  required: ["fixes", "keep"],
+  required: ["fixes", "keep", "faces"],
 };
 
 /** Reviewer: compares the original and the retouched version. */
@@ -107,7 +118,7 @@ ${list(fixes.length ? fixes : ["Remove wrinkles, creases, seams, stains, scuffs 
 - In general: remove photography equipment (light stands, umbrellas, softboxes, cables, clamps, tape) and, where another backdrop, wall or the room floor shows at an edge, extend the main backdrop seamlessly so it fills the frame.
 
 Keep exactly as they are:
-${list([...keep, "every person: faces, skin, hair, bodies, hands, clothes and poses", "natural shadows and reflections of people and props on the floor"])}
+${list([...keep, "every person: faces, skin, hair, bodies, hands, clothes and poses (except a helper's hand or arm listed above: remove it and rebuild the child's skin and clothes where it touched them)", "natural shadows and reflections of people and props on the floor"])}
 
 Keep the backdrop's own color, gradient, lighting and texture natural and consistent.
 Keep the exact same framing, camera angle, composition and image proportions. Do not crop, zoom, shift, add or remove anything else. Do not change colors or exposure of the rest of the photo.`;
