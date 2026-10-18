@@ -21,6 +21,16 @@ export interface EditOptions {
   readonly note?: string;
 }
 
+/** The service refused a request; `status` tells a bad key (401) apart. */
+export class EditorServiceError extends Error {
+  readonly status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
 /** Queues one photo. Throws when the service does not accept it. */
 export const queueEditPhoto = async (job: {
   readonly key: string;
@@ -42,7 +52,8 @@ export const queueEditPhoto = async (job: {
   });
 
   if (!response.ok) {
-    throw new Error(
+    throw new EditorServiceError(
+      response.status,
       `Editor service answered ${response.status}: ${await response.text()}`
     );
   }

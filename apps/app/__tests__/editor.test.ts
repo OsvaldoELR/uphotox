@@ -4,6 +4,7 @@ import {
   editState,
   formatCost,
   isInProgress,
+  jpegSize,
   matchOriginals,
   monthStart,
   statusUpdate,
@@ -127,4 +128,41 @@ test("editPhotoKeys matches the SQL clean-up layout", () => {
   expect(keys.prefix).toBe("editor/4/9/21/");
   expect(keys.original).toBe("editor/4/9/21/original.jpg");
   expect(keys.status).toBe("editor/4/9/21/status.json");
+});
+
+describe("jpegSize", () => {
+  const segment = (marker: number, body: number[]) => [
+    0xff,
+    marker,
+    Math.floor((body.length + 2) / 256),
+    (body.length + 2) % 256,
+    ...body,
+  ];
+
+  test("reads the frame header after EXIF and other segments", () => {
+    const bytes = Uint8Array.from([
+      0xff,
+      0xd8,
+      ...segment(0xe1, new Array(300).fill(7)),
+      ...segment(0xdb, new Array(64).fill(1)),
+      // SOF0: precision, height 7728, width 5152, components…
+      ...segment(0xc0, [8, 0x1e, 0x30, 0x14, 0x20, 3, 1, 0x22, 0]),
+    ]);
+
+    expect(jpegSize(bytes)).toEqual({ width: 5152, height: 7728 });
+  });
+
+  test("progressive JPEGs and not-JPEGs", () => {
+    const progressive = Uint8Array.from([
+      0xff,
+      0xd8,
+      ...segment(0xc2, [8, 0x05, 0x46, 0x08, 0x00, 3, 1, 0x22, 0]),
+    ]);
+
+    expect(jpegSize(progressive)).toEqual({ width: 2048, height: 1350 });
+    expect(jpegSize(Uint8Array.from([0x89, 0x50, 0x4e, 0x47]))).toBeNull();
+    expect(
+      jpegSize(Uint8Array.from([0xff, 0xd8, 0xff, 0xe1, 0x10]))
+    ).toBeNull();
+  });
 });

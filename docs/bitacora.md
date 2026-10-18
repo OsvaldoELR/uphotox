@@ -17,9 +17,9 @@ Documentos relacionados:
 
 ---
 
-## Estado actual (18 oct 2026 · versión 0.5.0)
+## Estado actual (18 oct 2026 · versión 0.5.1)
 
-Versión publicada: **v0.5.0** (historial de versiones en `CHANGELOG.md`).
+Versión publicada: **v0.5.1** (historial de versiones en `CHANGELOG.md`).
 
 | Módulo | Estado | Dónde |
 | --- | --- | --- |
@@ -101,8 +101,11 @@ Del Editor (por programar):
       en DSCF7339) o mueve el encuadre (Nano Banana 2 en DSCF6298).
 - [ ] Probar las manos de ayuda y la protección de caras con más fotos
       (solo hubo un caso, DSCF6322).
-- [ ] Probar la v0.5.0 con una galería real: «Limpiar fondos», arrastrar
-      las elegidas a tamaño completo y ver cómo terminan (usuario).
+- [ ] **Editor · volver a poner los secretos en Cloudflare** (Workers →
+      `uphotox-editor` → *Settings* → *Variables and Secrets*, tipo
+      **Secret**): `EDITOR_TOKEN`, `GEMINI_API_KEY`, `OPENAI_API_KEY`, con
+      los valores de `apps/app/.env.local`. Después, repetir la prueba con la
+      galería (las 7 fotos ya subidas no se vuelven a subir).
 - [ ] Fase 3 de `docs/plan-editor.md`: revisión antes/después (aprobar,
       rehacer con nota, descartar), descarga a la carpeta de la sesión,
       correo al terminar, ajustes del editor (enderezar y encuadrar, manos de
@@ -141,6 +144,35 @@ editar, paquetes y pagos.
 ---
 
 ## Historial
+
+### 18 oct 2026 · Editor: primera prueba real y arreglos · v0.5.1
+**Qué pasó** (galería 7, 7 fotos de 11–16 MB): todas subieron a R2 en el
+primer intento, pero ninguna entró en la cola: el Worker contestaba **401
+«No autorizado»** (registro de Vercel: «Editor service answered 401»).
+Comprobado también desde este PC con el token de `.env.local`: 401, cuando
+una hora antes daba 404 (autorizado). Causa: al reconstruirse el Worker
+(Workers Builds, tras corregir el directorio raíz) se borraron sus
+variables, que estaban guardadas como texto y no como **Secret**; `wrangler
+deploy` sustituye las variables de texto del panel. En el segundo intento 3
+subidas se cortaron y el original de DSCF2799 quedó con 0,1 MB (se arrastró
+una copia pequeña).
+
+**Arreglos**
+- `wrangler.jsonc`: `keep_vars: true`, para que un despliegue no borre las
+  variables puestas en el panel.
+- Al confirmar, cada foto que no entra dice por qué: clave rechazada
+  (401/403), servicio caído, no llegó completa, copia pequeña (< 512 KB) o
+  más de 80 MB (`UnsentPhoto` en `app/actions/editor.ts`).
+- Si el original ya está en R2 con el mismo tamaño, no se vuelve a subir
+  (va directo a la cola: `ready`).
+- Subidas a R2 con dos reintentos.
+- En el navegador se lee el tamaño del JPEG de su cabecera (`jpegSize` en
+  `lib/editor.ts`, sin descodificar) y se rechazan las copias de menos de
+  3000 px de lado largo.
+
+**Comprobado**: 2 pruebas nuevas de `jpegSize` (48 en total) y una prueba
+con los JPG reales (7728 px aceptados, la copia de 1600 px rechazada);
+build de la app y tipos del Worker sin errores; Biome sin avisos.
 
 ### 18 oct 2026 · Editor: ajuste de exportación para Lightroom
 - `apps/app/public/lightroom/uphotox-limpieza-fondos.lrtemplate`: ajuste

@@ -7,6 +7,8 @@
   "name": "uphotox-editor",
   "main": "src/index.ts",
   "compatibility_date": "2026-09-01",
+  // Variables added in the dashboard survive each deploy (secrets always do).
+  "keep_vars": true,
   "observability": { "enabled": true },
   "containers": [
     {

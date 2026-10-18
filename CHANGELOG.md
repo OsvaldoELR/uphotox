@@ -7,6 +7,22 @@ en `docs/bitacora.md`.
 Numeración: el primer número cambia con cambios grandes que rompen la forma de
 trabajar, el segundo con funciones nuevas y el tercero con arreglos.
 
+## [0.5.1] · 18 oct 2026 · Editor: subida más segura
+
+**Corregido**
+- Si el servicio de limpieza no acepta la conexión, cada foto dice por qué
+  (por ejemplo, «rechazó la clave») en vez de «No se pudo enviar al editor».
+- Al reintentar, las fotos que ya habían subido no se vuelven a subir: van
+  directas a la cola.
+- Una subida cortada se reintenta sola dos veces.
+
+**Añadido**
+- Uphotox no deja enviar copias pequeñas (por ejemplo, las de la galería con
+  marca de agua): avisa «Es una copia pequeña: expórtala a tamaño completo».
+- Ajuste de exportación para Lightroom «Uphotox - Limpieza de fondos»
+  (JPEG 95, sRGB, tamaño completo, nombre original), descargable desde la
+  página de limpieza.
+
 ## [0.5.0] · 18 oct 2026 · Editor: limpieza de fondos (primera parte)
 
 **Añadido**

@@ -18,13 +18,22 @@ import {
   type PreparedOriginal,
   prepareEditUploads,
 } from "@/app/actions/editor";
-import { MAX_ORIGINAL_BYTES, matchOriginals } from "@/lib/editor";
+import {
+  JPEG_HEADER_BYTES,
+  jpegSize,
+  MAX_ORIGINAL_BYTES,
+  MIN_ORIGINAL_EDGE,
+  matchOriginals,
+} from "@/lib/editor";
 import { mapLimit } from "../../components/prepare-photo";
 
 /** Photos registered and queued per server round trip. */
 const CHUNK = 10;
 /** Parallel uploads to R2 (each one is ~20 MB). */
 const UPLOAD_LIMIT = 3;
+/** A cut upload is tried again this many times, after a short pause. */
+const UPLOAD_RETRIES = 2;
+const RETRY_PAUSE_MS = 3000;
 
 export interface PickToClean {
   readonly fileName: string;
@@ -44,16 +53,60 @@ interface Summary {
   readonly skipped: number;
 }
 
-const put = async (url: string, file: File) => {
-  const response = await fetch(url, {
-    method: "PUT",
-    body: file,
-    headers: { "content-type": "image/jpeg" },
-  });
+const pause = (ms: number) =>
+  new Promise((resolve) => window.setTimeout(resolve, ms));
 
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
+/** Uploads one file to its presigned URL, retrying cut connections. */
+const put = async (url: string, file: File) => {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        method: "PUT",
+        body: file,
+        headers: { "content-type": "image/jpeg" },
+      });
+
+      if (response.ok) {
+        return;
+      }
+
+      throw new Error(`HTTP ${response.status}`);
+    } catch (error) {
+      if (attempt >= UPLOAD_RETRIES) {
+        throw error;
+      }
+
+      await pause(RETRY_PAUSE_MS * (attempt + 1));
+    }
   }
+};
+
+/** Long edge of a JPEG in pixels, read from its header (null if unknown). */
+const longEdge = async (file: File) => {
+  const header = new Uint8Array(
+    await file.slice(0, JPEG_HEADER_BYTES).arrayBuffer()
+  );
+  const size = jpegSize(header);
+  return size ? Math.max(size.width, size.height) : null;
+};
+
+/** Full-size exports only: a small copy (the gallery's) would be cleaned small. */
+const keepFullSize = async (files: readonly File[], problems: Problem[]) => {
+  const edges = await Promise.all(files.map(longEdge));
+
+  return files.filter((file, index) => {
+    const edge = edges[index];
+
+    if (edge !== null && edge !== undefined && edge < MIN_ORIGINAL_EDGE) {
+      problems.push({
+        name: file.name,
+        reason: `Es una copia pequeña (${edge} px): expórtala a tamaño completo`,
+      });
+      return false;
+    }
+
+    return true;
+  });
 };
 
 /** Uploads one chunk to R2 and queues what arrived. */
@@ -82,7 +135,8 @@ const sendChunk = async (
     advance();
   }
 
-  advance(prepared.skipped.length);
+  // Already in storage from an earlier try: straight to the queue.
+  advance(prepared.skipped.length + prepared.ready.length);
 
   const byName = new Map(chunk.map((file) => [file.name, file]));
   const sent = (
@@ -108,6 +162,7 @@ const sendChunk = async (
       }
     )
   ).filter((value): value is number => value !== null);
+  sent.push(...prepared.ready.map((target) => target.id));
 
   if (sent.length === 0) {
     return { queued: 0, skipped: prepared.skipped.length };
@@ -121,13 +176,16 @@ const sendChunk = async (
   }
 
   const names = new Map(
-    prepared.uploads.map((target) => [target.id, target.name])
+    [...prepared.uploads, ...prepared.ready].map((target) => [
+      target.id,
+      target.name,
+    ])
   );
 
-  for (const photoId of confirmed.failed) {
+  for (const photo of confirmed.failed) {
     problems.push({
-      name: names.get(photoId) ?? String(photoId),
-      reason: "No se pudo enviar al editor",
+      name: names.get(photo.id) ?? String(photo.id),
+      reason: photo.reason,
     });
   }
 
@@ -184,9 +242,13 @@ export const OriginalUploader = ({
         .filter((pair) => pair.file.size > MAX_ORIGINAL_BYTES)
         .map((pair) => ({ name: pair.file.name, reason: "Pesa más de 80 MB" })),
     ];
-    const files = toSend
-      .map((pair) => pair.file)
-      .filter((file) => file.size <= MAX_ORIGINAL_BYTES);
+    setSummary(null);
+    const files = await keepFullSize(
+      toSend
+        .map((pair) => pair.file)
+        .filter((file) => file.size <= MAX_ORIGINAL_BYTES),
+      problems
+    );
     let done = 0;
     let queued = 0;
     let skipped = match.pairs.length - toSend.length;
@@ -196,7 +258,6 @@ export const OriginalUploader = ({
       setProgress({ done, total: files.length });
     };
 
-    setSummary(null);
     setProgress({ done, total: files.length });
 
     for (let index = 0; index < files.length; index += CHUNK) {

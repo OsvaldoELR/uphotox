@@ -17,6 +17,12 @@ export type EditState = EditStatus | "review";
 
 /** Largest full-size export accepted (40 MP at quality 95 is ~20 MB). */
 export const MAX_ORIGINAL_BYTES = 80 * 1024 * 1024;
+/** Smaller files are web copies, not full-size exports. */
+export const MIN_ORIGINAL_BYTES = 512 * 1024;
+/** A long edge below this is a small copy (e.g. the gallery's watermarked one). */
+export const MIN_ORIGINAL_EDGE = 3000;
+/** Bytes read from the start of a JPEG to find its size (EXIF can be long). */
+export const JPEG_HEADER_BYTES = 512 * 1024;
 
 export const EDIT_STATE_LABELS: Record<EditState, string> = {
   uploading: "Sin subir",
@@ -171,3 +177,50 @@ export const monthStart = (now: Date = new Date()) =>
   new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
 
 export const formatCost = (amount: number) => `$${amount.toFixed(2)}`;
+
+const SOI = 0xd8;
+const MARKER = 0xff;
+const FRAME_MARKERS = new Set([
+  0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf,
+]);
+const STANDALONE_MARKERS = new Set([
+  0x01, 0xd0, 0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7,
+]);
+
+const word = (bytes: Uint8Array, at: number) =>
+  (bytes[at] ?? 0) * 256 + (bytes[at + 1] ?? 0);
+
+/**
+ * Width and height of a JPEG from its first bytes (the frame header), or
+ * null when they are not there. Cheap: no decoding.
+ */
+export const jpegSize = (bytes: Uint8Array) => {
+  if (bytes[0] !== MARKER || bytes[1] !== SOI) {
+    return null;
+  }
+
+  let offset = 2;
+
+  while (offset + 9 < bytes.length) {
+    if (bytes[offset] !== MARKER) {
+      return null;
+    }
+
+    const marker = bytes[offset + 1] ?? 0;
+
+    if (marker === MARKER) {
+      offset += 1;
+    } else if (STANDALONE_MARKERS.has(marker)) {
+      offset += 2;
+    } else if (FRAME_MARKERS.has(marker)) {
+      return {
+        height: word(bytes, offset + 5),
+        width: word(bytes, offset + 7),
+      };
+    } else {
+      offset += 2 + word(bytes, offset + 2);
+    }
+  }
+
+  return null;
+};

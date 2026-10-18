@@ -10,10 +10,15 @@ import { z } from "zod";
 import {
   type EngineStatus,
   MAX_ORIGINAL_BYTES,
+  MIN_ORIGINAL_BYTES,
   matchOriginals,
   statusUpdate,
 } from "@/lib/editor";
-import { isEditorConfigured, queueEditPhoto } from "@/lib/editor-service";
+import {
+  EditorServiceError,
+  isEditorConfigured,
+  queueEditPhoto,
+} from "@/lib/editor-service";
 import { isJpegName } from "@/lib/gallery";
 import { requireStudio } from "@/lib/studio";
 
@@ -89,13 +94,16 @@ const inBatches = async <T, R>(
  * Registers full-size exports and returns presigned URLs, so the browser
  * uploads them straight to R2. Files are paired with the client's picks by
  * name; picks already sent to the service are skipped (a redo is a separate
- * action), picks whose upload never finished get a new URL.
+ * action). A pick whose upload finished but was never queued (the service
+ * was down) is «ready»: it goes straight to confirm, without uploading it
+ * again; one whose upload never finished gets a new URL.
  */
 export const prepareEditUploads = async (
   galleryId: number,
   files: OriginalFile[]
 ): Promise<
   | {
+      readonly ready: { readonly id: number; readonly name: string }[];
       readonly rejected: string[];
       readonly skipped: string[];
       readonly uploads: PreparedOriginal[];
@@ -143,7 +151,7 @@ export const prepareEditUploads = async (
   const rejected = [...notPicked, ...notJpeg].map((file) => file.name);
 
   if (pairs.length === 0) {
-    return { rejected, skipped: [], uploads: [] };
+    return { ready: [], rejected, skipped: [], uploads: [] };
   }
 
   const { data: existing } = await supabase
@@ -187,7 +195,12 @@ export const prepareEditUploads = async (
       .filter((row) => row.status === "uploading")
       .map((row) => [row.gallery_photo_id, row.id] as const),
   ]);
-  const uploads = await Promise.all(
+  const resumed = new Set(
+    (existing ?? [])
+      .filter((row) => row.status === "uploading")
+      .map((row) => row.id)
+  );
+  const targets = await Promise.all(
     pairs
       .filter((pair) => rowIds.has(pair.photo.id))
       .map(async (pair) => {
@@ -197,17 +210,28 @@ export const prepareEditUploads = async (
           galleryId,
           id: rowId,
         });
+        // Same file already in R2 (only the queueing failed): no re-upload.
+        const stored = resumed.has(rowId)
+          ? await objectSize(keys.original)
+          : null;
 
-        return {
-          id: rowId,
-          name: pair.file.name,
-          uploadUrl: await signedPutUrl(keys.original, UPLOAD_URL_SECONDS),
-        };
+        return stored === pair.file.bytes
+          ? { id: rowId, name: pair.file.name, uploadUrl: null }
+          : {
+              id: rowId,
+              name: pair.file.name,
+              uploadUrl: await signedPutUrl(keys.original, UPLOAD_URL_SECONDS),
+            };
       })
   );
 
   return {
-    uploads,
+    uploads: targets.filter(
+      (target): target is PreparedOriginal => target.uploadUrl !== null
+    ),
+    ready: targets
+      .filter((target) => target.uploadUrl === null)
+      .map((target) => ({ id: target.id, name: target.name })),
     rejected,
     skipped: pairs
       .filter((pair) => !rowIds.has(pair.photo.id))
@@ -215,15 +239,37 @@ export const prepareEditUploads = async (
   };
 };
 
+export interface UnsentPhoto {
+  readonly id: number;
+  readonly reason: string;
+}
+
+const SERVICE_DOWN = "El servicio de limpieza no respondió. Reintenta.";
+const BAD_KEY =
+  "El servicio de limpieza rechazó la clave (EDITOR_TOKEN en Cloudflare y Vercel).";
+
+/** Why a stored original cannot be queued, or null when it can. */
+const originalProblem = (size: number | null) => {
+  if (!size) {
+    return "No llegó completa";
+  }
+
+  if (size < MIN_ORIGINAL_BYTES) {
+    return "Es una copia pequeña: expórtala a tamaño completo";
+  }
+
+  return size > MAX_ORIGINAL_BYTES ? "Pesa más de 80 MB" : null;
+};
+
 /**
  * Checks that the originals really are in R2 and queues them in the
- * Cloudflare service. Returns the ids that could not be sent (they stay
- * «sin subir» and can be dropped again).
+ * Cloudflare service. Returns the photos that could not be sent and why
+ * (they stay «sin subir» and can be dropped again).
  */
 export const confirmEditUploads = async (
   galleryId: number,
   photoIds: number[]
-): Promise<{ readonly failed: number[] } | { readonly error: string }> => {
+): Promise<{ readonly failed: UnsentPhoto[] } | { readonly error: string }> => {
   if (!(await requireEditor())) {
     return { error: NO_ACCESS };
   }
@@ -252,10 +298,10 @@ export const confirmEditUploads = async (
     });
 
     try {
-      const size = await objectSize(keys.original);
+      const problem = originalProblem(await objectSize(keys.original));
 
-      if (!size || size > MAX_ORIGINAL_BYTES) {
-        return null;
+      if (problem) {
+        return { id: row.id, reason: problem };
       }
 
       await queueEditPhoto({ key: keys.original, prefix: keys.prefix });
@@ -271,21 +317,31 @@ export const confirmEditUploads = async (
         .eq("id", row.id)
         .eq("studio_id", row.studio_id);
 
-      return error ? null : row.id;
+      return error ? { id: row.id, reason: SERVICE_DOWN } : null;
     } catch (error) {
       log.error("Editor: could not queue a photo", {
         photo: row.id,
         error: String(error),
       });
-      return null;
+      const refused =
+        error instanceof EditorServiceError &&
+        (error.status === 401 || error.status === 403);
+      return { id: row.id, reason: refused ? BAD_KEY : SERVICE_DOWN };
     }
   });
 
   revalidateEditor(galleryId);
-  const queued = new Set(
-    sent.filter((value): value is number => value !== null)
-  );
-  return { failed: ids.data.filter((photoId) => !queued.has(photoId)) };
+  const known = new Set((rows ?? []).map((row) => row.id));
+
+  return {
+    failed: [
+      ...sent.filter((value): value is UnsentPhoto => value !== null),
+      // Not «sin subir» any more (or not this member's): nothing to send.
+      ...ids.data
+        .filter((photoId) => !known.has(photoId))
+        .map((photoId) => ({ id: photoId, reason: "Ya estaba enviada" })),
+    ],
+  };
 };
 
 interface ActiveRow {
