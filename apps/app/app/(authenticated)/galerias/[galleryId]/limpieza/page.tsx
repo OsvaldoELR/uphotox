@@ -213,9 +213,9 @@ const CleanupPage = async ({ params }: CleanupPageProperties) => {
             </h2>
             <p className="max-w-prose text-muted-foreground text-sm">
               En Lightroom, filtra las elegidas y usa{" "}
-              <em>Archivo → Exportar con ajuste preestablecido</em> →
-              «Uphotox - Limpieza de fondos» (van a la carpeta «Uphotox para
-              limpiar» del escritorio).{" "}
+              <em>Archivo → Exportar con ajuste preestablecido</em> → «Uphotox -
+              Limpieza de fondos» (van a la carpeta «Uphotox para limpiar» del
+              escritorio).{" "}
               <a
                 className="text-signal-ink underline underline-offset-2"
                 download="Uphotox - Limpieza de fondos.lrtemplate"
