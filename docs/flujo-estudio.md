@@ -135,10 +135,31 @@ con el usuario el 13 oct 2026:
 - Decidir dónde corre: en el PC del estudio (los RAW pesan mucho) o en la nube
   (subida lenta, coste).
 
-### 5. IA en la edición
-- Aprender el estilo del estudio a partir de ediciones anteriores y aplicarlo
-  a las escogidas (perfiles tipo Imagen AI), con revisión humana; o generar
-  ajustes/presets por foto.
+### 5. IA en la edición (módulo Editor) — en prueba
+**Primera tarea elegida por el usuario (18 oct 2026): limpiar el fondo y el
+suelo sin tocar a las personas** (quitar franjas de otro fondo, focos, pies de
+luz, huecos; suavizar arrugas, costuras, manchas y brillos). Se vende después
+con Uphotox. Lightroom Classic; hoy la limpieza va después del color, pero
+puede ir antes.
+- **Regla clave:** la IA nunca entrega a las personas. Se recortan con un
+  modelo local (MODNet; BiRefNet en servidor), la IA trabaja sobre una copia
+  de 2048 px y el montaje a resolución completa (40 MP) solo usa píxeles de la
+  IA en las zonas de problemas; personas y decorados se quedan originales.
+- **Agentes:** analista (qué arreglar y qué respetar) → localizador
+  (recuadros, «quitar» o «suavizar») → editor (varios modelos, del barato al
+  caro) → montaje (código, sin IA) → revisor (nota y fallos) → aprobación
+  humana.
+- **Modelos probados:** Nano Banana 2 (~$0,10), Nano Banana Pro (~$0,14) y
+  GPT Image 2 alta (~$0,18) por foto, más ~$0,01 de análisis y revisión.
+  Gemini mantiene el encuadre; GPT Image 2 lo mueve un 1–2 % (hay que
+  alinearlo).
+- **Prueba de concepto:** `tools/fondo-lab` (informe para votar a ciegas en
+  la carpeta de fotos). Siguiente paso: votos del estudio → elegir modelos →
+  módulo en Uphotox con cola en paralelo y revisión antes/después → plugin de
+  Lightroom Classic para enviar y traer las fotos apiladas.
+- Más adelante: aprender el estilo del estudio a partir de ediciones
+  anteriores y aplicarlo a las escogidas (perfiles tipo Imagen AI), con
+  revisión humana; o generar ajustes/presets por foto.
 - Objetivo realista: reducir el mes de espera o dar al editor externo un punto
   de partida. Mientras tanto, los editores externos pueden ser usuarios
   «Editor» con «solo asignados» para seguir plazos en el tablero.

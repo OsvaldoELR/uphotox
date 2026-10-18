@@ -1,0 +1,13 @@
+{
+  "name": "fondo-lab",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Prueba de concepto: limpieza de fondos de estudio con IA sin tocar a las personas.",
+  "type": "module",
+  "scripts": {
+    "lab": "node --env-file=../../apps/app/.env.local lab.mjs"
+  },
+  "dependencies": {
+    "onnxruntime-node": "1.30.0"
+  }
+}

@@ -30,7 +30,7 @@ Versión publicada: **v0.4.1** (historial de versiones en `CHANGELOG.md`).
 | Ajustes | Hecho: nombre, WhatsApp, entrada de clientes (webhook) | `/ajustes` |
 | Entrada de clientes (Make/Typeform) | Hecho y publicado | `apps/api` |
 | Galerías (selección, sustituye a Pixieset) | Publicado (v0.4.0): subir fotos a Cloudflare R2, enviar al cliente, página del cliente con guía de primera visita, confirmar, lista para Lightroom, reabrir. Falta el borrado automático diario | `/galerias`, `/g/<código>` |
-| Editor de imágenes | Pendiente («Pronto» en el menú) | — |
+| Editor de imágenes | En prueba: laboratorio local de limpieza de fondos con IA sin tocar a las personas («Pronto» en el menú) | `tools/fondo-lab` |
 
 Publicado en Vercel (equipo «Upgradix's projects», plan Hobby):
 - **App**: https://uphotox-app.vercel.app (proyecto `uphotox-app`, carpeta `apps/app`).
@@ -50,6 +50,11 @@ Configuración:
 ## Pendientes
 
 Del usuario:
+- [ ] **Editor · votar la prueba de fondos**: abrir con doble clic
+      `D:\PROGRAMACION\uphotox\FOTOS PARA PRUEBA DE EDICON\resultados-ia\informe.html`
+      (mejor tu esposa), votar la mejor opción de cada foto sin saber el modelo,
+      pulsar «Revelar modelos» y pasarme el texto de votos que aparece. Decir
+      también si quitar la mano de un adulto que sujeta al bebé es habitual.
 - [ ] Galerías ya está publicada: activar «Galerías» a la fotógrafa en
       Equipo (los usuarios ya creados no lo tienen) y probar una galería real
       antes de cancelar Pixieset. Decidir antes qué hacer con la web del
@@ -119,6 +124,79 @@ editar, paquetes y pagos.
 ---
 
 ## Historial
+
+### 18 oct 2026 · Editor: prueba de concepto de limpieza de fondos con IA
+**Decisiones (con el usuario)**
+- Primer trabajo del módulo Editor: **limpiar fondo y suelo con IA sin tocar
+  a las personas**, probando varios modelos (de barato a caro). Se usará
+  primero en el estudio y después se venderá con Uphotox.
+- Lightroom Classic. Hoy la limpieza va después del color, pero puede ir antes.
+- Las familias dieron permiso para la prueba. Claves `GEMINI_API_KEY` y
+  `OPENAI_API_KEY` en `apps/app/.env.local` (de pago: Google no entrena con
+  ellas).
+
+**Qué se hizo**
+- Herramienta `tools/fondo-lab` (Node, fuera de la app): analista (Gemini
+  Flash) → localizador de zonas («quitar» o «suavizar» y decorados) → recorte
+  de personas en el PC (MODNet) → edición con **Nano Banana 2, Nano Banana
+  Pro y GPT Image 2** sobre una copia de 2048 px → **montaje a 40 MP**: se
+  alinea y se iguala el color de la salida, y solo se usan sus píxeles en las
+  zonas de problemas; personas y decorados quedan originales → revisor IA →
+  informe para votar a ciegas.
+- 12 fotos reales (pared con molduras y columpio, papel marrón, fondo blanco
+  infinito, set de dinosaurios), con su versión del editor para comparar.
+  Resultados en `FOTOS PARA PRUEBA DE EDICON\resultados-ia\` (fuera del
+  repositorio).
+
+**Resultados del revisor IA** (falta el voto del estudio, que es el que vale)
+
+| Modelo | Nota media | Coste por foto | Tiempo por foto |
+| --- | --- | --- | --- |
+| Nano Banana 2 (2K) | 6,7 (11 de 12; una rechazada) | $0,10 | ~28 s |
+| Nano Banana Pro (2K) | 5,7 | $0,14 | ~33 s |
+| GPT Image 2 (alta) | 6,5 | $0,18 | ~78 s |
+
+Coste total de la prueba: **$5,16**.
+
+**Hallazgos**
+- Los modelos redibujan la foto entera y a 2K: sin el montaje cambiarían
+  caras y perderían resolución. Con el montaje, la cara del bebé de DSCF6279
+  difiere del original 1,95 de media (solo la recompresión JPEG).
+- Gemini mantiene el encuadre (escala 0,99–1,00); GPT Image 2 lo mueve 1–2 %
+  (se alinea). Nano Banana 2 cambió una vez el encuadre un 13 % (DSCF6298):
+  ahora se **rechaza sola** cualquier salida que se mueva más de un 3 %.
+- Los modelos redibujan los decorados (flores, columpio): se protegen con los
+  recuadros del localizador y solo se aceptan cambios grandes de color (una
+  franja azul tapada).
+- Arrugas, costuras y brillos son cambios suaves que un umbral descarta: en
+  las zonas de «suavizar» se usa la IA entera.
+- Nano Banana Pro a veces devuelve la foto sin cambios (DSCF7310): habrá que
+  reintentar.
+- **Quitar la mano de un adulto** que sujeta al bebé (DSCF6322) choca con
+  «no tocar personas»: la IA la quitó, pero el montaje la protege. Hace falta
+  separar a cada persona (pendiente).
+- Tu editor además recorta y ajusta el color; la prueba no lo hace.
+- El recorte BiRefNet (MIT, mejor pelo) no cupo en memoria con el disco C:
+  lleno; se usa MODNet (Apache-2.0). En un servidor iría BiRefNet. Las
+  máscaras de objetos de Gemini no sirven (lentas y en un formato raro); sus
+  recuadros sí.
+- El disco C: tenía 30 MB libres durante la prueba (la caché de npm ocupa
+  ~10 GB; `npm cache clean --force` la vacía); al terminar tenía 13 GB.
+
+**Dónde está el código**: `tools/fondo-lab/` (`lab.mjs`, `lib/prompts.mjs`,
+`lib/providers.mjs`, `lib/segment.mjs`, `lib/align.mjs`,
+`lib/composite.mjs`, `lib/report.mjs`, `README.md`). Los modelos descargados
+van en `tools/fondo-lab/models/` (ignorado por Git).
+
+**Comprobado**: 36 ediciones sin errores; el informe se abrió en el
+navegador (12 fotos, 60 imágenes sin fallos; votar, ver zonas, revelar y
+borrar votos funcionan; votos dejados a cero); Biome sin avisos en la
+herramienta.
+
+**Siguiente**: votos del estudio → elegir modelo (o modelo barato con
+reintento en el caro) → diseñar el módulo en Uphotox (cola en paralelo,
+reintentos, revisión antes/después, recorte en servidor) → plugin de
+Lightroom Classic.
 
 ### 18 oct 2026 · Borrada la cuenta vacía de lis…@gmail.com
 A petición del usuario, para que ella se registre de cero. Antes de borrar
