@@ -62,10 +62,9 @@ Del usuario:
       sí tiene acceso al equipo, así que no bloquea nada).
 - [ ] Antes de vender a otros estudios: plan Pro de Vercel (el Hobby es solo
       para uso no comercial) y, si se quiere, dominio `app.uphotox.com`.
-- [ ] Avisar a lis…@gmail.com de que ya puede pedir «¿Olvidaste tu
-      contraseña?» desde el iPhone (el enlace ya funciona en cualquier
-      dispositivo). Su cuenta no tiene estudio: al entrar creará el suyo.
-      Para añadirla al equipo de Lente Libre se usará otro correo.
+- [ ] Avisar a lis…@gmail.com de que puede crear su cuenta de cero en
+      `/sign-up` (su cuenta anterior se borró el 18 oct). Para añadirla al
+      equipo de Lente Libre se usará otro correo.
 - [ ] Opcional: activar en Supabase la protección de contraseñas filtradas
       (único aviso del revisor de seguridad).
 - [ ] Crear la etapa «Solicitud recibida» («Nueva etapa», sin aviso al
@@ -120,6 +119,18 @@ editar, paquetes y pagos.
 ---
 
 ## Historial
+
+### 18 oct 2026 · Borrada la cuenta vacía de lis…@gmail.com
+A petición del usuario, para que ella se registre de cero. Antes de borrar
+se comprobó que la cuenta no había entrado nunca y que solo tenía su fila de
+acceso, su identidad y su perfil: ningún estudio, miembro, tablero, tarjeta,
+cliente, galería, evento ni archivo apuntaba a ella. Se borró con la API de
+administración de Supabase (`auth.admin.deleteUser`, que arrastra perfil,
+identidad y sesiones). Totales antes → después: usuarios 7 → 6 y perfiles
+7 → 6; estudios, miembros, tableros, etapas, tarjetas, clientes, eventos,
+galerías, fotos, integraciones y archivos sin cambios. Quedan solo los
+registros de Supabase y de Resend de los correos ya enviados, que no son
+parte de la base de datos.
 
 ### 18 oct 2026 · v0.4.1 · Correos de cuenta que funcionan en cualquier dispositivo
 **Qué se hizo** (el usuario lo pidió tras el diagnóstico del 15 oct; la
