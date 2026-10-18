@@ -37,12 +37,19 @@ const imagePart = (buffer) => ({
   inlineData: { mimeType: "image/jpeg", data: buffer.toString("base64") },
 });
 
-/** Vision model answering with JSON (analysis and review steps). */
-export const geminiJson = async ({ images, model, prompt, schema }) => {
+/**
+ * Vision model answering with JSON (analysis, zones, framing, review).
+ * `parts` (strings and image buffers, in order) can replace `prompt` +
+ * `images`, e.g. for labelled examples.
+ */
+export const geminiJson = async ({ images, model, parts, prompt, schema }) => {
+  const content = parts
+    ? parts.map((part) =>
+        typeof part === "string" ? { text: part } : imagePart(part)
+      )
+    : [{ text: prompt }, ...images.map(imagePart)];
   const json = await geminiPost(model, {
-    contents: [
-      { role: "user", parts: [{ text: prompt }, ...images.map(imagePart)] },
-    ],
+    contents: [{ role: "user", parts: content }],
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: schema,

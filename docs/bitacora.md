@@ -50,9 +50,10 @@ Configuración:
 ## Pendientes
 
 Del usuario:
-- [ ] **Editor · decidir**: ¿limpiar todas las fotos de la sesión o solo
-      las que el cliente elige en la galería? ¿GPT Image 2 en todas
-      (~$0,18 por foto) o Nano Banana 2 (~$0,10) como opción barata?
+- [ ] **Editor · opcional**: abrir el informe
+      (`D:\PROGRAMACION\uphotox\FOTOS PARA PRUEBA DE EDICON\resultados-ia\informe.html`)
+      y mirar la fila «Encuadre automático» de cada foto: ¿el recorte azul de
+      la IA te sirve como punto de partida?
 - [ ] Galerías ya está publicada: activar «Galerías» a la fotógrafa en
       Equipo (los usuarios ya creados no lo tienen) y probar una galería real
       antes de cancelar Pixieset. Decidir antes qué hacer con la web del
@@ -95,9 +96,11 @@ Del Editor (por programar):
       en DSCF7339) o mueve el encuadre (Nano Banana 2 en DSCF6298).
 - [ ] Probar las manos de ayuda y la protección de caras con más fotos
       (solo hubo un caso, DSCF6322).
-- [ ] Diseñar el módulo en Uphotox: cola en paralelo, revisión
-      antes/después, recorte BiRefNet en servidor, subida directa como en
-      Galerías → plugin de Lightroom Classic.
+- [ ] Diseñar el módulo en Uphotox: limpia las fotos elegidas en la galería
+      con GPT Image 2; cola en paralelo, revisión antes/después, recorte
+      BiRefNet en servidor, subida directa como en Galerías; en sus ajustes,
+      «Enderezar y encuadrar» (apagado por defecto) → plugin de Lightroom
+      Classic (el encuadre como ajuste de recorte de Lightroom).
 
 Detectado al probar (no es de Galerías):
 - [ ] Si se borra un usuario con la sesión abierta (p. ej. un miembro del
@@ -131,6 +134,55 @@ editar, paquetes y pagos.
 ---
 
 ## Historial
+
+### 18 oct 2026 · Editor: decisiones y encuadre automático opcional
+**Decisiones del usuario**: se limpian **solo las fotos que el cliente elige
+en la galería**, con **GPT Image 2**. El usuario pidió también enderezar y
+encuadrar, como opción en los ajustes del módulo.
+
+**Cómo se hizo el encuadre** (opcional en el laboratorio: `--encuadre gpt2`)
+- **No lo hace la IA de imagen**: si GPT reencuadra, el montaje con las
+  personas originales deja de cuadrar y la foto vuelve a 2K. Es geometría:
+  se calcula aparte y se aplica con código al resultado de 40 MP.
+- **Estilo del estudio**: de las 12 fotos de `editadas/` se recupera el
+  recorte y el giro reales del editor (`matchEditorCrop`, correlación
+  0,89–0,99). El editor casi no gira (10 de 12 entre −0,5° y +0,5°; una a
+  1,7°), recorta sobre todo arriba (5–17 %), conserva el borde de abajo y
+  quita poco de los lados; la proporción es libre. DSCF5554 se exportó
+  ampliada: se busca también la escala.
+- **Enderezar**: líneas rectas casi verticales del fondo (transformada de
+  Hough, sin personas ni decorados), descartando manchas con textura y
+  líneas que no coinciden. Primer intento (perfil de columnas) proponía
+  2–5° donde el editor puso ~0,5°: descartado. Ahora: error medio 0,23°
+  frente a 0,32° si no se endereza nunca; DSCF6279 sale a 1,5° (editor
+  1,7°). Si no hay líneas claras (papel liso), no gira.
+- **Recortar**: Gemini Flash ve 6 recortes reales del estudio (primero del
+  mismo set) con su rectángulo y sus números (cuánto recorta por lado) y
+  propone el de la foto; nunca ve el del editor para esa foto.
+  **Coincidencia media con el editor: 90 %** (sin recortar 84 %; recorte
+  medio del estudio 88 %). Mejora poco sobre el recorte medio: con muchos
+  más ejemplos (el catálogo de Lightroom del estudio) debería afinar más.
+  ~$0,012 por foto.
+- Informe: fila «Encuadre automático» en cada foto (rectángulo rosa del
+  editor y azul de la IA sobre la original, resultado encuadrado y versión
+  del editor) y resumen arriba.
+
+**Dónde**: `tools/fondo-lab/lib/framing.mjs` (`matchEditorCrop`,
+`estimateTilt`, `applyFraming`, `drawFramings`), `lab.mjs`
+(`suggestFraming`, `frameAll`, `cropStyle`), `lib/prompts.mjs`
+(`FRAMING_*`), `lib/providers.mjs` (`geminiJson` acepta texto e imágenes
+intercalados), `lib/report.mjs`.
+
+**Comprobado**: recortes del editor recuperados en las 12 fotos; giro y
+recorte comparados con el editor en las 12; DSCF6279 enderezada sin
+esquinas negras (esquinas con color de fondo, molduras verticales);
+informe con 12 filas de encuadre y 260 imágenes, ninguna falta; Biome sin
+avisos. Coste del encuadre: ~$0,30 en dos pasadas.
+
+**En el módulo**: ajuste «Enderezar y encuadrar» apagado por defecto. En
+el plugin de Lightroom, mejor enviarlo como ajuste de recorte (el fotógrafo
+lo mueve si no le gusta) que cortar la foto; los recortes que el estudio
+ya tiene en su catálogo son el entrenamiento.
 
 ### 18 oct 2026 · Editor: gana GPT Image 2 y se quitan las manos de ayuda
 **Votos de la ronda 2** (12 fotos, fondo completo): **GPT Image 2 8**, Nano

@@ -3,7 +3,7 @@
  *
  *   npm run lab -- --fotos "D:/.../FOTOS PARA PRUEBA DE EDICON" [--solo DSCF6279,DSCF7317]
  *                  [--variantes nb2,nbpro,gpt2] [--rehacer paso,paso] [--concurrencia 3]
- *                  [--modo completo|zonas]
+ *                  [--modo completo|zonas] [--encuadre gpt2]
  *
  * Reads <fotos>/sin editar/*.jpg (and <fotos>/editadas/ for reference) and
  * writes everything to <fotos>/resultados-ia/, ending with informe.html.
@@ -13,6 +13,8 @@
  * Composite mode (--modo): "completo" (default) takes the whole background
  * from the model except people and the props to keep; "zonas" only the
  * problem boxes (patchy on plain backdrops: seams where boxes end).
+ * Optional framing (--encuadre <model>): straighten and crop that model's
+ * result as the studio's editor would, scored against the editor's crops.
  * Every step is cached on disk; --rehacer analysis,zones,mask,edit,final,review
  * redoes the listed steps.
  */
@@ -24,9 +26,22 @@ import sharp from "sharp";
 import { estimateAlignment } from "./lib/align.mjs";
 import { compositeBackground } from "./lib/composite.mjs";
 import {
+  applyFraming,
+  boxToFraming,
+  drawFramings,
+  estimateTilt,
+  framingToBox,
+  matchEditorCrop,
+  overlap,
+} from "./lib/framing.mjs";
+import {
   ANALYSIS_PROMPT,
   ANALYSIS_SCHEMA,
   editPrompt,
+  FRAMING_INTRO,
+  FRAMING_SCHEMA,
+  framingExample,
+  framingTask,
   REVIEW_SCHEMA,
   reviewPrompt,
   ZONES_SCHEMA,
@@ -42,6 +57,8 @@ const WEB_EDGE = 1600;
 const MAX_REFRAME = 0.03;
 const TEXT_MODEL = "gemini-flash-latest";
 const JPEG_NAME = /\.jpe?g$/i;
+const FRAMING_EXAMPLES = 6;
+const FULL_FRAME = { angle: 0, left: 0, top: 0, width: 1, height: 1 };
 
 export const VARIANTS = {
   nb2: {
@@ -378,6 +395,184 @@ const processPhoto = async ({ args, name, outDir, redo, variants }) => {
   return { id, name, portrait, mode, analysis, zones, results };
 };
 
+/** The studio editor's framing of a photo, from «editadas/» (if there). */
+const editorFraming = ({ args, outDir, photo, redo }) => {
+  const edited = path.join(args.fotos, "editadas", photo.name);
+
+  if (!existsSync(edited)) {
+    return undefined;
+  }
+
+  return cached(
+    path.join(outDir, photo.id, "editor-crop.json"),
+    redo.has("framing"),
+    () =>
+      matchEditorCrop(path.join(args.fotos, "sin editar", photo.name), edited)
+  );
+};
+
+/** A model box made safe: inside the photo and at least half of it. */
+const safeBox = ([y0, x0, y1, x1]) => {
+  const box = [y0, x0, y1, x1].map((v) => Math.min(1000, Math.max(0, v)));
+  return box[2] - box[0] >= 500 && box[3] - box[1] >= 500
+    ? box
+    : [0, 0, 1000, 1000];
+};
+
+/** Median, minimum and maximum trim per side of the studio's crops. */
+const cropStyle = (framings) => {
+  const side = (pick) => {
+    const values = framings.map(pick).sort((a, b) => a - b);
+    return {
+      median: values[Math.floor(values.length / 2)],
+      min: values[0],
+      max: values.at(-1),
+    };
+  };
+  const bottom = (f) => Math.max(0, 1 - f.top - f.height);
+
+  return {
+    top: side((f) => f.top),
+    bottom: side(bottom),
+    left: side((f) => f.left),
+    right: side((f) => Math.max(0, 1 - f.left - f.width)),
+    bottomKept: framings.filter((f) => bottom(f) < 0.02).length,
+    count: framings.length,
+  };
+};
+
+/** Average of the studio's other crops (a baseline to beat). */
+const averageFraming = (framings) => {
+  const mean = (key) =>
+    framings.reduce((sum, f) => sum + f[key], 0) / framings.length;
+  return {
+    angle: 0,
+    left: mean("left"),
+    top: mean("top"),
+    width: mean("width"),
+    height: mean("height"),
+  };
+};
+
+/**
+ * Suggests a framing for one photo: tilt from the backdrop's lines, crop
+ * from the framing agent shown the studio's crops of other photos (same set
+ * first). The editor's crop of this photo is never shown: it only scores.
+ */
+const suggestFraming = async ({ args, folder, photo, photos, studio }) => {
+  const tilt = await estimateTilt(
+    path.join(folder, "input.jpg"),
+    path.join(folder, "mask.png"),
+    photo.zones.keep.map((zone) => zone.box_2d)
+  );
+  const examples = photos
+    .filter((other) => other.id !== photo.id && studio[other.id])
+    .sort(
+      (a, b) =>
+        Number(b.analysis.scene === photo.analysis.scene) -
+        Number(a.analysis.scene === photo.analysis.scene)
+    )
+    .slice(0, FRAMING_EXAMPLES);
+  const parts = [FRAMING_INTRO];
+
+  for (const [index, other] of examples.entries()) {
+    parts.push(
+      framingExample(
+        index + 1,
+        other.analysis.scene,
+        framingToBox(studio[other.id])
+      ),
+      await drawFramings(path.join(args.fotos, "sin editar", other.name), [
+        { framing: studio[other.id], colour: "#ff2a2a" },
+      ])
+    );
+  }
+
+  const others = examples.map((other) => studio[other.id]);
+  parts.push(
+    framingTask(photo.analysis.scene, cropStyle(others)),
+    await drawFramings(path.join(args.fotos, "sin editar", photo.name), [])
+  );
+
+  const { result } = await timed(() =>
+    geminiJson({ model: TEXT_MODEL, parts, schema: FRAMING_SCHEMA })
+  );
+  const suggested = boxToFraming(safeBox(result.data.box_2d), tilt.angle);
+  const editor = studio[photo.id];
+
+  return {
+    tilt,
+    suggested,
+    editor,
+    examples: examples.map((other) => other.id),
+    overlap: editor ? overlap(suggested, editor) : undefined,
+    baselines: editor
+      ? {
+          full: overlap(FULL_FRAME, editor),
+          average: overlap(averageFraming(others), editor),
+        }
+      : undefined,
+    cost: result.cost,
+  };
+};
+
+/**
+ * Optional framing (--encuadre <model>): suggestion per photo, applied to
+ * that model's full-size result, plus a comparison picture (editor's crop
+ * in magenta, suggestion in cyan, on the original).
+ */
+const frameAll = async ({ args, outDir, photos, redo, variant }) => {
+  const studio = {};
+
+  for (const photo of photos) {
+    studio[photo.id] = await editorFraming({ args, outDir, photo, redo });
+  }
+
+  for (const photo of photos) {
+    const folder = path.join(outDir, photo.id);
+    const source = path.join(args.fotos, "sin editar", photo.name);
+    photo.framing = await cached(
+      path.join(folder, "framing.json"),
+      redo.has("framing"),
+      () => suggestFraming({ args, folder, photo, photos, studio })
+    );
+
+    await writeFile(
+      path.join(folder, "encuadre-comparacion.jpg"),
+      await drawFramings(
+        source,
+        [
+          ...(photo.framing.editor
+            ? [{ framing: photo.framing.editor, colour: "#ff2fb3" }]
+            : []),
+          { framing: photo.framing.suggested, colour: "#00c8ff" },
+        ],
+        WEB_EDGE
+      )
+    );
+
+    const result = photo.results[variant];
+
+    if (result?.final && !result.final.rejected) {
+      const framed = path.join(folder, `${result.base}-encuadre.jpg`);
+      await writeFile(
+        framed,
+        await applyFraming(
+          path.join(folder, `${result.base}-final.jpg`),
+          photo.framing.suggested
+        )
+      );
+      await web(framed, path.join(folder, `${result.base}-encuadre-web.jpg`));
+      photo.framing.file = `${result.base}-encuadre`;
+    }
+
+    const score = photo.framing.overlap;
+    console.log(
+      `${photo.name} · encuadre · giro ${photo.framing.tilt.angle}° · ${score === undefined ? "sin editor" : `coincide ${(score * 100).toFixed(0)} % con el editor`}`
+    );
+  }
+};
+
 const main = async () => {
   const args = parseArgs(process.argv.slice(2));
 
@@ -425,6 +620,15 @@ const main = async () => {
   await Promise.all(Array.from({ length: concurrency }, worker));
 
   photos.sort((a, b) => a.name.localeCompare(b.name));
+
+  if (args.encuadre) {
+    if (!VARIANTS[args.encuadre]) {
+      throw new Error(`--encuadre: modelo desconocido «${args.encuadre}»`);
+    }
+
+    await frameAll({ args, outDir, photos, redo, variant: args.encuadre });
+  }
+
   await mkdir(outDir, { recursive: true });
   await writeFile(
     path.join(outDir, "resultados.json"),

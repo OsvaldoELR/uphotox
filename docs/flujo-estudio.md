@@ -156,8 +156,18 @@ puede ir antes.
   GPT Image 2 alta (~$0,18) por foto, más ~$0,01 de análisis y revisión.
   Gemini mantiene el encuadre; GPT Image 2 lo mueve un 1–2 % (hay que
   alinearlo). **Voto a ciegas del estudio: gana GPT Image 2** (8 de 12 fotos).
-  Limpiar solo las fotos que el cliente elige en la galería baja mucho el
-  coste por sesión.
+- **Decidido (18 oct 2026):** GPT Image 2 y **solo las fotos que el cliente
+  elige en la galería** (~$0,18 por foto: unos $5,40 si elige 30).
+- **Encuadre y enderezado (opcional, ajuste del módulo, apagado por
+  defecto):** no lo hace la IA de imagen (si reencuadra, el montaje con las
+  personas originales falla y la foto vuelve a 2K). El ángulo sale de las
+  líneas verticales del fondo y el recorte lo propone Gemini Flash (~$0,01)
+  viendo recortes reales del estudio; se aplica con código a tamaño
+  completo. En la prueba coincide un 90 % con el editor (sin recortar 84 %,
+  recorte medio del estudio 88 %) y endereza solo cuando hay líneas claras.
+  En el plugin conviene mandarlo como ajuste de recorte de Lightroom
+  (ajustable) en vez de cortar la foto, y el «entrenamiento» pueden ser los
+  recortes que el estudio ya hizo en su catálogo.
 - **Prueba de concepto:** `tools/fondo-lab` (informe para votar a ciegas en
   la carpeta de fotos). Siguiente paso: votos del estudio → elegir modelos →
   módulo en Uphotox con cola en paralelo y revisión antes/después → plugin de

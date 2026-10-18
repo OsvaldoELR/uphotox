@@ -42,6 +42,45 @@ const seededOrder = (items, seed) => {
 };
 
 const money = (value) => `$${value.toFixed(3)}`;
+const percent = (value) => `${Math.round(value * 100)} %`;
+const mean = (values) =>
+  values.reduce((sum, value) => sum + value, 0) / values.length;
+
+/** Optional framing: editor's crop vs suggestion, and the framed result. */
+const framingRow = (photo) => {
+  const framing = photo.framing;
+
+  if (!framing) {
+    return "";
+  }
+
+  const match =
+    framing.overlap === undefined
+      ? ""
+      : ` · coincide un <b>${percent(framing.overlap)}</b> con tu editor`;
+  const framed = framing.file
+    ? `<figure><img alt="Encuadrada" loading="lazy" src="${photo.id}/${framing.file}-web.jpg"><figcaption><b>Encuadrada</b><span class="muted">resultado limpio, enderezado y recortado</span><a href="${photo.id}/${framing.file}.jpg" target="_blank">Tamaño real</a></figcaption></figure>`
+    : "";
+
+  return `<details class="framing" open><summary>Encuadre automático (opcional)</summary>
+    <div class="row">
+      <figure><img alt="Encuadres" loading="lazy" src="${photo.id}/encuadre-comparacion.jpg"><figcaption><span class="muted"><b class="editor-box">Rosa</b>: tu editor · <b class="ai-box">Azul</b>: la IA · giro ${framing.tilt.angle}°${match}</span></figcaption></figure>
+      ${framed}
+      <figure><img alt="Tu editor" loading="lazy" src="${photo.id}/editor-web.jpg"><figcaption><b>Tu editor</b></figcaption></figure>
+    </div>
+  </details>`;
+};
+
+const framingSummary = (photos) => {
+  const scored = photos.filter((photo) => photo.framing?.overlap !== undefined);
+
+  if (!scored.length) {
+    return "";
+  }
+
+  const turned = photos.filter((photo) => photo.framing?.tilt.angle).length;
+  return `<p class="lead">Encuadre automático (opcional): el recorte de la IA coincide de media un <b>${percent(mean(scored.map((photo) => photo.framing.overlap)))}</b> con el de tu editor (sin recortar: ${percent(mean(scored.map((photo) => photo.framing.baselines.full)))}; el recorte medio del estudio: ${percent(mean(scored.map((photo) => photo.framing.baselines.average)))}). Se enderezaron ${turned} de ${photos.length} fotos; las demás no tenían líneas claras o ya estaban rectas.</p>`;
+};
 
 const summary = (photos, variants) =>
   Object.entries(variants).map(([id, label]) => {
@@ -111,6 +150,7 @@ const card = (photo, variants) => {
       <figure><img alt="Tu editor" loading="lazy" src="${photo.id}/editor-web.jpg"><figcaption><b>Tu editor</b><span class="muted">recorte, color y fondo</span></figcaption></figure>
       ${options}
     </div>
+    ${framingRow(photo)}
   </section>`;
 };
 
@@ -126,6 +166,7 @@ export const writeReport = async ({ outDir, photos, variants }) => {
       sum +
       (photo.analysis.cost ?? 0) +
       (photo.zones?.cost ?? 0) +
+      (photo.framing?.cost ?? 0) +
       Object.values(photo.results).reduce(
         (inner, r) =>
           inner + (r.edit.ok ? r.edit.cost + (r.review?.cost ?? 0) : 0),
@@ -155,6 +196,9 @@ button.primary { background: var(--signal); border-color: var(--signal); }
 .photo header { display:flex; flex-wrap:wrap; gap: 12px; align-items: baseline; justify-content: space-between; }
 .photo header span { color: var(--muted); font-size: 13px; }
 details { margin: 8px 0 12px; color: var(--muted); font-size: 13px; }
+details.framing summary { font: 700 11px ui-monospace, Consolas, monospace; text-transform: uppercase; letter-spacing: .1em; margin: 12px 0 8px; cursor: pointer; }
+.editor-box { color: #d4148f; }
+.ai-box { color: var(--signal-ink); }
 .row { display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
 figure { margin: 0; display:flex; flex-direction: column; gap: 8px; }
 figure img { width: 100%; height: auto; display:block; border: 1px solid var(--line); background: #e9eef3; cursor: zoom-in; }
@@ -175,7 +219,8 @@ body.revealed #export { display: block; }
 <h1>Limpieza de fondos con IA · ronda ${ROUND}</h1>
 <p class="lead">${photos.length} fotos del estudio · ${Object.keys(variants).length} modelos. En cada foto hay tres opciones (A, B, C) en un orden distinto cada vez; no sabes qué modelo es cada una. Pulsa <b>«Me quedo con esta»</b> en la mejor. <b>Mantén pulsada una imagen</b> para ver la original en el mismo sitio, <b>«Ver zonas»</b> marca en azul dónde actuó la IA y <b>«Tamaño real»</b> abre la foto completa (40 MP) para mirar detalles. La cara y el cuerpo de las personas nunca vienen de la IA; ahora el resto del fondo viene entero de la IA (salvo los decorados), sin parches por zonas. Cuando termines, pulsa <b>«Revelar modelos»</b>.</p>
 <table><thead><tr><th class="reveal-cell">Modelo</th><th>Fotos</th><th>Coste por foto</th><th>Tiempo por foto</th><th>Nota revisor IA</th><th>Tus votos</th></tr></thead><tbody>${rows}</tbody></table>
-<p class="lead">Coste total de esta prueba (análisis, zonas, edición y revisión): <b>${money(total)}</b>.</p>
+<p class="lead">Coste total de esta prueba (análisis, zonas, edición, revisión y encuadre): <b>${money(total)}</b>.</p>
+${framingSummary(photos)}
 <div class="toolbar"><button class="primary" id="reveal" type="button">Revelar modelos</button><button id="reset" type="button">Borrar mis votos</button><span class="muted" id="count"></span></div>
 <textarea id="export" readonly></textarea>
 ${photos.map((photo) => card(photo, variants)).join("\n")}

@@ -32,7 +32,14 @@ construir el módulo.
      lisos deja parches con bordes rectos (DSCF7325), por eso ya no es el
      modo por defecto.
 6. **Revisor** (Gemini Flash): compara original y resultado y pone nota.
-7. **Informe** `resultados-ia/informe.html` para votar a ciegas.
+7. **Encuadre (opcional, `--encuadre gpt2`)**: endereza con las líneas
+   verticales del fondo (molduras, bordes; sin personas ni decorados) y
+   recorta como el editor del estudio: Gemini Flash ve recortes reales del
+   estudio en otras fotos (primero del mismo set) y propone el de esta. Se
+   aplica con código al resultado a tamaño completo (la IA de imagen nunca
+   reencuadra). Los recortes del estudio salen de `editadas/`
+   (`lib/framing.mjs`, `matchEditorCrop`) y sirven también para puntuar.
+8. **Informe** `resultados-ia/informe.html` para votar a ciegas.
 
 ## Uso
 
@@ -53,8 +60,9 @@ clientes y no se suben a ningún sitio salvo a las APIs de los modelos.
 
 Opciones: `--solo DSCF6279,DSCF7317`, `--variantes nb2,nbpro,gpt2`,
 `--modo completo|zonas` (cada modo guarda sus propios archivos),
-`--concurrencia 3`, `--rehacer analysis,zones,mask,edit,final,review` (cada
-paso queda guardado y no se repite si no se pide).
+`--encuadre gpt2` (encuadra el resultado de ese modelo), `--concurrencia 3`,
+`--rehacer analysis,zones,mask,edit,final,review,framing` (cada paso queda
+guardado y no se repite si no se pide).
 
 Recorte alternativo: `FONDO_LAB_MASK=birefnet` o `portrait` usa BiRefNet (MIT,
 mejores bordes de pelo) si se descarga en `models/`, pero necesita varios GB

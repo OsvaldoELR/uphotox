@@ -122,3 +122,32 @@ ${list([...keep, "every person: faces, skin, hair, bodies, hands, clothes and po
 
 Keep the backdrop's own color, gradient, lighting and texture natural and consistent.
 Keep the exact same framing, camera angle, composition and image proportions. Do not crop, zoom, shift, add or remove anything else. Do not change colors or exposure of the rest of the photo.`;
+
+/**
+ * Framing agent: suggests the crop the studio's editor would make, from
+ * examples of the studio's own crops (its "training"). Straightening is
+ * measured in code (lines of the backdrop), not asked.
+ */
+export const FRAMING_INTRO = `You frame photos for a portrait photography studio. Below are examples of how the studio's editor crops its photos: each example is the uncropped photo with the editor's crop drawn as a red rectangle, followed by that crop as box_2d [ymin, xmin, ymax, xmax] normalised to 0-1000. Learn the studio's style from them: how much it trims at the top, the sides and the bottom, how much room it leaves above heads and around the subjects, what it keeps in the frame.`;
+
+export const framingExample = (index, scene, box) =>
+  `Example ${index} (${scene}): crop box_2d ${JSON.stringify(box)}.`;
+
+const trims = (style) =>
+  ["top", "bottom", "left", "right"]
+    .map(
+      (side) =>
+        `${side} ${Math.round(style[side].median * 100)} % (from ${Math.round(style[side].min * 100)} to ${Math.round(style[side].max * 100)} %)`
+    )
+    .join(", ");
+
+export const framingTask = (scene, style) =>
+  `In these examples the studio trims, as a share of the photo: ${trims(style)}; the bottom edge is kept (trim under 2 %) in ${style.bottomKept} of ${style.count}.
+
+Now the photo to frame (${scene}), the last image, without a rectangle. Suggest the crop the studio's editor would make, in the same style. The aspect ratio is free. Never cut the heads, faces or hands of the subjects, nor props that are part of the set. Return JSON {"box_2d": [ymin, xmin, ymax, xmax]} normalised to 0-1000.`;
+
+export const FRAMING_SCHEMA = {
+  type: "object",
+  properties: { box_2d: box },
+  required: ["box_2d"],
+};
