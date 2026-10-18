@@ -169,9 +169,9 @@ puede ir antes.
   (ajustable) en vez de cortar la foto, y el «entrenamiento» pueden ser los
   recortes que el estudio ya hizo en su catálogo.
 - **Prueba de concepto:** `tools/fondo-lab` (informe para votar a ciegas en
-  la carpeta de fotos). Siguiente paso: votos del estudio → elegir modelos →
-  módulo en Uphotox con cola en paralelo y revisión antes/después → plugin de
-  Lightroom Classic para enviar y traer las fotos apiladas.
+  la carpeta de fotos). **Plan del módulo:** `docs/plan-editor.md` (cola en
+  la nube, revisión antes/después, descarga para Lightroom, después el
+  plugin de Lightroom Classic).
 - Más adelante: aprender el estilo del estudio a partir de ediciones
   anteriores y aplicarlo a las escogidas (perfiles tipo Imagen AI), con
   revisión humana; o generar ajustes/presets por foto.

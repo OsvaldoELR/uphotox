@@ -12,6 +12,7 @@ Documentos relacionados:
 - `CLAUDE.md`: reglas técnicas del proyecto (base de datos, permisos, correo…).
 - `docs/flujo-estudio.md`: cómo trabaja el estudio, análisis del formulario de
   reserva y hoja de ruta de automatización con IA.
+- `docs/plan-editor.md`: plan del módulo Editor (limpieza de fondos con IA).
 - `.interface-design/system.md`: estilo visual y patrones de pantalla.
 
 ---
@@ -50,6 +51,9 @@ Configuración:
 ## Pendientes
 
 Del usuario:
+- [ ] **Editor · aprobar el plan** de `docs/plan-editor.md` (o cambiar el
+      orden de las fases) y confirmar Google Cloud con facturación para el
+      trabajador.
 - [ ] **Editor · opcional**: abrir el informe
       (`D:\PROGRAMACION\uphotox\FOTOS PARA PRUEBA DE EDICON\resultados-ia\informe.html`)
       y mirar la fila «Encuadre automático» de cada foto: ¿el recorte azul de
@@ -96,11 +100,9 @@ Del Editor (por programar):
       en DSCF7339) o mueve el encuadre (Nano Banana 2 en DSCF6298).
 - [ ] Probar las manos de ayuda y la protección de caras con más fotos
       (solo hubo un caso, DSCF6322).
-- [ ] Diseñar el módulo en Uphotox: limpia las fotos elegidas en la galería
-      con GPT Image 2; cola en paralelo, revisión antes/después, recorte
-      BiRefNet en servidor, subida directa como en Galerías; en sus ajustes,
-      «Enderezar y encuadrar» (apagado por defecto) → plugin de Lightroom
-      Classic (el encuadre como ajuste de recorte de Lightroom).
+- [ ] Construir el módulo según `docs/plan-editor.md` cuando se apruebe:
+      motor y trabajador en Cloud Run → datos y subida → revisión y
+      descarga → prueba real → plugin de Lightroom Classic.
 
 Detectado al probar (no es de Galerías):
 - [ ] Si se borra un usuario con la sesión abierta (p. ej. un miembro del
@@ -134,6 +136,28 @@ editar, paquetes y pagos.
 ---
 
 ## Historial
+
+### 18 oct 2026 · Editor: plan del módulo
+Plan propuesto en `docs/plan-editor.md` (pendiente de aprobar). Resumen:
+- Parte de una galería confirmada: el estudio sube los originales de las
+  fotos elegidas (emparejados por nombre), una cola los limpia con GPT Image 2
+  y el proceso de la prueba, se revisan antes/después (aprobar, rehacer con
+  nota, descartar) y se descargan a una carpeta para Lightroom.
+- Ajustes del editor: enderezar y encuadrar (apagado), quitar manos de ayuda
+  (encendido), límite de gasto al mes, días que se guardan las fotos.
+- Se procesa en un trabajador en Google Cloud Run con Cloud Tasks (Vercel se
+  queda corto de memoria y tiempo); el código de la prueba pasa a
+  `packages/editor-engine`.
+- Coste estimado: **~$7 por sesión de 30 fotos**, casi todo GPT Image 2;
+  ~8–10 minutos.
+- Fases: motor y trabajador → datos y subida → revisión y descarga → prueba
+  real → plugin de Lightroom Classic.
+- Para venderlo: Vercel Pro (Hobby es no comercial) y aviso a los clientes
+  en el contrato.
+
+Datos revisados para el plan: `gallery_photos.picked_at` (elegidas), el
+permiso `editor.access` ya existe, `storage_deletions` y la tarea diaria
+pendiente de Galerías sirven también para el editor.
 
 ### 18 oct 2026 · Editor: decisiones y encuadre automático opcional
 **Decisiones del usuario**: se limpian **solo las fotos que el cliente elige
