@@ -16,9 +16,9 @@ Documentos relacionados:
 
 ---
 
-## Estado actual (13 oct 2026 · versión 0.4.0)
+## Estado actual (18 oct 2026 · versión 0.4.1)
 
-Versión publicada: **v0.4.0** (historial de versiones en `CHANGELOG.md`).
+Versión publicada: **v0.4.1** (historial de versiones en `CHANGELOG.md`).
 
 | Módulo | Estado | Dónde |
 | --- | --- | --- |
@@ -62,11 +62,10 @@ Del usuario:
       sí tiene acceso al equipo, así que no bloquea nada).
 - [ ] Antes de vender a otros estudios: plan Pro de Vercel (el Hobby es solo
       para uso no comercial) y, si se quiere, dominio `app.uphotox.com`.
-- [ ] **Recomendado (ya afectó a un usuario real, 15 oct)**: que el enlace de
-      recuperación de contraseña y el de confirmar cuenta funcionen en otro
-      navegador/dispositivo (cambiar las plantillas «Reset password» y
-      «Confirm signup» de Supabase a `/auth/confirm?token_hash=…`; ver
-      Historial, 11 y 15 oct). Hoy solo funcionan en el mismo navegador.
+- [ ] Avisar a lis…@gmail.com de que ya puede pedir «¿Olvidaste tu
+      contraseña?» desde el iPhone (el enlace ya funciona en cualquier
+      dispositivo). Su cuenta no tiene estudio: al entrar creará el suyo.
+      Para añadirla al equipo de Lente Libre se usará otro correo.
 - [ ] Opcional: activar en Supabase la protección de contraseñas filtradas
       (único aviso del revisor de seguridad).
 - [ ] Crear la etapa «Solicitud recibida» («Nueva etapa», sin aviso al
@@ -121,6 +120,38 @@ editar, paquetes y pagos.
 ---
 
 ## Historial
+
+### 18 oct 2026 · v0.4.1 · Correos de cuenta que funcionan en cualquier dispositivo
+**Qué se hizo** (el usuario lo pidió tras el diagnóstico del 15 oct; la
+usuaria afectada pidió el enlace y lo abrió en el mismo iPhone, pero el
+correo se abre en el navegador de la app de correo, que es otro):
+- **Plantillas de Supabase** «Confirm signup» y «Reset password»: ahora en
+  español, con el logo y los colores de Uphotox, y el enlace va a
+  `/auth/confirm?token_hash=…` (funciona desde cualquier navegador, caduca
+  en 1 hora y solo sirve una vez). Aplicadas con la Management API; copia de
+  referencia y cómo cambiarlas en `docs/supabase-auth-emails/`. La copia de
+  las plantillas anteriores quedó en el scratchpad de la sesión (eran las de
+  inglés por defecto).
+- **Registro con un correo que ya tiene cuenta**: antes decía «Revisa tu
+  correo» y no llegaba nada (Supabase no envía para no revelar qué correos
+  existen). Ahora dice «Ese correo ya tiene una cuenta. Entra con tu
+  contraseña o usa «¿Olvidaste tu contraseña?»…». Se detecta porque el
+  usuario vuelve sin `identities`. Decisión: se acepta que así se puede
+  saber si un correo está registrado, porque ayuda más a los estudios que lo
+  que expone.
+- **Errores en español**: `authErrorMessage()` en `packages/auth/errors.ts`
+  traduce por código los errores de Supabase al entrar, crear cuenta, pedir
+  enlace y cambiar contraseña (p. ej. «Correo o contraseña incorrectos…»,
+  «Por seguridad, espera 50 segundos antes de pedir otro correo.»). Lo
+  desconocido sale como «Algo salió mal…», nunca en inglés.
+
+**Comprobado**: Biome, tipos y 37 pruebas (6 nuevas de los mensajes). En
+producción, con usuarios temporales ya borrados: el enlace nuevo de confirmar
+cuenta abierto sin cookies (otro dispositivo) entra en la app con sesión y
+confirma el correo; el de restablecer contraseña pedido desde el formulario
+y abierto en otro navegador deja poner la contraseña nueva y entrar; los dos
+enlaces fallan si se usan dos veces; Supabase envía los dos correos con las
+plantillas nuevas (registros de Auth con estado 200).
 
 ### 15 oct 2026 · «No llega el correo» al crear cuenta y error al recuperar contraseña (diagnóstico, sin cambios)
 **Qué pasaba**: el usuario creó una cuenta y no le llegó el correo; además,

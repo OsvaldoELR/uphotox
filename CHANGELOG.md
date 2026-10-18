@@ -7,6 +7,23 @@ en `docs/bitacora.md`.
 Numeración: el primer número cambia con cambios grandes que rompen la forma de
 trabajar, el segundo con funciones nuevas y el tercero con arreglos.
 
+## [0.4.1] · 18 oct 2026 · Correos de cuenta
+
+**Corregido**
+- El enlace para restablecer la contraseña y el de confirmar la cuenta ahora
+  funcionan desde cualquier dispositivo o navegador (antes solo en el mismo
+  donde se pidieron, y fallaban al abrirlos desde el móvil o la app de
+  Gmail).
+- Crear una cuenta con un correo que ya está registrado decía «Revisa tu
+  correo», pero no llegaba nada. Ahora avisa de que ese correo ya tiene
+  cuenta.
+
+**Cambiado**
+- Los correos de confirmar cuenta y de restablecer contraseña llegan en
+  español y con la imagen de Uphotox (antes, en inglés).
+- Los errores al entrar, crear cuenta o cambiar la contraseña salen en
+  español (antes, p. ej., «Invalid login credentials»).
+
 ## [0.4.0] · 13 oct 2026 · Galerías de selección
 
 **Añadido**

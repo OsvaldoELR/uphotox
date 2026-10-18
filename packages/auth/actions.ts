@@ -4,6 +4,7 @@ import { createClient } from "@repo/database/server";
 import { keys } from "@repo/next-config/keys";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { ALREADY_REGISTERED, authErrorMessage } from "./errors";
 import { safeRedirectPath } from "./redirect";
 
 export interface AuthFormState {
@@ -40,6 +41,8 @@ const field = (formData: FormData, name: string) => {
   return typeof value === "string" ? value : "";
 };
 
+// The Supabase email templates link to /auth/confirm?token_hash=… (works in
+// any browser), so this PKCE callback only matters if they are reset.
 const callbackUrl = (next: string) => {
   const url = new URL("/auth/callback", keys().NEXT_PUBLIC_APP_URL);
   url.searchParams.set("next", next);
@@ -66,7 +69,7 @@ export const signIn = async (
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
 
   if (error) {
-    return { error: error.message, email: parsed.data.email };
+    return { error: authErrorMessage(error), email: parsed.data.email };
   }
 
   redirect(safeRedirectPath(field(formData, "next")));
@@ -100,7 +103,14 @@ export const signUp = async (
   });
 
   if (error) {
-    return { error: error.message, email: parsed.data.email };
+    return { error: authErrorMessage(error), email: parsed.data.email };
+  }
+
+  // An address that already has a confirmed account comes back as a user
+  // with no identities and no email is sent (Supabase hides that it exists).
+  // Say so, or the form promises an email that never arrives.
+  if (data.user && data.user.identities?.length === 0) {
+    return { error: ALREADY_REGISTERED, email: parsed.data.email };
   }
 
   // No session means email confirmation is enabled in Supabase Auth.
@@ -133,7 +143,7 @@ export const requestPasswordReset = async (
   });
 
   if (error) {
-    return { error: error.message, email: parsed.data };
+    return { error: authErrorMessage(error), email: parsed.data };
   }
 
   // Same message whether or not the account exists, to avoid leaking emails.
@@ -163,7 +173,7 @@ export const updatePassword = async (
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: authErrorMessage(error) };
   }
 
   redirect("/");
