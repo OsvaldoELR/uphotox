@@ -19,6 +19,7 @@ export const editPhotoKeys = (photo: {
   return {
     prefix,
     original: `${prefix}original.jpg`,
+    before: `${prefix}before.jpg`,
     result: `${prefix}result.jpg`,
     preview: `${prefix}preview.jpg`,
     zones: `${prefix}zones.jpg`,

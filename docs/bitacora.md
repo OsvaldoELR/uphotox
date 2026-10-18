@@ -17,9 +17,9 @@ Documentos relacionados:
 
 ---
 
-## Estado actual (18 oct 2026 · versión 0.5.1)
+## Estado actual (18 oct 2026 · versión 0.6.0)
 
-Versión publicada: **v0.5.1** (historial de versiones en `CHANGELOG.md`).
+Versión publicada: **v0.6.0** (historial de versiones en `CHANGELOG.md`).
 
 | Módulo | Estado | Dónde |
 | --- | --- | --- |
@@ -101,16 +101,18 @@ Del Editor (por programar):
       en DSCF7339) o mueve el encuadre (Nano Banana 2 en DSCF6298).
 - [ ] Probar las manos de ayuda y la protección de caras con más fotos
       (solo hubo un caso, DSCF6322).
-- [ ] **Editor · volver a poner los secretos en Cloudflare** (Workers →
-      `uphotox-editor` → *Settings* → *Variables and Secrets*, tipo
-      **Secret**): `EDITOR_TOKEN`, `GEMINI_API_KEY`, `OPENAI_API_KEY`, con
-      los valores de `apps/app/.env.local`. Después, repetir la prueba con la
-      galería (las 7 fotos ya subidas no se vuelven a subir).
-- [ ] Fase 3 de `docs/plan-editor.md`: revisión antes/después (aprobar,
-      rehacer con nota, descartar), descarga a la carpeta de la sesión,
-      correo al terminar, ajustes del editor (enderezar y encuadrar, manos de
-      ayuda, límite de gasto, días que se guardan) y borrado automático. La
-      tarea diaria de Galerías tiene que borrar también `editor/…` al purgar.
+- [ ] **Editor · probar la v0.6.0** con la galería de la prueba: aprobar,
+      rehacer con nota la foto que salió peor, descargar a la carpeta de la
+      sesión y «Sincronizar carpeta…» en Lightroom; mirar *Ajustes → Editor*.
+- [ ] **Seguridad**: cambiar las claves de OpenAI y Gemini (se vieron en
+      una captura) y ponerlas como *Secret* en Cloudflare y en `.env.local`.
+- [ ] Motor: en paredes con molduras, junto a los decorados protegidos (el
+      columpio) las molduras salen dobladas donde se juntan la pared
+      original y la de la IA (DSCF6279). Y varias fotos dejan la línea de la
+      junta del suelo. Mejorar el montaje y las instrucciones.
+- [ ] Encuadre con los recortes reales del estudio como ejemplos (hoy usa
+      sus recortes medios, sin IA): llegará con el plugin de Lightroom.
+- [ ] Fase 5: plugin de Lightroom Classic (`docs/plan-editor.md`).
 
 Detectado al probar (no es de Galerías):
 - [ ] Si se borra un usuario con la sesión abierta (p. ej. un miembro del
@@ -144,6 +146,51 @@ editar, paquetes y pagos.
 ---
 
 ## Historial
+
+### 18 oct 2026 · Editor: fase 3 (revisar, descargar, ajustes) · v0.6.0
+**Primera prueba real (v0.5.1)**: 7 fotos de la galería 7, todas
+terminadas (notas 6 a 10; $1,51, ~$0,21 por foto). Comentario repetido del
+revisor: queda la línea de la junta del suelo. El usuario: «lo hizo
+bastante bien menos una foto».
+
+**Qué se hizo**
+- Migración `20261018194632_editor_review.sql` (aplicada): en
+  `edit_photos`, `review_status` (pendiente, aprobada, descartada), `note`,
+  `reviewed_at`, `downloaded_at` (los miembros solo pueden cambiar la
+  revisión y la descarga); en `studios`, `editor_helpers`,
+  `editor_framing`, `editor_monthly_limit`, `editor_keep_days`; el
+  disparador de borrado incluye `before.jpg`. Asesores: sin avisos nuevos.
+- Motor: guarda también la original a tamaño de vista previa
+  (`before.jpg`) y, con «Enderezar y encuadrar», la versión encuadrada:
+  `styleFraming` (giro por las líneas del fondo + recortes medios del
+  estudio: arriba 8,5 %, abajo 0, izquierda 2 %, derecha 3,5 %, sin cortar
+  cabezas ni brazos; sin IA). En las 12 fotos de la prueba coincide un
+  89,6 % con el editor, igual que la IA con ejemplos (medido con los
+  mismos recortes de los que salen esas medias).
+- Worker: pasa `framing` al motor y, al terminar cada foto, avisa a la app
+  (`APP_CALLBACK_URL` en `wrangler.jsonc`) → `app/api/editor/callback`
+  (pública, con `EDITOR_TOKEN`) guarda el resultado y, cuando no queda
+  ninguna en la nube, manda el correo «Fotos limpias listas»
+  (`packages/email/templates/editor-ready.tsx`, `lib/editor-sync.tsx`).
+  La página también lo manda si el aviso se perdió.
+- App: tarjetas de revisión (`edit-photo-card.tsx`: mantener pulsado para
+  la original, zonas, tamaño real, aprobar, rehacer con nota, descartar,
+  deshacer), «Aprobar las listas», descarga a la carpeta de la sesión
+  (`download-panel.tsx`, File System Access en Chrome/Edge; Descargas en el
+  resto), aviso del límite de gasto, y *Ajustes → Editor*
+  (`editor-settings.tsx`). Acciones nuevas: `reviewEditPhotos`,
+  `redoEditPhoto`, `editDownloads`, `markEditDownloaded`,
+  `updateEditorSettings`; el límite se comprueba al enviar y al rehacer.
+- Borrado automático: `app/api/cron/purge` cada día a las 3:30 UTC
+  (`apps/app/vercel.json`), con `CRON_SECRET`: borra las fotos del editor
+  pasados los días del estudio y las subidas a medias de más de 2 días, y
+  vacía `storage_deletions`.
+
+**Comprobado**: 4 pruebas nuevas (52 en total) y `npm run build` de la app;
+tipos del Worker; Biome sin avisos; el motor en este PC con DSCF6279 real y
+encuadre + nota: 111 s, $0,19, devuelve `before`, `framed` y
+`framed-preview`, giro 1,5°, la nota llega a las instrucciones. Visto: en
+esa foto las molduras se doblan junto al columpio (anotado en Pendientes).
 
 ### 18 oct 2026 · Editor: primera prueba real y arreglos · v0.5.1
 **Qué pasó** (galería 7, 7 fotos de 11–16 MB): todas subieron a R2 en el

@@ -5,9 +5,17 @@ import type { NextProxy, NextRequest } from "next/server";
 const securityHeaders = securityMiddleware(noseconeOptions);
 
 // /g/<token> is the client's selection gallery: no account, the token is
-// the credential (checked by the page and its actions).
+// the credential (checked by the page and its actions). The Editor service
+// on Cloudflare calls /api/editor/callback with its own token, and Vercel's
+// daily jobs (/api/cron) bring CRON_SECRET.
 const auth = authMiddleware({
-  publicRoutes: ["/auth", "/.well-known", "/g"],
+  publicRoutes: [
+    "/auth",
+    "/.well-known",
+    "/g",
+    "/api/editor/callback",
+    "/api/cron",
+  ],
 });
 
 // Refresh the Supabase session (and guard routes), then add security headers

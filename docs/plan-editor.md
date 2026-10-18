@@ -1,7 +1,7 @@
 # Plan del módulo Editor (limpieza de fondos con IA)
 
 Propuesta del 18 oct 2026; el usuario eligió procesar en Cloudflare y la
-fase 1 está publicada y probada y la fase 2 construida (18 oct 2026). Sale de la prueba de
+fases 1, 2 y 3 publicadas (v0.6.0, 18 oct 2026); falta el plugin. Sale de la prueba de
 `tools/fondo-lab` (historial en `docs/bitacora.md`) y de las decisiones del
 usuario: se limpian **solo las fotos que el cliente elige en la galería**, con
 **GPT Image 2**, y enderezar y encuadrar es **opcional** en los ajustes.
@@ -133,7 +133,7 @@ las APIs de pago no entrenan con ellas).
    de punta a punta con `npm run try` en `services/editor`.
 2. **Datos y subida** (construida): tablas, permisos, R2, pantalla «Limpiar fondos» en la
    galería con emparejado por nombre, cola y progreso en vivo.
-3. **Revisión y descarga**: cuadrícula antes/después, aprobar, rehacer con
+3. **Revisión y descarga** (hecha, v0.6.0): cuadrícula antes/después, aprobar, rehacer con
    nota, descartar, descargar a una carpeta, aviso por correo, ajustes del
    editor, límite de gasto y borrado automático.
 4. **Prueba real** con una sesión completa del estudio y ajustes; versión

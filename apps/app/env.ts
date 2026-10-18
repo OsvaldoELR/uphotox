@@ -25,10 +25,13 @@ export const env = createEnv({
     // background clean-up is off.
     EDITOR_URL: z.url().optional(),
     EDITOR_TOKEN: z.string().min(32).optional(),
+    // Vercel sends it to the daily clean-up (vercel.json crons).
+    CRON_SECRET: z.string().min(16).optional(),
   },
   client: {},
   runtimeEnv: {
     EDITOR_URL: process.env.EDITOR_URL,
     EDITOR_TOKEN: process.env.EDITOR_TOKEN,
+    CRON_SECRET: process.env.CRON_SECRET,
   },
 });

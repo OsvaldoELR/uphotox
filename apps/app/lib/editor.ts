@@ -12,6 +12,17 @@ export type EditStatus =
   | "done"
   | "failed";
 
+export type ReviewStatus = "pending" | "approved" | "discarded";
+
+export const REVIEW_LABELS: Record<ReviewStatus, string> = {
+  pending: "Sin revisar",
+  approved: "Aprobada",
+  discarded: "Descartada",
+};
+
+/** Longest studio note for a redo. */
+export const MAX_NOTE_LENGTH = 500;
+
 /** What the studio sees: a finished photo the reviewer flagged reads «Revisar». */
 export type EditState = EditStatus | "review";
 
@@ -223,4 +234,63 @@ export const jpegSize = (bytes: Uint8Array) => {
   }
 
   return null;
+};
+
+/**
+ * Name of a cleaned photo when downloaded next to the original in the
+ * session folder: DSCF7325.jpg → DSCF7325-fondo.jpg.
+ */
+export const downloadName = (fileName: string) =>
+  `${baseName(fileName)}-fondo.jpg`;
+
+/** Share of the monthly limit at which the studio is warned. */
+export const LIMIT_WARNING = 0.8;
+
+/**
+ * Where the month's consumption stands against the optional limit: no new
+ * photos once it is reached, a warning from 80 %.
+ */
+export const limitState = (used: number, limit: number | null) => {
+  if (limit === null) {
+    return { reached: false, warning: false, left: null };
+  }
+
+  return {
+    reached: used >= limit,
+    warning: used >= limit * LIMIT_WARNING,
+    left: Math.max(0, limit - used),
+  };
+};
+
+const DAY_MS = 86_400_000;
+/** Registered photos whose upload never finished are dropped after this. */
+export const ABANDONED_UPLOAD_DAYS = 2;
+
+/**
+ * Whether the daily clean-up deletes an Editor photo (row and files): its
+ * keep days are over since it finished, or its upload was abandoned. Never
+ * one the service is working on.
+ */
+export const isExpiredEditPhoto = (
+  photo: {
+    readonly createdAt: string;
+    readonly finishedAt: string | null;
+    readonly keepDays: number;
+    readonly status: string;
+  },
+  now: Date = new Date()
+) => {
+  if (photo.status === "queued" || photo.status === "processing") {
+    return false;
+  }
+
+  if (photo.status === "uploading") {
+    return (
+      now.getTime() - new Date(photo.createdAt).getTime() >
+      ABANDONED_UPLOAD_DAYS * DAY_MS
+    );
+  }
+
+  const since = new Date(photo.finishedAt ?? photo.createdAt).getTime();
+  return now.getTime() - since > photo.keepDays * DAY_MS;
 };

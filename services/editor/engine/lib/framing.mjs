@@ -636,3 +636,78 @@ export const suggestFraming = async ({
     cost: answer.cost,
   };
 };
+
+/**
+ * The studio's usual trims (shares of the photo), measured on its editor's
+ * crops: mostly the top, the bottom kept, a little of each side.
+ */
+export const STUDIO_STYLE = { top: 0.085, bottom: 0, left: 0.02, right: 0.035 };
+// Room kept above the highest head and beside the people.
+const HEADROOM = 0.03;
+const SIDE_ROOM = 0.01;
+
+/** Bounding box of the people (shares of the photo), or null. */
+const peopleBox = async (personPng) => {
+  const { data, info } = await sharp(personPng)
+    .extractChannel(0)
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  let top = info.height;
+  let left = info.width;
+  let right = -1;
+
+  for (let y = 0; y < info.height; y += 1) {
+    for (let x = 0; x < info.width; x += 1) {
+      if (data[y * info.width + x] > 128) {
+        top = Math.min(top, y);
+        left = Math.min(left, x);
+        right = Math.max(right, x);
+      }
+    }
+  }
+
+  return right < 0
+    ? null
+    : {
+        top: top / info.height,
+        left: left / info.width,
+        right: (right + 1) / info.width,
+      };
+};
+
+/**
+ * Framing without examples: straighten from the backdrop's lines and crop
+ * with the studio's usual trims, never into the people (heads keep some
+ * room above, arms are not cut at the sides). No AI, no cost.
+ */
+export const styleFraming = async ({
+  keep = [],
+  person,
+  style = STUDIO_STYLE,
+  working,
+}) => {
+  const tilt = await estimateTilt(working, person, keep);
+  const people = await peopleBox(person);
+  let top = style.top;
+  let left = style.left;
+  let right = 1 - style.right;
+
+  if (people) {
+    top = Math.min(top, Math.max(0, people.top - HEADROOM));
+    left = Math.min(left, Math.max(0, people.left - SIDE_ROOM));
+    right = Math.max(right, Math.min(1, people.right + SIDE_ROOM));
+  }
+
+  return {
+    tilt,
+    suggested: {
+      angle: tilt.angle,
+      left,
+      top,
+      width: right - left,
+      height: 1 - style.bottom - top,
+    },
+    cost: 0,
+    method: "style",
+  };
+};

@@ -6,6 +6,7 @@ import { env } from "@/env";
 import { requirePermission } from "@/lib/studio";
 import { formatWhatsapp } from "@/lib/whatsapp";
 import { Header } from "../components/header";
+import { EditorSettingsForm } from "./editor-settings";
 import { SettingsForm } from "./settings-form";
 import {
   type WebhookBoard,
@@ -21,19 +22,27 @@ export const metadata: Metadata = {
 const SettingsPage = async () => {
   const context = await requirePermission("settings.manage");
   const supabase = await createClient();
-  const [{ data: webhookRow }, { data: boardRows }] = await Promise.all([
-    supabase
-      .from("studio_integrations")
-      .select(
-        "token, enabled, board_id, stage_id, last_received_at, last_error"
-      )
-      .eq("provider", "webhook")
-      .maybeSingle(),
-    supabase
-      .from("boards")
-      .select("id, name, board_stages(id, name, position)")
-      .order("created_at"),
-  ]);
+  const [{ data: webhookRow }, { data: boardRows }, { data: editor }] =
+    await Promise.all([
+      supabase
+        .from("studio_integrations")
+        .select(
+          "token, enabled, board_id, stage_id, last_received_at, last_error"
+        )
+        .eq("provider", "webhook")
+        .maybeSingle(),
+      supabase
+        .from("boards")
+        .select("id, name, board_stages(id, name, position)")
+        .order("created_at"),
+      supabase
+        .from("studios")
+        .select(
+          "editor_helpers, editor_framing, editor_monthly_limit, editor_keep_days"
+        )
+        .eq("id", context.studio.id)
+        .maybeSingle(),
+    ]);
 
   const boards: WebhookBoard[] = (boardRows ?? []).map((board) => ({
     id: board.id,
@@ -91,6 +100,30 @@ const SettingsPage = async () => {
               apiUrl={env.NEXT_PUBLIC_API_URL ?? null}
               boards={boards}
               webhook={webhook}
+            />
+          </Panel>
+        </section>
+
+        <section className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <HudLabel align="start">Editor</HudLabel>
+            <p className="max-w-prose text-muted-foreground text-sm">
+              Cómo trabaja la limpieza de fondos con IA de las fotos que elige
+              cada cliente.
+            </p>
+          </div>
+          <Panel className="max-w-3xl p-6">
+            <EditorSettingsForm
+              settings={{
+                helpers: editor?.editor_helpers ?? true,
+                framing: editor?.editor_framing ?? false,
+                monthlyLimit:
+                  editor?.editor_monthly_limit === null ||
+                  editor?.editor_monthly_limit === undefined
+                    ? null
+                    : Number(editor.editor_monthly_limit),
+                keepDays: editor?.editor_keep_days ?? 30,
+              }}
             />
           </Panel>
         </section>

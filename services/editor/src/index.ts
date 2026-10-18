@@ -17,7 +17,7 @@ import { Container, getRandom } from "@cloudflare/containers";
 
 interface PhotoJob {
   key: string;
-  options?: { helpers?: boolean; note?: string };
+  options?: { framing?: boolean; helpers?: boolean; note?: string };
   prefix: string;
 }
 
@@ -36,6 +36,7 @@ const KEY_PATTERN = /^editor\/[\w./-]+$/;
 
 const FILES: Record<string, string> = {
   result: "result.jpg",
+  before: "before.jpg",
   preview: "preview.jpg",
   zones: "zones.jpg",
   framed: "framed.jpg",
@@ -100,6 +101,7 @@ const queuePhoto = async (request: Request, env: Env) => {
     key: job.key,
     prefix: job.prefix,
     options: {
+      framing: job.options?.framing === true,
       helpers: job.options?.helpers,
       note: job.options?.note?.slice(0, 500),
     },
@@ -118,6 +120,30 @@ const readStatus = async (url: URL, env: Env) => {
   return object
     ? json(await object.json())
     : json({ error: "Sin estado" }, 404);
+};
+
+/**
+ * Tells the app a photo finished, so it stores the result and can email
+ * the studio even with no page open. Best effort: the page also polls.
+ */
+const notifyApp = async (env: Env, prefix: string) => {
+  if (!env.APP_CALLBACK_URL) {
+    return;
+  }
+
+  try {
+    await fetch(env.APP_CALLBACK_URL, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${env.EDITOR_TOKEN}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ prefix }),
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch (error) {
+    console.error("Could not notify the app", prefix, String(error));
+  }
 };
 
 /** Sends one photo through an engine and stores the answer in R2. */
@@ -211,6 +237,7 @@ export default {
     for (const message of batch.messages) {
       try {
         await processPhoto(message.body, env, message.attempts);
+        await notifyApp(env, message.body.prefix);
         message.ack();
       } catch (error) {
         // The engine never answered (crash, start failure): try again later.
@@ -222,6 +249,7 @@ export default {
             at: now(),
             error: `El motor no respondió: ${String(error)}`,
           });
+          await notifyApp(env, message.body.prefix);
           message.ack();
         }
       }

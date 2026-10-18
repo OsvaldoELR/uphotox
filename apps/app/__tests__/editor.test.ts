@@ -1,10 +1,13 @@
 import { editPhotoKeys } from "@repo/storage/editor";
 import { describe, expect, test } from "vitest";
 import {
+  downloadName,
   editState,
   formatCost,
+  isExpiredEditPhoto,
   isInProgress,
   jpegSize,
+  limitState,
   matchOriginals,
   monthStart,
   statusUpdate,
@@ -164,5 +167,68 @@ describe("jpegSize", () => {
     expect(
       jpegSize(Uint8Array.from([0xff, 0xd8, 0xff, 0xe1, 0x10]))
     ).toBeNull();
+  });
+});
+
+test("downloadName goes next to the original in the session folder", () => {
+  expect(downloadName("DSCF7325.jpg")).toBe("DSCF7325-fondo.jpg");
+  expect(downloadName("IMG_0042.JPEG")).toBe("IMG_0042-fondo.jpg");
+});
+
+test("limitState warns at 80 % and stops at the limit", () => {
+  expect(limitState(50, null)).toEqual({
+    reached: false,
+    warning: false,
+    left: null,
+  });
+  expect(limitState(7.9, 10)).toMatchObject({ reached: false, warning: false });
+  expect(limitState(8, 10)).toMatchObject({ reached: false, warning: true });
+  expect(limitState(10.5, 10)).toEqual({
+    reached: true,
+    warning: true,
+    left: 0,
+  });
+});
+
+describe("isExpiredEditPhoto", () => {
+  const now = new Date("2026-11-30T12:00:00Z");
+
+  test("finished photos go after the studio's keep days", () => {
+    const photo = {
+      status: "done",
+      createdAt: "2026-10-01T10:00:00Z",
+      finishedAt: "2026-10-31T14:00:00Z",
+      keepDays: 30,
+    };
+
+    expect(isExpiredEditPhoto(photo, now)).toBe(false);
+    expect(isExpiredEditPhoto({ ...photo, keepDays: 29 }, now)).toBe(true);
+    expect(
+      isExpiredEditPhoto({ ...photo, status: "failed", keepDays: 29 }, now)
+    ).toBe(true);
+  });
+
+  test("abandoned uploads after two days, never photos in the cloud", () => {
+    const photo = {
+      createdAt: "2026-11-28T11:00:00Z",
+      finishedAt: null,
+      keepDays: 30,
+    };
+
+    expect(isExpiredEditPhoto({ ...photo, status: "uploading" }, now)).toBe(
+      true
+    );
+    expect(
+      isExpiredEditPhoto(
+        { ...photo, status: "uploading", createdAt: "2026-11-29T12:00:00Z" },
+        now
+      )
+    ).toBe(false);
+    expect(
+      isExpiredEditPhoto(
+        { ...photo, status: "processing", createdAt: "2026-01-01T00:00:00Z" },
+        now
+      )
+    ).toBe(false);
   });
 });

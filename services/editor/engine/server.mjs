@@ -2,9 +2,10 @@
  * Editor engine: HTTP server inside the Cloudflare container.
  *
  *   POST /process   body: the original JPEG; header x-options: URL-encoded
- *                   JSON ({ helpers, note }); header x-photo: a label for
- *                   the logs. Answers multipart/form-data with "info"
- *                   (JSON) and the JPEGs "result", "preview", "zones" (and
+ *                   JSON ({ helpers, note, framing }); header x-photo: a label
+ *                   for the logs. Answers multipart/form-data with "info"
+ *                   (JSON) and the JPEGs "result", "before", "preview",
+ *                   "zones" (and
  *                   "framed", "framed-preview" when framing ran).
  *   GET  /ping      readiness check for the Worker.
  *
@@ -103,6 +104,7 @@ const process_ = async (request, response) => {
       "info.json"
     );
     form.append("result", ...jpeg(result.final, "result.jpg"));
+    form.append("before", ...jpeg(result.before, "before.jpg"));
     form.append("preview", ...jpeg(result.preview, "preview.jpg"));
     form.append("zones", ...jpeg(result.zones, "zones.jpg"));
 

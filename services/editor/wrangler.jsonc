@@ -35,5 +35,9 @@
       }
     ]
   },
-  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "uphotox-galerias" }]
+  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "uphotox-galerias" }],
+  // Where the Worker tells the app that a photo finished.
+  "vars": {
+    "APP_CALLBACK_URL": "https://uphotox-app.vercel.app/api/editor/callback"
+  }
 }

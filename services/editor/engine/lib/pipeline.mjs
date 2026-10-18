@@ -1,6 +1,6 @@
 import { estimateAlignment } from "./align.mjs";
 import { compositeBackground } from "./composite.mjs";
-import { applyFraming, suggestFraming } from "./framing.mjs";
+import { applyFraming, styleFraming, suggestFraming } from "./framing.mjs";
 import { editPrompt } from "./prompts.mjs";
 import { openaiEdit } from "./providers.mjs";
 import { personMask } from "./segment.mjs";
@@ -113,16 +113,20 @@ const runPipeline = async ({ log, options, original, spend }) => {
   let framing;
   let framed;
 
-  if (options.framing?.examples?.length) {
+  // With the studio's crops as examples the framing agent decides; without
+  // them, the studio's usual trims (no AI).
+  if (options.framing) {
     log("framing");
-    framing = await suggestFraming({
-      examples: options.framing.examples,
-      image: original,
-      keep: boxes.keep,
-      person,
-      scene: analysis.scene,
-      working,
-    });
+    framing = options.framing.examples?.length
+      ? await suggestFraming({
+          examples: options.framing.examples,
+          image: original,
+          keep: boxes.keep,
+          person,
+          scene: analysis.scene,
+          working,
+        })
+      : await styleFraming({ keep: boxes.keep, person, working });
     spend(framing.cost);
     framed = await applyFraming(composite.final, framing.suggested);
   }
@@ -139,6 +143,8 @@ const runPipeline = async ({ log, options, original, spend }) => {
   return {
     final: composite.final,
     framed,
+    // The original at preview size, to compare before and after.
+    before: await webPreview(original),
     preview,
     framedPreview: framed ? await webPreview(framed) : undefined,
     zones: await tintedPreview(preview, composite.changeMask),
@@ -169,8 +175,9 @@ const runPipeline = async ({ log, options, original, spend }) => {
  * @param original full-size photo (JPEG buffer, as exported from Lightroom)
  * @param options.helpers false keeps a helper's hand holding the child
  * @param options.note extra instruction from the studio for a redo
- * @param options.framing { examples: [{ image, scene, framing }] } to also
- *   straighten and crop like the studio (off without examples)
+ * @param options.framing true to also straighten and crop in the studio's
+ *   usual style, or { examples: [{ image, scene, framing }] } to let the
+ *   framing agent follow the studio's own crops
  * @param log progress callback (step name)
  * @returns { final, framed?, preview, zones, info } JPEG buffers + JSON info
  */

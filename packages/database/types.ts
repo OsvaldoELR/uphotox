@@ -333,6 +333,7 @@ export type Database = {
           bytes: number
           created_at: string
           created_by: string | null
+          downloaded_at: string | null
           error: string | null
           file_name: string
           finished_at: string | null
@@ -340,8 +341,11 @@ export type Database = {
           gallery_photo_id: number
           id: number
           needs_review: boolean
+          note: string | null
           queued_at: string | null
           review_comment: string | null
+          review_status: string
+          reviewed_at: string | null
           runs: number
           score: number | null
           status: string
@@ -351,6 +355,7 @@ export type Database = {
           bytes: number
           created_at?: string
           created_by?: string | null
+          downloaded_at?: string | null
           error?: string | null
           file_name: string
           finished_at?: string | null
@@ -358,8 +363,11 @@ export type Database = {
           gallery_photo_id: number
           id?: never
           needs_review?: boolean
+          note?: string | null
           queued_at?: string | null
           review_comment?: string | null
+          review_status?: string
+          reviewed_at?: string | null
           runs?: number
           score?: number | null
           status?: string
@@ -369,6 +377,7 @@ export type Database = {
           bytes?: number
           created_at?: string
           created_by?: string | null
+          downloaded_at?: string | null
           error?: string | null
           file_name?: string
           finished_at?: string | null
@@ -376,8 +385,11 @@ export type Database = {
           gallery_photo_id?: number
           id?: never
           needs_review?: boolean
+          note?: string | null
           queued_at?: string | null
           review_comment?: string | null
+          review_status?: string
+          reviewed_at?: string | null
           runs?: number
           score?: number | null
           status?: string
@@ -749,6 +761,10 @@ export type Database = {
       studios: {
         Row: {
           created_at: string
+          editor_framing: boolean
+          editor_helpers: boolean
+          editor_keep_days: number
+          editor_monthly_limit: number | null
           extra_photo_price: number
           id: number
           name: string
@@ -758,6 +774,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          editor_framing?: boolean
+          editor_helpers?: boolean
+          editor_keep_days?: number
+          editor_monthly_limit?: number | null
           extra_photo_price?: number
           id?: never
           name: string
@@ -767,6 +787,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          editor_framing?: boolean
+          editor_helpers?: boolean
+          editor_keep_days?: number
+          editor_monthly_limit?: number | null
           extra_photo_price?: number
           id?: never
           name?: string

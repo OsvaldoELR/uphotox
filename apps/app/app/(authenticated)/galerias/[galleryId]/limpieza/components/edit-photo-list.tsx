@@ -13,7 +13,7 @@ import {
 } from "@repo/design-system/components/ui/alert-dialog";
 import { Button } from "@repo/design-system/components/ui/button";
 import { cn } from "@repo/design-system/lib/utils";
-import Image from "next/image";
+import { CheckCheckIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -21,44 +21,21 @@ import {
   confirmEditUploads,
   refreshEditPhotos,
   removeEditPhotos,
+  reviewEditPhotos,
 } from "@/app/actions/editor";
-import { EDIT_STATE_LABELS, type EditState, formatCost } from "@/lib/editor";
+import { EDIT_STATE_LABELS, type EditState } from "@/lib/editor";
+import { DownloadPanel } from "./download-panel";
+import { EditPhotoCard, type EditPhotoItem } from "./edit-photo-card";
+
+export type { EditPhotoItem } from "./edit-photo-card";
 
 /** How often the page asks the service while photos are in progress. */
 const POLL_MS = 10_000;
-
-export interface EditPhotoItem {
-  readonly comment: string | null;
-  readonly cost: number;
-  readonly error: string | null;
-  readonly fileName: string;
-  readonly id: number;
-  /** Signed URL of the cleaned preview; null until it is done. */
-  readonly previewUrl: string | null;
-  readonly score: number | null;
-  readonly state: EditState;
-}
-
-const TONES: Record<EditState, string> = {
-  uploading: "text-muted-foreground",
-  queued: "border-signal-ink/30 text-signal-ink",
-  processing: "border-signal-ink/60 bg-signal/15 text-signal-ink",
-  done: "border-signal-ink/60 text-signal-ink",
-  review: "border-flare/40 bg-flare/10 text-flare",
-  failed: "border-destructive/40 text-destructive",
-};
 
 // Photos that need the studio first («sin subir» have their own strip).
 const ORDER: EditState[] = ["review", "failed", "processing", "queued", "done"];
 /** Most photos confirmed per server call. */
 const CONFIRM_CHUNK = 50;
-
-const chip =
-  "whitespace-nowrap border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em]";
-
-export const EditStateChip = ({ state }: { readonly state: EditState }) => (
-  <span className={cn(chip, TONES[state])}>{EDIT_STATE_LABELS[state]}</span>
-);
 
 type Filter = EditState | "all";
 
@@ -209,6 +186,52 @@ const PendingUploads = ({
   );
 };
 
+/** «Aprobar las listas»: finished, not flagged by the reviewer, not decided. */
+const ApproveReady = ({
+  galleryId,
+  photos,
+}: {
+  readonly galleryId: number;
+  readonly photos: readonly EditPhotoItem[];
+}) => {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const ready = photos.filter(
+    (photo) => photo.state === "done" && photo.reviewStatus === "pending"
+  );
+
+  if (ready.length === 0) {
+    return null;
+  }
+
+  const approve = () => {
+    startTransition(async () => {
+      const result = await reviewEditPhotos(
+        galleryId,
+        ready.map((photo) => photo.id),
+        "approved"
+      );
+
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success(
+        `${ready.length} ${ready.length === 1 ? "aprobada" : "aprobadas"}`
+      );
+      router.refresh();
+    });
+  };
+
+  return (
+    <Button disabled={pending} onClick={approve} size="sm" variant="outline">
+      <CheckCheckIcon className="size-4" />
+      Aprobar las listas ({ready.length})
+    </Button>
+  );
+};
+
 interface EditPhotoListProperties {
   readonly galleryId: number;
   readonly photos: readonly EditPhotoItem[];
@@ -257,6 +280,7 @@ export const EditPhotoList = ({
 
   const waiting = photos.filter((photo) => photo.state === "uploading");
   const listed = photos.filter((photo) => photo.state !== "uploading");
+  const approved = listed.filter((photo) => photo.reviewStatus === "approved");
   const counts = new Map<EditState, number>();
 
   for (const photo of listed) {
@@ -281,90 +305,54 @@ export const EditPhotoList = ({
         <PendingUploads galleryId={galleryId} photos={waiting} />
       )}
 
-      {filters.length > 2 && (
-        <div className="flex flex-wrap gap-2">
-          {filters.map((option) => (
-            <button
-              className={cn(
-                "border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] transition-colors",
-                filter === option.id
-                  ? "border-signal-ink bg-signal/15 text-signal-ink"
-                  : "bg-card text-muted-foreground hover:bg-accent"
-              )}
-              key={option.id}
-              onClick={() => setFilter(option.id)}
-              type="button"
-            >
-              {option.label} · {option.count}
-            </button>
-          ))}
-        </div>
+      {listed.length > 0 && (
+        <DownloadPanel
+          approved={approved.length}
+          downloaded={approved.filter((photo) => photo.downloaded).length}
+          galleryId={galleryId}
+        />
       )}
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {filters.length > 2 ? (
+          <div className="flex flex-wrap gap-2">
+            {filters.map((option) => (
+              <button
+                className={cn(
+                  "border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] transition-colors",
+                  filter === option.id
+                    ? "border-signal-ink bg-signal/15 text-signal-ink"
+                    : "bg-card text-muted-foreground hover:bg-accent"
+                )}
+                key={option.id}
+                onClick={() => setFilter(option.id)}
+                type="button"
+              >
+                {option.label} · {option.count}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <span />
+        )}
+        <ApproveReady galleryId={galleryId} photos={listed} />
+      </div>
 
       {inProgress && (
         <p className="text-muted-foreground text-xs">
-          Limpiando en la nube. Puedes cerrar esta página: el trabajo sigue y
-          aquí verás el resultado al volver.
+          Limpiando en la nube. Puedes cerrar esta página: te llegará un correo
+          cuando terminen y aquí verás el resultado al volver.
         </p>
       )}
 
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
+      <p className="text-muted-foreground text-xs">
+        Mantén pulsada una foto para ver la original. «Ver zonas» marca en azul
+        lo que vino de la IA.
+      </p>
+
+      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
         {visible.map((photo) => (
-          <li className="grid content-start gap-2" key={photo.id}>
-            <div className="relative aspect-[2/3] overflow-hidden border bg-secondary">
-              {photo.previewUrl ? (
-                <a href={photo.previewUrl} rel="noopener" target="_blank">
-                  <Image
-                    alt={photo.fileName}
-                    className="size-full object-cover"
-                    crossOrigin="anonymous"
-                    draggable={false}
-                    height={600}
-                    loading="lazy"
-                    src={photo.previewUrl}
-                    unoptimized
-                    width={400}
-                  />
-                </a>
-              ) : (
-                <span
-                  className={cn(
-                    "flex size-full items-center justify-center p-3 text-center font-mono text-[10px] text-muted-foreground uppercase tracking-[0.12em]",
-                    photo.state === "processing" && "animate-pulse"
-                  )}
-                >
-                  {EDIT_STATE_LABELS[photo.state]}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="truncate font-mono text-[11px]">
-                {photo.fileName}
-              </span>
-              <EditStateChip state={photo.state} />
-            </div>
-            {(photo.comment || photo.error) && (
-              <p
-                className={cn(
-                  "line-clamp-3 text-xs",
-                  photo.error ? "text-destructive" : "text-muted-foreground"
-                )}
-                title={photo.error ?? photo.comment ?? undefined}
-              >
-                {photo.score !== null && (
-                  <span className="mr-1 font-bold font-mono text-foreground">
-                    {photo.score}/10
-                  </span>
-                )}
-                {photo.error ?? photo.comment}
-              </p>
-            )}
-            {photo.cost > 0 && (
-              <span className="font-mono text-[10px] text-muted-foreground tabular-nums">
-                {formatCost(photo.cost)}
-              </span>
-            )}
-          </li>
+          <EditPhotoCard galleryId={galleryId} key={photo.id} photo={photo} />
         ))}
       </ul>
     </div>

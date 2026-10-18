@@ -3,22 +3,27 @@
 import { createAdminClient } from "@repo/database/admin";
 import { createClient } from "@repo/database/server";
 import { log } from "@repo/observability/log";
-import { objectSize, readObjectText, signedPutUrl } from "@repo/storage";
+import { objectSize, signedGetUrls, signedPutUrl } from "@repo/storage";
 import { editPhotoKeys } from "@repo/storage/editor";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import {
-  type EngineStatus,
+  downloadName,
+  formatCost,
+  limitState,
+  MAX_NOTE_LENGTH,
   MAX_ORIGINAL_BYTES,
   MIN_ORIGINAL_BYTES,
   matchOriginals,
-  statusUpdate,
+  monthStart,
 } from "@/lib/editor";
 import {
   EditorServiceError,
   isEditorConfigured,
   queueEditPhoto,
 } from "@/lib/editor-service";
+import { notifyEditorBatchDone, syncEditPhoto } from "@/lib/editor-sync";
 import { isJpegName } from "@/lib/gallery";
 import { scheduleStorageCleanup } from "@/lib/storage-cleanup";
 import { requireStudio } from "@/lib/studio";
@@ -74,6 +79,42 @@ const revalidateEditor = (galleryId: number) => {
   revalidatePath(`/galerias/${galleryId}`);
   revalidatePath("/editor");
 };
+
+type ServerClient = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * How the studio set the editor up (Ajustes → Editor) and where this
+ * month's consumption stands against its optional limit.
+ */
+const editorPolicy = async (supabase: ServerClient, studioId: number) => {
+  const [{ data: studio }, { data: usage }] = await Promise.all([
+    supabase
+      .from("studios")
+      .select("editor_helpers, editor_framing, editor_monthly_limit")
+      .eq("id", studioId)
+      .maybeSingle(),
+    supabase.from("edit_usage").select("cost").gte("created_at", monthStart()),
+  ]);
+  const used = (usage ?? []).reduce((sum, row) => sum + Number(row.cost), 0);
+  const limit =
+    studio?.editor_monthly_limit === null ||
+    studio?.editor_monthly_limit === undefined
+      ? null
+      : Number(studio.editor_monthly_limit);
+
+  return {
+    framing: studio?.editor_framing ?? false,
+    options: {
+      helpers: studio?.editor_helpers ?? true,
+      framing: studio?.editor_framing ?? false,
+    },
+    limit,
+    state: limitState(used, limit),
+  };
+};
+
+const limitReached = (limit: number | null) =>
+  `Llegaste al límite de gasto de este mes (${formatCost(limit ?? 0)}). Súbelo en Ajustes → Editor para seguir.`;
 
 /** In batches, so a long list does not open dozens of requests at once. */
 const inBatches = async <T, R>(
@@ -290,6 +331,13 @@ export const confirmEditUploads = async (
     .eq("gallery_id", galleryId)
     .eq("status", "uploading")
     .in("id", ids.data);
+  const studioId = rows?.[0]?.studio_id;
+  const policy = studioId ? await editorPolicy(supabase, studioId) : null;
+
+  if (policy?.state.reached) {
+    return { error: limitReached(policy.limit) };
+  }
+
   const admin = createAdminClient();
 
   const sent = await inBatches(rows ?? [], 5, async (row) => {
@@ -306,7 +354,11 @@ export const confirmEditUploads = async (
         return { id: row.id, reason: problem };
       }
 
-      await queueEditPhoto({ key: keys.original, prefix: keys.prefix });
+      await queueEditPhoto({
+        key: keys.original,
+        prefix: keys.prefix,
+        options: policy?.options,
+      });
       const { error } = await admin
         .from("edit_photos")
         .update({
@@ -346,75 +398,6 @@ export const confirmEditUploads = async (
   };
 };
 
-interface ActiveRow {
-  readonly gallery_id: number;
-  readonly id: number;
-  readonly runs: number;
-  readonly status: string;
-  readonly studio_id: number;
-}
-
-/** Reads one photo's status.json and stores what changed. */
-const syncPhoto = async (
-  admin: ReturnType<typeof createAdminClient>,
-  row: ActiveRow
-) => {
-  const keys = editPhotoKeys({
-    studioId: row.studio_id,
-    galleryId: row.gallery_id,
-    id: row.id,
-  });
-  const raw = await readObjectText(keys.status);
-  const update = raw ? statusUpdate(JSON.parse(raw) as EngineStatus) : null;
-
-  if (!update || update.status === row.status) {
-    return false;
-  }
-
-  if (update.status === "queued" || update.status === "processing") {
-    await admin
-      .from("edit_photos")
-      .update({ status: update.status })
-      .eq("id", row.id)
-      .eq("runs", row.runs);
-    return true;
-  }
-
-  // The run's cost goes to the usage ledger once (unique photo + run).
-  await admin.from("edit_usage").upsert(
-    {
-      studio_id: row.studio_id,
-      edit_photo_id: row.id,
-      gallery_id: row.gallery_id,
-      run: row.runs,
-      cost: update.cost,
-      succeeded: update.status === "done",
-    },
-    { onConflict: "edit_photo_id,run", ignoreDuplicates: true }
-  );
-  await admin
-    .from("edit_photos")
-    .update(
-      update.status === "done"
-        ? {
-            status: "done",
-            score: update.score,
-            needs_review: update.needsReview,
-            review_comment: update.comment,
-            error: null,
-            finished_at: update.finishedAt,
-          }
-        : {
-            status: "failed",
-            error: update.error,
-            finished_at: update.finishedAt,
-          }
-    )
-    .eq("id", row.id)
-    .eq("runs", row.runs);
-  return true;
-};
-
 /**
  * Brings the gallery's photos in progress up to date with the service.
  * Called by the clean-up page while it is open; returns how many are still
@@ -448,7 +431,7 @@ export const refreshEditPhotos = async (
 
   const admin = createAdminClient();
   const changes = await inBatches(active, STATUS_READS_AT_ONCE, (row) =>
-    syncPhoto(admin, row).catch((error) => {
+    syncEditPhoto(admin, row).catch((error) => {
       log.error("Editor: could not read a photo status", {
         photo: row.id,
         error: String(error),
@@ -460,6 +443,15 @@ export const refreshEditPhotos = async (
 
   if (changed) {
     revalidateEditor(galleryId);
+    // Normally the service's notice sends it; this covers a missed notice.
+    after(() =>
+      notifyEditorBatchDone(admin, galleryId).catch((error) =>
+        log.error("Editor: batch email failed", {
+          gallery: galleryId,
+          error: String(error),
+        })
+      )
+    );
   }
 
   const { count } = await supabase
@@ -503,5 +495,297 @@ export const removeEditPhotos = async (
 
   scheduleStorageCleanup();
   revalidateEditor(galleryId);
+  return { ok: true };
+};
+
+const decisionSchema = z.enum(["approved", "discarded", "pending"]);
+
+/**
+ * Approves cleaned photos, discards them (the original is kept) or undoes
+ * either. Only finished photos; a failed one can only be discarded.
+ */
+export const reviewEditPhotos = async (
+  galleryId: number,
+  photoIds: number[],
+  decision: z.infer<typeof decisionSchema>
+): Promise<ActionResult> => {
+  if (!(await requireEditor())) {
+    return { error: NO_ACCESS };
+  }
+
+  const ids = z.array(id).min(1).max(1000).safeParse(photoIds);
+
+  if (
+    !(
+      ids.success &&
+      id.safeParse(galleryId).success &&
+      decisionSchema.safeParse(decision).success
+    )
+  ) {
+    return { error: "Revisa las fotos." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("edit_photos")
+    .update({
+      review_status: decision,
+      reviewed_at: decision === "pending" ? null : new Date().toISOString(),
+    })
+    .eq("gallery_id", galleryId)
+    .in("id", ids.data)
+    .in("status", decision === "discarded" ? ["done", "failed"] : ["done"])
+    .select("id");
+
+  if (error || !data?.length) {
+    return { error: "No se pudo guardar la revisión." };
+  }
+
+  revalidateEditor(galleryId);
+  return { ok: true };
+};
+
+const noteSchema = z.string().trim().max(MAX_NOTE_LENGTH);
+
+/**
+ * Sends a finished (or failed) photo to the service again, with the
+ * studio's note added to the AI's fixes («quita también el cable»).
+ */
+export const redoEditPhoto = async (
+  galleryId: number,
+  photoId: number,
+  note: string
+): Promise<ActionResult> => {
+  if (!(await requireEditor())) {
+    return { error: NO_ACCESS };
+  }
+
+  const parsedNote = noteSchema.safeParse(note);
+
+  if (
+    !(
+      parsedNote.success &&
+      id.safeParse(galleryId).success &&
+      id.safeParse(photoId).success &&
+      isEditorConfigured()
+    )
+  ) {
+    return {
+      error: parsedNote.success
+        ? NOT_READY
+        : `La nota admite hasta ${MAX_NOTE_LENGTH} caracteres.`,
+    };
+  }
+
+  const supabase = await createClient();
+  const { data: row } = await supabase
+    .from("edit_photos")
+    .select("id, studio_id, gallery_id, runs")
+    .eq("gallery_id", galleryId)
+    .eq("id", photoId)
+    .in("status", ["done", "failed"])
+    .maybeSingle();
+
+  if (!row) {
+    return { error: "Solo se pueden rehacer fotos que ya terminaron." };
+  }
+
+  const policy = await editorPolicy(supabase, row.studio_id);
+
+  if (policy.state.reached) {
+    return { error: limitReached(policy.limit) };
+  }
+
+  const keys = editPhotoKeys({
+    studioId: row.studio_id,
+    galleryId,
+    id: row.id,
+  });
+
+  if (originalProblem(await objectSize(keys.original))) {
+    return { error: "El original ya no está: vuelve a subir esta foto." };
+  }
+
+  try {
+    await queueEditPhoto({
+      key: keys.original,
+      prefix: keys.prefix,
+      options: { ...policy.options, note: parsedNote.data || undefined },
+    });
+  } catch (error) {
+    log.error("Editor: could not queue a redo", {
+      photo: row.id,
+      error: String(error),
+    });
+    const refused =
+      error instanceof EditorServiceError &&
+      (error.status === 401 || error.status === 403);
+    return { error: refused ? BAD_KEY : SERVICE_DOWN };
+  }
+
+  const { error } = await createAdminClient()
+    .from("edit_photos")
+    .update({
+      status: "queued",
+      runs: row.runs + 1,
+      note: parsedNote.data || null,
+      queued_at: new Date().toISOString(),
+      finished_at: null,
+      error: null,
+      score: null,
+      needs_review: false,
+      review_comment: null,
+      review_status: "pending",
+      reviewed_at: null,
+    })
+    .eq("id", row.id)
+    .eq("runs", row.runs);
+
+  if (error) {
+    return { error: SERVICE_DOWN };
+  }
+
+  revalidateEditor(galleryId);
+  return { ok: true };
+};
+
+export interface EditDownload {
+  readonly id: number;
+  /** Name to save it with, next to the original: DSCF7325-fondo.jpg. */
+  readonly name: string;
+  readonly url: string;
+}
+
+/**
+ * Signed links of the approved photos, to save them in the session folder.
+ * With framing on in Ajustes, the straightened and cropped version when the
+ * photo has one.
+ */
+export const editDownloads = async (
+  galleryId: number
+): Promise<{ readonly files: EditDownload[] } | { readonly error: string }> => {
+  if (!(await requireEditor())) {
+    return { error: NO_ACCESS };
+  }
+
+  if (!(id.safeParse(galleryId).success && isEditorConfigured())) {
+    return { error: NOT_READY };
+  }
+
+  const supabase = await createClient();
+  const { data: rows } = await supabase
+    .from("edit_photos")
+    .select("id, studio_id, gallery_id, file_name")
+    .eq("gallery_id", galleryId)
+    .eq("status", "done")
+    .eq("review_status", "approved");
+
+  if (!rows?.length) {
+    return { files: [] };
+  }
+
+  const policy = await editorPolicy(supabase, rows[0]?.studio_id ?? 0);
+  const keys = await inBatches(rows, 8, async (row) => {
+    const photoKeys = editPhotoKeys({
+      studioId: row.studio_id,
+      galleryId: row.gallery_id,
+      id: row.id,
+    });
+    const framed =
+      policy.framing && (await objectSize(photoKeys.framed)) !== null;
+    return framed ? photoKeys.framed : photoKeys.result;
+  });
+  const urls = await signedGetUrls(keys);
+
+  return {
+    files: rows.map((row, index) => ({
+      id: row.id,
+      name: downloadName(row.file_name),
+      url: urls[index] as string,
+    })),
+  };
+};
+
+/** Remembers which approved photos were already saved to the computer. */
+export const markEditDownloaded = async (
+  galleryId: number,
+  photoIds: number[]
+): Promise<ActionResult> => {
+  if (!(await requireEditor())) {
+    return { error: NO_ACCESS };
+  }
+
+  const ids = z.array(id).min(1).max(1000).safeParse(photoIds);
+
+  if (!(ids.success && id.safeParse(galleryId).success)) {
+    return { error: "Revisa las fotos." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("edit_photos")
+    .update({ downloaded_at: new Date().toISOString() })
+    .eq("gallery_id", galleryId)
+    .in("id", ids.data);
+
+  if (error) {
+    return { error: "No se pudo guardar la descarga." };
+  }
+
+  revalidateEditor(galleryId);
+  return { ok: true };
+};
+
+const settingsSchema = z.object({
+  helpers: z.boolean(),
+  framing: z.boolean(),
+  monthlyLimit: z
+    .number()
+    .min(0, "El límite no puede ser negativo.")
+    .max(100_000, "Como máximo $100.000.")
+    .nullable(),
+  keepDays: z
+    .number()
+    .int("Escribe un número entero de días.")
+    .min(7, "Como mínimo 7 días.")
+    .max(365, "Como máximo 365 días."),
+});
+
+export type EditorSettings = z.infer<typeof settingsSchema>;
+
+/** Ajustes → Editor (settings.manage). */
+export const updateEditorSettings = async (
+  settings: EditorSettings
+): Promise<ActionResult> => {
+  const context = await requireStudio();
+
+  if (!context.can("settings.manage")) {
+    return { error: "No tienes permiso para cambiar los ajustes del estudio." };
+  }
+
+  const parsed = settingsSchema.safeParse(settings);
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Revisa los ajustes." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("studios")
+    .update({
+      editor_helpers: parsed.data.helpers,
+      editor_framing: parsed.data.framing,
+      editor_monthly_limit: parsed.data.monthlyLimit,
+      editor_keep_days: parsed.data.keepDays,
+    })
+    .eq("id", context.studio.id)
+    .select("id");
+
+  if (error || !data?.length) {
+    return { error: "No se pudieron guardar los ajustes del editor." };
+  }
+
+  revalidatePath("/ajustes");
+  revalidatePath("/editor");
   return { ok: true };
 };

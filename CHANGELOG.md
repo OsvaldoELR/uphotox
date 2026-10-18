@@ -7,6 +7,26 @@ en `docs/bitacora.md`.
 Numeración: el primer número cambia con cambios grandes que rompen la forma de
 trabajar, el segundo con funciones nuevas y el tercero con arreglos.
 
+## [0.6.0] · 18 oct 2026 · Editor: revisar, descargar y ajustes
+
+**Añadido**
+- **Revisar cada foto limpia**: mantener pulsada para ver la original,
+  «Ver zonas» (lo que vino de la IA), «Tamaño real», y **Aprobar**,
+  **Rehacer con una nota** («quita también la línea del suelo», se añade a
+  las instrucciones de la IA) o **Descartar** (se queda la original). Con
+  «Deshacer» y «Aprobar las listas» para todas las que el revisor no marcó.
+- **Descargar las aprobadas** en la carpeta de la sesión, al lado de cada
+  original (`DSCF7325-fondo.jpg`), en Chrome o Edge; en otros navegadores,
+  a Descargas. Después, en Lightroom, «Sincronizar carpeta…».
+- **Correo al terminar**: «N fotos están listas para revisar», aunque la
+  página esté cerrada (el servicio de limpieza avisa a la app).
+- **Ajustes → Editor**: quitar manos de ayuda (sí/no), **enderezar y
+  encuadrar** como suele hacerlo el estudio (sin IA, sin coste), límite de
+  gasto al mes (aviso al 80 % y parada al llegar) y días que se guardan las
+  fotos en la nube (30 por defecto).
+- **Borrado automático** cada noche de las fotos del editor pasados esos
+  días (y de las subidas que se quedaron a medias).
+
 ## [0.5.1] · 18 oct 2026 · Editor: subida más segura
 
 **Corregido**

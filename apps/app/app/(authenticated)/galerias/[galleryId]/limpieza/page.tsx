@@ -10,7 +10,9 @@ import {
   type EditStatus,
   editState,
   formatCost,
+  limitState,
   monthStart,
+  type ReviewStatus,
 } from "@/lib/editor";
 import { isEditorConfigured } from "@/lib/editor-service";
 import { compareFileNames } from "@/lib/gallery";
@@ -49,6 +51,59 @@ const Stat = ({
 const sum = (rows: readonly { cost: number }[] | null) =>
   (rows ?? []).reduce((total, row) => total + Number(row.cost), 0);
 
+const NO_LINKS = {
+  previewUrl: null,
+  beforeUrl: null,
+  zonesUrl: null,
+  fullUrl: null,
+};
+
+/** Four signed links per finished photo: after, before, zones, full size. */
+const photoLinks = async (
+  studioId: number,
+  galleryId: number,
+  photoIds: readonly number[]
+) => {
+  const urls = photoIds.length
+    ? await signedGetUrls(
+        photoIds.flatMap((id) => {
+          const keys = editPhotoKeys({ studioId, galleryId, id });
+          return [keys.preview, keys.before, keys.zones, keys.result];
+        })
+      )
+    : [];
+
+  return new Map(
+    photoIds.map((id, index) => [
+      id,
+      {
+        previewUrl: urls[index * 4] ?? null,
+        beforeUrl: urls[index * 4 + 1] ?? null,
+        zonesUrl: urls[index * 4 + 2] ?? null,
+        fullUrl: urls[index * 4 + 3] ?? null,
+      },
+    ])
+  );
+};
+
+/** What each photo cost over all its runs. */
+const costsByPhoto = (
+  usage: readonly { cost: number; edit_photo_id: number | null }[]
+) => {
+  const costs = new Map<number, number>();
+
+  for (const run of usage) {
+    if (run.edit_photo_id !== null) {
+      costs.set(
+        run.edit_photo_id,
+        (costs.get(run.edit_photo_id) ?? 0) + Number(run.cost)
+      );
+    }
+  }
+
+  return costs;
+};
+
 const CleanupPage = async ({ params }: CleanupPageProperties) => {
   await requirePermission("editor.access");
   const galleryId = Number((await params).galleryId);
@@ -64,6 +119,7 @@ const CleanupPage = async ({ params }: CleanupPageProperties) => {
     { data: rows },
     galleryUsage,
     monthUsage,
+    { data: settings },
   ] = await Promise.all([
     supabase
       .from("galleries")
@@ -80,7 +136,7 @@ const CleanupPage = async ({ params }: CleanupPageProperties) => {
     supabase
       .from("edit_photos")
       .select(
-        "id, gallery_photo_id, file_name, status, score, needs_review, review_comment, error"
+        "id, gallery_photo_id, file_name, status, score, needs_review, review_comment, error, note, review_status, downloaded_at"
       )
       .eq("gallery_id", galleryId),
     supabase
@@ -88,6 +144,7 @@ const CleanupPage = async ({ params }: CleanupPageProperties) => {
       .select("edit_photo_id, cost")
       .eq("gallery_id", galleryId),
     supabase.from("edit_usage").select("cost").gte("created_at", monthStart()),
+    supabase.from("studios").select("editor_monthly_limit").maybeSingle(),
   ]);
 
   // RLS hides galleries of other studios and of cards the member can't see.
@@ -97,33 +154,20 @@ const CleanupPage = async ({ params }: CleanupPageProperties) => {
 
   const ready = isEditorConfigured();
   const editRows = rows ?? [];
-  const done = editRows.filter((row) => row.status === "done");
-  const previewUrls =
-    ready && done.length
-      ? await signedGetUrls(
-          done.map(
-            (row) =>
-              editPhotoKeys({
-                studioId: gallery.studio_id,
-                galleryId,
-                id: row.id,
-              }).preview
-          )
-        )
-      : [];
-  const previews = new Map(
-    done.map((row, index) => [row.id, previewUrls[index] ?? null])
-  );
-  const costs = new Map<number, number>();
-
-  for (const usage of galleryUsage.data ?? []) {
-    if (usage.edit_photo_id !== null) {
-      costs.set(
-        usage.edit_photo_id,
-        (costs.get(usage.edit_photo_id) ?? 0) + Number(usage.cost)
-      );
-    }
-  }
+  const links = ready
+    ? await photoLinks(
+        gallery.studio_id,
+        galleryId,
+        editRows.filter((row) => row.status === "done").map((row) => row.id)
+      )
+    : new Map();
+  const monthUsed = sum(monthUsage.data);
+  const limit =
+    settings?.editor_monthly_limit == null
+      ? null
+      : Number(settings.editor_monthly_limit);
+  const spending = limitState(monthUsed, limit);
+  const costs = costsByPhoto(galleryUsage.data ?? []);
 
   const sentPhotoIds = new Set(
     editRows
@@ -144,7 +188,10 @@ const CleanupPage = async ({ params }: CleanupPageProperties) => {
       score: row.score,
       comment: row.review_comment,
       error: row.error,
-      previewUrl: previews.get(row.id) ?? null,
+      note: row.note,
+      reviewStatus: row.review_status as ReviewStatus,
+      downloaded: Boolean(row.downloaded_at),
+      ...(links.get(row.id) ?? NO_LINKS),
       cost: costs.get(row.id) ?? 0,
     }))
     .sort((a, b) => compareFileNames(a.fileName, b.fileName));
@@ -189,9 +236,23 @@ const CleanupPage = async ({ params }: CleanupPageProperties) => {
             />
             <Stat
               label="Consumo del mes"
-              value={formatCost(sum(monthUsage.data))}
+              value={
+                limit === null
+                  ? formatCost(monthUsed)
+                  : `${formatCost(monthUsed)} / ${formatCost(limit)}`
+              }
             />
           </dl>
+          {spending.warning && (
+            <p className="border border-flare/40 bg-flare/10 px-4 py-3 text-flare text-sm">
+              {spending.reached
+                ? "Llegaste al límite de gasto de este mes: no se envían más fotos."
+                : `Te quedan ${formatCost(spending.left ?? 0)} del límite de este mes.`}{" "}
+              <Link className="underline underline-offset-2" href="/ajustes">
+                Cambiarlo en Ajustes
+              </Link>
+            </p>
+          )}
         </section>
 
         {pickList.length === 0 && (
