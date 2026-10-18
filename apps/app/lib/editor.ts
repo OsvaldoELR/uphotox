@@ -14,6 +14,112 @@ export type EditStatus =
 
 export type ReviewStatus = "pending" | "approved" | "discarded";
 
+/** «fondo»: backdrop and floor (people original); «completa»: all but faces. */
+export type EditMode = "fondo" | "completa";
+export type EditModel = "gpt" | "nbpro";
+/** 1 one model, 2 both and the reviewer keeps the best, 3 plus a second pass. */
+export type EditLevel = 1 | 2 | 3;
+
+export interface EditChoice {
+  readonly level: EditLevel;
+  readonly mode: EditMode;
+  /** Used with level 1. */
+  readonly model: EditModel;
+}
+
+export const EDIT_MODES: readonly EditMode[] = ["fondo", "completa"];
+export const EDIT_MODELS: readonly EditModel[] = ["gpt", "nbpro"];
+export const EDIT_LEVELS: readonly EditLevel[] = [1, 2, 3];
+
+export const EDIT_MODE_LABELS: Record<EditMode, string> = {
+  fondo: "Solo fondo",
+  completa: "Edición completa",
+};
+
+export const EDIT_MODE_HINTS: Record<EditMode, string> = {
+  fondo: "Fondo y suelo. Las personas se quedan tal cual.",
+  completa:
+    "Todo menos las caras: piel, ropa, pelo, decoración y fondo. Las caras siempre son las originales.",
+};
+
+export const EDIT_MODEL_LABELS: Record<EditModel, string> = {
+  gpt: "GPT Image 2",
+  nbpro: "Nano Banana Pro",
+};
+
+export const EDIT_MODEL_HINTS: Record<EditModel, string> = {
+  gpt: "Ganó la votación a ciegas del estudio para los fondos.",
+  nbpro: "La más nítida para la edición completa (fotos de 17 MP).",
+};
+
+export const EDIT_LEVEL_LABELS: Record<EditLevel, string> = {
+  1: "Un modelo",
+  2: "Los dos modelos: se queda el mejor",
+  3: "Perfeccionista: los dos y una segunda pasada",
+};
+
+export const DEFAULT_CHOICE: EditChoice = {
+  mode: "fondo",
+  level: 1,
+  model: "gpt",
+};
+
+// Measured per photo: the model plus analysis and review. A model that has
+// to repeat (it moved the framing) costs that call again.
+const MODEL_COST: Record<EditMode, Record<EditModel, number>> = {
+  fondo: { gpt: 0.19, nbpro: 0.15 },
+  completa: { gpt: 0.5, nbpro: 0.26 },
+};
+
+/** About what one photo costs with this choice (level 3: the dearer model's second pass). */
+export const estimatedCost = ({ level, mode, model }: EditChoice) => {
+  const costs = MODEL_COST[mode];
+
+  if (level === 1) {
+    return costs[model];
+  }
+
+  const both = costs.gpt + costs.nbpro;
+  return level === 2 ? both : both + Math.max(costs.gpt, costs.nbpro);
+};
+
+const LEVEL_TAGS: Record<EditLevel, string> = {
+  1: "",
+  2: "mejor de 2",
+  3: "perfeccionista",
+};
+
+/**
+ * How a photo was edited, for its card: «Edición completa · Nano Banana
+ * Pro», «Solo fondo · mejor de 2: GPT Image 2».
+ */
+export const editLabel = (choice: EditChoice, winner: EditModel | null) => {
+  const model = winner ?? (choice.level === 1 ? choice.model : null);
+  const tag = LEVEL_TAGS[choice.level];
+  const how = [tag, model && EDIT_MODEL_LABELS[model]]
+    .filter(Boolean)
+    .join(": ");
+
+  return `${EDIT_MODE_LABELS[choice.mode]} · ${how}`;
+};
+
+/** A stored choice (database row or settings) made safe. */
+export const toChoice = (stored: {
+  readonly level?: number | null;
+  readonly mode?: string | null;
+  readonly model?: string | null;
+}): EditChoice => ({
+  mode: EDIT_MODES.includes(stored.mode as EditMode)
+    ? (stored.mode as EditMode)
+    : DEFAULT_CHOICE.mode,
+  level: EDIT_LEVELS.includes(stored.level as EditLevel)
+    ? (stored.level as EditLevel)
+    : DEFAULT_CHOICE.level,
+  model: EDIT_MODELS.includes(stored.model as EditModel)
+    ? (stored.model as EditModel)
+    : DEFAULT_CHOICE.model,
+});
+
 export const REVIEW_LABELS: Record<ReviewStatus, string> = {
   pending: "Sin revisar",
   approved: "Aprobada",
@@ -107,6 +213,7 @@ export interface EngineStatus {
   readonly cost?: number;
   readonly error?: string;
   readonly info?: {
+    readonly chosen?: string;
     readonly costs?: { readonly total?: number };
     readonly needsReview?: boolean;
     readonly review?: { readonly comment?: string; readonly score?: number };
@@ -124,6 +231,8 @@ export type EditUpdate =
       readonly needsReview: boolean;
       readonly score: number | null;
       readonly status: "done";
+      /** Model whose result was kept. */
+      readonly winner: EditModel | null;
     }
   | {
       readonly cost: number;
@@ -170,6 +279,9 @@ export const statusUpdate = (
         comment: text(status.info?.review?.comment),
         cost: money(status.info?.costs?.total),
         finishedAt,
+        winner: EDIT_MODELS.includes(status.info?.chosen as EditModel)
+          ? (status.info?.chosen as EditModel)
+          : null,
       };
     case "failed":
       return {

@@ -340,6 +340,9 @@ export type Database = {
           gallery_id: number
           gallery_photo_id: number
           id: number
+          level: number
+          mode: string
+          model: string | null
           needs_review: boolean
           note: string | null
           queued_at: string | null
@@ -350,6 +353,7 @@ export type Database = {
           score: number | null
           status: string
           studio_id: number
+          winner: string | null
         }
         Insert: {
           bytes: number
@@ -362,6 +366,9 @@ export type Database = {
           gallery_id: number
           gallery_photo_id: number
           id?: never
+          level?: number
+          mode?: string
+          model?: string | null
           needs_review?: boolean
           note?: string | null
           queued_at?: string | null
@@ -372,6 +379,7 @@ export type Database = {
           score?: number | null
           status?: string
           studio_id: number
+          winner?: string | null
         }
         Update: {
           bytes?: number
@@ -384,6 +392,9 @@ export type Database = {
           gallery_id?: number
           gallery_photo_id?: number
           id?: never
+          level?: number
+          mode?: string
+          model?: string | null
           needs_review?: boolean
           note?: string | null
           queued_at?: string | null
@@ -394,6 +405,7 @@ export type Database = {
           score?: number | null
           status?: string
           studio_id?: number
+          winner?: string | null
         }
         Relationships: [
           {
@@ -764,6 +776,9 @@ export type Database = {
           editor_framing: boolean
           editor_helpers: boolean
           editor_keep_days: number
+          editor_level: number
+          editor_mode: string
+          editor_model: string
           editor_monthly_limit: number | null
           extra_photo_price: number
           id: number
@@ -777,6 +792,9 @@ export type Database = {
           editor_framing?: boolean
           editor_helpers?: boolean
           editor_keep_days?: number
+          editor_level?: number
+          editor_mode?: string
+          editor_model?: string
           editor_monthly_limit?: number | null
           extra_photo_price?: number
           id?: never
@@ -790,6 +808,9 @@ export type Database = {
           editor_framing?: boolean
           editor_helpers?: boolean
           editor_keep_days?: number
+          editor_level?: number
+          editor_mode?: string
+          editor_model?: string
           editor_monthly_limit?: number | null
           extra_photo_price?: number
           id?: never

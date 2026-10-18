@@ -17,7 +17,14 @@ import { Container, getRandom } from "@cloudflare/containers";
 
 interface PhotoJob {
   key: string;
-  options?: { framing?: boolean; helpers?: boolean; note?: string };
+  options?: {
+    framing?: boolean;
+    helpers?: boolean;
+    level?: number;
+    mode?: string;
+    model?: string;
+    note?: string;
+  };
   prefix: string;
 }
 
@@ -33,6 +40,7 @@ const ENGINE_SLOTS = 4;
 const DELIVERY_ATTEMPTS = 3;
 const RETRY_DELAY_SECONDS = 60;
 const KEY_PATTERN = /^editor\/[\w./-]+$/;
+const MODELS = new Set(["gpt", "nbpro"]);
 
 const FILES: Record<string, string> = {
   result: "result.jpg",
@@ -103,6 +111,13 @@ const queuePhoto = async (request: Request, env: Env) => {
     options: {
       framing: job.options?.framing === true,
       helpers: job.options?.helpers,
+      mode: job.options?.mode === "completa" ? "completa" : "fondo",
+      level: [1, 2, 3].includes(job.options?.level ?? 0)
+        ? job.options?.level
+        : 1,
+      model: MODELS.has(job.options?.model ?? "")
+        ? job.options?.model
+        : undefined,
       note: job.options?.note?.slice(0, 500),
     },
   });

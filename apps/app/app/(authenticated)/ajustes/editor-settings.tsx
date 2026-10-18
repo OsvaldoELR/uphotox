@@ -10,6 +10,7 @@ import {
   type EditorSettings,
   updateEditorSettings,
 } from "@/app/actions/editor";
+import { EditChoiceFields } from "@/components/edit-choice-fields";
 
 const Toggle = ({
   checked,
@@ -39,6 +40,7 @@ export const EditorSettingsForm = ({
   readonly settings: EditorSettings;
 }) => {
   const [pending, startTransition] = useTransition();
+  const [choice, setChoice] = useState(settings.choice);
   const [helpers, setHelpers] = useState(settings.helpers);
   const [framing, setFraming] = useState(settings.framing);
   const [limit, setLimit] = useState(
@@ -51,6 +53,7 @@ export const EditorSettingsForm = ({
 
     startTransition(async () => {
       const result = await updateEditorSettings({
+        choice,
         helpers,
         framing,
         monthlyLimit: limit.trim() === "" ? null : Number(limit),
@@ -68,6 +71,17 @@ export const EditorSettingsForm = ({
 
   return (
     <form className="grid gap-6" onSubmit={save}>
+      <div className="grid gap-2">
+        <p className="text-muted-foreground text-xs">
+          Lo que viene marcado al subir fotos; se puede cambiar en cada envío y
+          al rehacer una foto.
+        </p>
+        <EditChoiceFields
+          idPrefix="editor-default"
+          onChange={setChoice}
+          value={choice}
+        />
+      </div>
       <Toggle
         checked={helpers}
         description="La mano o el brazo de quien sujeta al niño (cuando el resto de esa persona no sale en la foto). Las caras nunca se tocan."

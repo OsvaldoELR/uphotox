@@ -3,6 +3,7 @@ import { HudLabel } from "@repo/design-system/components/hud/hud-label";
 import { Panel } from "@repo/design-system/components/hud/panel";
 import type { Metadata } from "next";
 import { env } from "@/env";
+import { toChoice } from "@/lib/editor";
 import { requirePermission } from "@/lib/studio";
 import { formatWhatsapp } from "@/lib/whatsapp";
 import { Header } from "../components/header";
@@ -38,7 +39,7 @@ const SettingsPage = async () => {
       supabase
         .from("studios")
         .select(
-          "editor_helpers, editor_framing, editor_monthly_limit, editor_keep_days"
+          "editor_helpers, editor_framing, editor_monthly_limit, editor_keep_days, editor_mode, editor_level, editor_model"
         )
         .eq("id", context.studio.id)
         .maybeSingle(),
@@ -108,13 +109,18 @@ const SettingsPage = async () => {
           <div className="flex flex-col gap-2">
             <HudLabel align="start">Editor</HudLabel>
             <p className="max-w-prose text-muted-foreground text-sm">
-              Cómo trabaja la limpieza de fondos con IA de las fotos que elige
-              cada cliente.
+              Cómo trabaja la edición con IA de las fotos que elige cada
+              cliente: qué se edita, con cuánta exigencia y con qué modelo.
             </p>
           </div>
           <Panel className="max-w-3xl p-6">
             <EditorSettingsForm
               settings={{
+                choice: toChoice({
+                  mode: editor?.editor_mode,
+                  level: editor?.editor_level,
+                  model: editor?.editor_model,
+                }),
                 helpers: editor?.editor_helpers ?? true,
                 framing: editor?.editor_framing ?? false,
                 monthlyLimit:

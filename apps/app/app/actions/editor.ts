@@ -10,6 +10,9 @@ import { after } from "next/server";
 import { z } from "zod";
 import {
   downloadName,
+  EDIT_MODELS,
+  EDIT_MODES,
+  type EditChoice,
   formatCost,
   limitState,
   MAX_NOTE_LENGTH,
@@ -17,6 +20,7 @@ import {
   MIN_ORIGINAL_BYTES,
   matchOriginals,
   monthStart,
+  toChoice,
 } from "@/lib/editor";
 import {
   EditorServiceError,
@@ -60,6 +64,30 @@ const fileSchema = z.object({
 
 const batchSchema = z.array(fileSchema).min(1).max(50);
 
+const choiceSchema = z.object({
+  mode: z.enum(EDIT_MODES),
+  level: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  model: z.enum(EDIT_MODELS),
+});
+
+/** The columns a choice is stored in (the model only counts with level 1). */
+const choiceColumns = (choice: EditChoice) => ({
+  mode: choice.mode,
+  level: choice.level,
+  model: choice.level === 1 ? choice.model : null,
+});
+
+/** What the service is told to do with one photo, from its row. */
+const jobOptions = (
+  policy: { readonly options: { framing: boolean; helpers: boolean } },
+  row: { level: number; mode: string; model: string | null }
+) => ({
+  ...policy.options,
+  mode: row.mode,
+  level: row.level,
+  model: row.model ?? undefined,
+});
+
 export type OriginalFile = z.infer<typeof fileSchema>;
 
 export interface PreparedOriginal {
@@ -90,7 +118,9 @@ const editorPolicy = async (supabase: ServerClient, studioId: number) => {
   const [{ data: studio }, { data: usage }] = await Promise.all([
     supabase
       .from("studios")
-      .select("editor_helpers, editor_framing, editor_monthly_limit")
+      .select(
+        "editor_helpers, editor_framing, editor_monthly_limit, editor_mode, editor_level, editor_model"
+      )
       .eq("id", studioId)
       .maybeSingle(),
     supabase.from("edit_usage").select("cost").gte("created_at", monthStart()),
@@ -103,6 +133,11 @@ const editorPolicy = async (supabase: ServerClient, studioId: number) => {
       : Number(studio.editor_monthly_limit);
 
   return {
+    choice: toChoice({
+      mode: studio?.editor_mode,
+      level: studio?.editor_level,
+      model: studio?.editor_model,
+    }),
     framing: studio?.editor_framing ?? false,
     options: {
       helpers: studio?.editor_helpers ?? true,
@@ -139,11 +174,13 @@ const inBatches = async <T, R>(
  * name; picks already sent to the service are skipped (a redo is a separate
  * action). A pick whose upload finished but was never queued (the service
  * was down) is «ready»: it goes straight to confirm, without uploading it
- * again; one whose upload never finished gets a new URL.
+ * again; one whose upload never finished gets a new URL. Each photo keeps
+ * the choice it was dropped with (mode, level, model) until it is queued.
  */
 export const prepareEditUploads = async (
   galleryId: number,
-  files: OriginalFile[]
+  files: OriginalFile[],
+  choice: EditChoice
 ): Promise<
   | {
       readonly ready: { readonly id: number; readonly name: string }[];
@@ -162,10 +199,17 @@ export const prepareEditUploads = async (
   }
 
   const parsed = batchSchema.safeParse(files);
+  const parsedChoice = choiceSchema.safeParse(choice);
+
+  if (!parsedChoice.success) {
+    return { error: "Elige cómo se edita: modo, exigencia y modelo." };
+  }
 
   if (!(parsed.success && id.safeParse(galleryId).success)) {
     return { error: "Revisa los archivos: fotos JPG de hasta 80 MB." };
   }
+
+  const columns = choiceColumns(parsedChoice.data);
 
   const supabase = await createClient();
   const { data: gallery } = await supabase
@@ -221,6 +265,7 @@ export const prepareEditUploads = async (
           gallery_photo_id: pair.photo.id,
           file_name: pair.file.name,
           bytes: pair.file.bytes,
+          ...columns,
         }))
       )
       .select("id, gallery_photo_id");
@@ -243,6 +288,17 @@ export const prepareEditUploads = async (
       .filter((row) => row.status === "uploading")
       .map((row) => row.id)
   );
+
+  // Dropped again, maybe with another choice (members can't update these
+  // columns; RLS already showed these rows to this member).
+  if (resumed.size) {
+    await createAdminClient()
+      .from("edit_photos")
+      .update(columns)
+      .eq("studio_id", gallery.studio_id)
+      .eq("status", "uploading")
+      .in("id", [...resumed]);
+  }
   const targets = await Promise.all(
     pairs
       .filter((pair) => rowIds.has(pair.photo.id))
@@ -327,7 +383,7 @@ export const confirmEditUploads = async (
   const supabase = await createClient();
   const { data: rows } = await supabase
     .from("edit_photos")
-    .select("id, studio_id, gallery_id, status, runs")
+    .select("id, studio_id, gallery_id, status, runs, mode, level, model")
     .eq("gallery_id", galleryId)
     .eq("status", "uploading")
     .in("id", ids.data);
@@ -357,7 +413,7 @@ export const confirmEditUploads = async (
       await queueEditPhoto({
         key: keys.original,
         prefix: keys.prefix,
-        options: policy?.options,
+        options: policy ? jobOptions(policy, row) : undefined,
       });
       const { error } = await admin
         .from("edit_photos")
@@ -549,18 +605,25 @@ const noteSchema = z.string().trim().max(MAX_NOTE_LENGTH);
 
 /**
  * Sends a finished (or failed) photo to the service again, with the
- * studio's note added to the AI's fixes («quita también el cable»).
+ * studio's note added to the AI's fixes («quita también el cable») and,
+ * maybe, another mode, level or model.
  */
 export const redoEditPhoto = async (
   galleryId: number,
   photoId: number,
-  note: string
+  note: string,
+  choice: EditChoice
 ): Promise<ActionResult> => {
   if (!(await requireEditor())) {
     return { error: NO_ACCESS };
   }
 
   const parsedNote = noteSchema.safeParse(note);
+  const parsedChoice = choiceSchema.safeParse(choice);
+
+  if (!parsedChoice.success) {
+    return { error: "Elige cómo se edita: modo, exigencia y modelo." };
+  }
 
   if (
     !(
@@ -606,11 +669,16 @@ export const redoEditPhoto = async (
     return { error: "El original ya no está: vuelve a subir esta foto." };
   }
 
+  const columns = choiceColumns(parsedChoice.data);
+
   try {
     await queueEditPhoto({
       key: keys.original,
       prefix: keys.prefix,
-      options: { ...policy.options, note: parsedNote.data || undefined },
+      options: {
+        ...jobOptions(policy, columns),
+        note: parsedNote.data || undefined,
+      },
     });
   } catch (error) {
     log.error("Editor: could not queue a redo", {
@@ -629,6 +697,8 @@ export const redoEditPhoto = async (
       status: "queued",
       runs: row.runs + 1,
       note: parsedNote.data || null,
+      ...columns,
+      winner: null,
       queued_at: new Date().toISOString(),
       finished_at: null,
       error: null,
@@ -737,6 +807,7 @@ export const markEditDownloaded = async (
 };
 
 const settingsSchema = z.object({
+  choice: choiceSchema,
   helpers: z.boolean(),
   framing: z.boolean(),
   monthlyLimit: z
@@ -777,6 +848,9 @@ export const updateEditorSettings = async (
       editor_framing: parsed.data.framing,
       editor_monthly_limit: parsed.data.monthlyLimit,
       editor_keep_days: parsed.data.keepDays,
+      editor_mode: parsed.data.choice.mode,
+      editor_level: parsed.data.choice.level,
+      editor_model: parsed.data.choice.model,
     })
     .eq("id", context.studio.id)
     .select("id");

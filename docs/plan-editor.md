@@ -116,6 +116,11 @@ para el montaje a 40 MP se queda corto (2 GB y sin cola de verdad en su plan).
 | R2 (fotos guardadas 30 días) | — | céntimos |
 | **Total** | | **~$7 por sesión** |
 
+**Edición completa** (todo menos las caras; modelos a 8 MP / 4K), por foto:
+GPT Image 2 ~$0,50 y ~80 s; Nano Banana Pro ~$0,26 y ~30 s; exigencia 2
+(los dos, se queda el mejor) ~$0,76; exigencia 3 (más una segunda pasada)
+~$1,26 y unos 4 minutos. Una sesión de 30 fotos en exigencia 3 ronda $38.
+
 Tiempo: ~70 s por foto en GPT; con 5–6 a la vez, 30 fotos en ~8–10 minutos
 (OpenAI limita imágenes por minuto según el nivel de la cuenta). Subida: unos
 600 MB por sesión (a 20 Mbps, ~4 minutos); bajada parecida.
@@ -136,9 +141,12 @@ las APIs de pago no entrenan con ellas).
 3. **Revisión y descarga** (hecha, v0.6.0): cuadrícula antes/después, aprobar, rehacer con
    nota, descartar, descargar a una carpeta, aviso por correo, ajustes del
    editor, límite de gasto y borrado automático.
-4. **Prueba real** con una sesión completa del estudio y ajustes; versión
+4. **Edición completa** (construida, v0.7.0): modo «Solo fondo» o «Edición
+   completa» (todo menos las caras), exigencia 1–3 y modelo, con valores por
+   defecto en Ajustes y elegibles al subir y al rehacer.
+5. **Prueba real** con una sesión completa del estudio y ajustes; versión
    publicada.
-5. **Plugin de Lightroom Classic**: «Marcar las elegidas por el cliente»
+6. **Plugin de Lightroom Classic**: «Marcar las elegidas por el cliente»
    (sustituye copiar los nombres al filtro), «Limpiar fondos de las
    seleccionadas» (exporta, sube, espera, descarga e importa apiladas junto a
    la original) y el encuadre como ajuste de recorte de Lightroom (movible).

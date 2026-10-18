@@ -31,7 +31,7 @@ Versión publicada: **v0.6.2** (historial de versiones en `CHANGELOG.md`).
 | Ajustes | Hecho: nombre, WhatsApp, entrada de clientes (webhook) | `/ajustes` |
 | Entrada de clientes (Make/Typeform) | Hecho y publicado | `apps/api` |
 | Galerías (selección, sustituye a Pixieset) | Publicado (v0.4.0): subir fotos a Cloudflare R2, enviar al cliente, página del cliente con guía de primera visita, confirmar, lista para Lightroom, reabrir. Falta el borrado automático diario | `/galerias`, `/g/<código>` |
-| Editor de imágenes | En construcción: servicio de limpieza de fondos publicado en Cloudflare y probado con una foto; falta la pantalla en la app («Pronto» en el menú) | `services/editor`, `tools/fondo-lab` |
+| Editor de imágenes | Publicado (v0.6.2): limpieza de fondos en Cloudflare, subida, revisión, visor, descarga, correo, ajustes y consumo. **Edición completa** (todo menos las caras, exigencia 1–3, elección de modelo) construida, pendiente de publicar como v0.7.0 | `/editor`, `/galerias/<id>/limpieza`, `services/editor` |
 
 Publicado en Vercel (equipo «Upgradix's projects», plan Hobby):
 - **App**: https://uphotox-app.vercel.app (proyecto `uphotox-app`, carpeta `apps/app`).
@@ -112,11 +112,12 @@ Del Editor (por programar):
       junta del suelo. Mejorar el montaje y las instrucciones.
 - [ ] Encuadre con los recortes reales del estudio como ejemplos (hoy usa
       sus recortes medios, sin IA): llegará con el plugin de Lightroom.
-- [ ] Fase 5: plugin de Lightroom Classic (`docs/plan-editor.md`).
-- [ ] **Edición completa** (pedido del usuario y su esposa): todo menos las
-      caras, con nivel de exigencia y elección de modelo. Prototipo hecho
-      (ver Historial); falta que el usuario confirme el diseño y construir la
-      pantalla.
+- [ ] Fase 6: plugin de Lightroom Classic (`docs/plan-editor.md`).
+- [ ] **Edición completa · probar la v0.7.0** (cuando se publique): en
+      Ajustes → Editor elegir los valores por defecto; subir unas fotos con
+      «Edición completa» y exigencia 1, 2 y 3, y comparar. Ojo al coste:
+      exigencia 3 ronda $1,25 por foto (30 fotos ≈ $38); conviene poner un
+      límite de gasto al mes.
 
 Detectado al probar (no es de Galerías):
 - [ ] Si se borra un usuario con la sesión abierta (p. ej. un miembro del
@@ -150,6 +151,49 @@ editar, paquetes y pagos.
 ---
 
 ## Historial
+
+### 18 oct 2026 · Editor: edición completa, exigencia y modelo (sin publicar)
+**Pedido** (el usuario y su esposa, que prueba el editor): una edición
+completa, todo menos la cara (piel, ropa, pelo, decoración, fondo), con una
+barra de exigencia y la posibilidad de elegir los modelos más caros. Diseño
+aprobado con «1 yes 2 yes».
+
+**Qué se hizo**
+- Base de datos (`20261018214900_editor_modes.sql`): `edit_photos.mode`
+  (`fondo` / `completa`), `level` (1–3), `model` (`gpt` / `nbpro`, solo con
+  exigencia 1) y `winner` (el modelo que se quedó, lo escribe el servidor);
+  `studios.editor_mode`, `editor_level`, `editor_model` (valores por
+  defecto). Los miembros solo insertan modo, exigencia y modelo; al volver a
+  soltar una foto sin enviar o al rehacerla, los cambia el servidor.
+- Motor (`services/editor/engine/lib/pipeline.mjs`): `MODELS` (GPT Image 2 y
+  Nano Banana Pro, con su tamaño por modo: 8 MP y 4K en edición completa,
+  entrada de 3072 px). Exigencia 1 = un modelo (por defecto GPT en fondo y
+  Nano Banana Pro en completa); 2 = los dos a la vez y el revisor se queda
+  con el de mejor nota (empate: el de por defecto); 3 = además una segunda
+  pasada con lo que el revisor aún vio mal, que solo se queda si no baja la
+  nota. `info.json` lleva `mode`, `level`, `chosen`, `passes` y cada
+  candidato con su nota y coste. El Worker (`src/index.ts`) valida y pasa
+  `mode`, `level` y `model`.
+- App: reglas en `lib/editor.ts` (`EditChoice`, etiquetas, `estimatedCost`,
+  `toChoice`, `editLabel`; probadas), selector común
+  `components/edit-choice-fields.tsx` (modo, barra de exigencia 1–3, modelo
+  y coste estimado por foto) encima de la zona de subida, en «Rehacer» y en
+  Ajustes → Editor. Cada tarjeta y el visor dicen cómo se editó la foto
+  («Edición completa · mejor de 2: Nano Banana Pro»).
+
+**Prueba**: motor en local con una foto real a tamaño completo, edición
+completa y exigencia 3: los dos modelos con nota 7, se quedó Nano Banana Pro
+y su segunda pasada; 248 s y $1,47 (GPT tuvo que repetir porque movió el
+encuadre: $0,97 en vez de $0,48). Resultado bien: sin trípodes ni cables,
+suelo limpio, la familia y las caras iguales. Las colas de Cloudflare dejan
+hasta 15 minutos por foto, así que cabe de sobra. Compilación y 56 pruebas
+de la app en verde; `tsc` del Worker y Biome limpios. Sin probar en el
+navegador.
+
+**Costes estimados por foto** (análisis y revisión incluidos; un reintento
+cuesta esa llamada otra vez): solo fondo GPT $0,19 / Nano Banana Pro $0,15;
+edición completa GPT $0,50 / Nano Banana Pro $0,26; exigencia 2 en completa
+$0,76; exigencia 3 en completa ~$1,26.
 
 ### 18 oct 2026 · Editor: cara flotante y prototipo de edición completa
 **Cara flotante** (DSCF2845, al rehacer con la nota «quita a la persona…»):

@@ -2,7 +2,9 @@ import { editPhotoKeys } from "@repo/storage/editor";
 import { describe, expect, test } from "vitest";
 import {
   downloadName,
+  editLabel,
   editState,
+  estimatedCost,
   formatCost,
   isExpiredEditPhoto,
   isInProgress,
@@ -11,6 +13,7 @@ import {
   matchOriginals,
   monthStart,
   statusUpdate,
+  toChoice,
 } from "@/lib/editor";
 
 const picks = [
@@ -70,6 +73,7 @@ describe("statusUpdate", () => {
       comment: "Falta la línea del suelo.",
       cost: 0.1861,
       finishedAt: "2026-10-18T18:00:00.000Z",
+      winner: null,
     });
   });
 
@@ -230,5 +234,54 @@ describe("isExpiredEditPhoto", () => {
         now
       )
     ).toBe(false);
+  });
+});
+
+describe("edit choices", () => {
+  test("estimated cost per photo by mode, level and model", () => {
+    expect(estimatedCost({ mode: "fondo", level: 1, model: "gpt" })).toBe(0.19);
+    expect(estimatedCost({ mode: "completa", level: 1, model: "nbpro" })).toBe(
+      0.26
+    );
+    expect(estimatedCost({ mode: "completa", level: 2, model: "gpt" })).toBe(
+      0.76
+    );
+    expect(
+      estimatedCost({ mode: "completa", level: 3, model: "gpt" })
+    ).toBeCloseTo(1.26);
+  });
+
+  test("stored choices are made safe", () => {
+    expect(toChoice({ mode: "completa", level: 3, model: "nbpro" })).toEqual({
+      mode: "completa",
+      level: 3,
+      model: "nbpro",
+    });
+    expect(toChoice({ mode: "otro", level: 9, model: null })).toEqual({
+      mode: "fondo",
+      level: 1,
+      model: "gpt",
+    });
+  });
+
+  test("each card says how its photo was edited", () => {
+    expect(
+      editLabel({ mode: "completa", level: 1, model: "nbpro" }, null)
+    ).toBe("Edición completa · Nano Banana Pro");
+    expect(editLabel({ mode: "fondo", level: 2, model: "gpt" }, "gpt")).toBe(
+      "Solo fondo · mejor de 2: GPT Image 2"
+    );
+    expect(editLabel({ mode: "completa", level: 3, model: "gpt" }, null)).toBe(
+      "Edición completa · perfeccionista"
+    );
+  });
+
+  test("the kept model is read from the service", () => {
+    expect(
+      statusUpdate({ state: "done", info: { chosen: "nbpro" } })
+    ).toMatchObject({ winner: "nbpro" });
+    expect(
+      statusUpdate({ state: "done", info: { chosen: "dalle" } })
+    ).toMatchObject({ winner: null });
   });
 });

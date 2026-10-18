@@ -18,7 +18,9 @@ import {
   type PreparedOriginal,
   prepareEditUploads,
 } from "@/app/actions/editor";
+import { EditChoiceFields } from "@/components/edit-choice-fields";
 import {
+  type EditChoice,
   JPEG_HEADER_BYTES,
   jpegSize,
   MAX_ORIGINAL_BYTES,
@@ -113,12 +115,14 @@ const keepFullSize = async (files: readonly File[], problems: Problem[]) => {
 const sendChunk = async (
   galleryId: number,
   chunk: readonly File[],
+  choice: EditChoice,
   problems: Problem[],
   advance: (count?: number) => void
 ) => {
   const prepared = await prepareEditUploads(
     galleryId,
-    chunk.map((file) => ({ name: file.name, bytes: file.size }))
+    chunk.map((file) => ({ name: file.name, bytes: file.size })),
+    choice
   );
 
   if ("error" in prepared) {
@@ -196,16 +200,20 @@ const sendChunk = async (
 };
 
 interface OriginalUploaderProperties {
+  /** The studio's defaults (Ajustes → Editor). */
+  readonly defaultChoice: EditChoice;
   readonly galleryId: number;
   readonly picks: readonly PickToClean[];
 }
 
 export const OriginalUploader = ({
+  defaultChoice,
   galleryId,
   picks,
 }: OriginalUploaderProperties) => {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
+  const [choice, setChoice] = useState(defaultChoice);
   const [progress, setProgress] = useState<{
     done: number;
     total: number;
@@ -264,6 +272,7 @@ export const OriginalUploader = ({
       const result = await sendChunk(
         galleryId,
         files.slice(index, index + CHUNK),
+        choice,
         problems,
         advance
       );
@@ -311,6 +320,18 @@ export const OriginalUploader = ({
 
   return (
     <div className="grid gap-3">
+      <div
+        className={cn(
+          "border bg-card p-4",
+          working && "pointer-events-none opacity-60"
+        )}
+      >
+        <EditChoiceFields
+          idPrefix="upload"
+          onChange={setChoice}
+          value={choice}
+        />
+      </div>
       <button
         className={cn(
           "flex flex-col items-center gap-2 border border-dashed bg-card px-6 py-10 text-center transition-colors",

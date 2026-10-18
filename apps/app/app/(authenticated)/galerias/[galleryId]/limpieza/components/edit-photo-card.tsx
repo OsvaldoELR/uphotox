@@ -19,9 +19,14 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { redoEditPhoto, reviewEditPhotos } from "@/app/actions/editor";
+import { EditChoiceFields } from "@/components/edit-choice-fields";
 import {
   EDIT_STATE_LABELS,
+  type EditChoice,
+  type EditModel,
   type EditState,
+  editLabel,
+  estimatedCost,
   formatCost,
   MAX_NOTE_LENGTH,
   REVIEW_LABELS,
@@ -31,6 +36,8 @@ import {
 export interface EditPhotoItem {
   /** Signed URL of the original at preview size (to compare); may be missing. */
   readonly beforeUrl: string | null;
+  /** How it is (or was last) edited. */
+  readonly choice: EditChoice;
   readonly comment: string | null;
   readonly cost: number;
   readonly downloaded: boolean;
@@ -47,6 +54,8 @@ export interface EditPhotoItem {
   readonly reviewStatus: ReviewStatus;
   readonly score: number | null;
   readonly state: EditState;
+  /** Model whose result was kept. */
+  readonly winner: EditModel | null;
   readonly zonesUrl: string | null;
 }
 
@@ -81,11 +90,12 @@ const RedoDialog = ({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState(photo.note ?? "");
+  const [choice, setChoice] = useState(photo.choice);
   const [pending, startTransition] = useTransition();
 
   const redo = () => {
     startTransition(async () => {
-      const result = await redoEditPhoto(galleryId, photo.id, note);
+      const result = await redoEditPhoto(galleryId, photo.id, note, choice);
 
       if ("error" in result) {
         toast.error(result.error);
@@ -105,12 +115,13 @@ const RedoDialog = ({
           Rehacer
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Rehacer {photo.fileName}</DialogTitle>
           <DialogDescription>
-            Se limpia otra vez desde el original (unos $0,20). Si algo quedó
-            mal, dilo aquí y se añade a las instrucciones de la IA.
+            Se edita otra vez desde el original (unos{" "}
+            {formatCost(estimatedCost(choice))}). Si algo quedó mal, dilo aquí y
+            se añade a las instrucciones de la IA.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-2">
@@ -124,6 +135,11 @@ const RedoDialog = ({
             value={note}
           />
         </div>
+        <EditChoiceFields
+          idPrefix={`redo-${photo.id}`}
+          onChange={setChoice}
+          value={choice}
+        />
         <DialogFooter>
           <Button disabled={pending} onClick={redo}>
             Rehacer
@@ -308,9 +324,17 @@ const viewFor = (holding: boolean, zones: boolean): View => {
   return zones ? "zones" : "after";
 };
 
-/** Reviewer's score and comment (or the error), and the studio's note. */
+/**
+ * How it was edited, the reviewer's score and comment (or the error), and
+ * the studio's note.
+ */
 const Details = ({ photo }: { readonly photo: EditPhotoItem }) => (
   <>
+    {photo.state !== "uploading" && (
+      <p className="truncate font-mono text-[10px] text-muted-foreground uppercase tracking-[0.12em]">
+        {editLabel(photo.choice, photo.winner)}
+      </p>
+    )}
     {(photo.comment || photo.error) && (
       <p
         className={cn(

@@ -27,14 +27,10 @@ export const timed = async (task) => {
 };
 
 /** The copy the models see: auto-oriented, 2048 px long edge. */
-export const workingCopy = (original) =>
+export const workingCopy = (original, edge = MODEL_INPUT_EDGE) =>
   sharp(original)
     .rotate()
-    .resize({
-      width: MODEL_INPUT_EDGE,
-      height: MODEL_INPUT_EDGE,
-      fit: "inside",
-    })
+    .resize({ width: edge, height: edge, fit: "inside" })
     .jpeg({ quality: 90 })
     .toBuffer();
 
@@ -143,11 +139,16 @@ export const isReframed = ({ s, dx, dy }) =>
   Math.abs(dy) > MAX_REFRAME;
 
 /** Reviewer: score and comments comparing original and result. */
-export const reviewResult = async (original, final, fixes) => {
+export const reviewResult = async (
+  original,
+  final,
+  fixes,
+  promptFor = reviewPrompt
+) => {
   const { result } = await timed(async () =>
     geminiJson({
       model: TEXT_MODEL,
-      prompt: reviewPrompt(fixes),
+      prompt: promptFor(fixes),
       schema: REVIEW_SCHEMA,
       images: [await small(original), await small(final)],
     })

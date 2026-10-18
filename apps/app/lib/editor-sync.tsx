@@ -71,6 +71,7 @@ export const syncEditPhoto = async (admin: AdminClient, row: SyncRow) => {
             score: update.score,
             needs_review: update.needsReview,
             review_comment: update.comment,
+            winner: update.winner,
             error: null,
             finished_at: update.finishedAt,
           }

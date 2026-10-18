@@ -10,7 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { EDIT_STATE_LABELS } from "@/lib/editor";
+import { EDIT_STATE_LABELS, editLabel } from "@/lib/editor";
 import {
   type EditPhotoItem,
   EditStateChip,
@@ -188,6 +188,9 @@ export const EditPhotoViewer = ({
           </span>
           <span className="truncate text-white/55">{photo.fileName}</span>
           <EditStateChip state={photo.state} />
+          <span className="hidden truncate text-white/55 md:inline">
+            {editLabel(photo.choice, photo.winner)}
+          </span>
         </p>
         <button
           aria-label="Cerrar"

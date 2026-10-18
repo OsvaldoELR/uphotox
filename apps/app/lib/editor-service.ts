@@ -15,8 +15,16 @@ export const isEditorConfigured = () =>
   Boolean(env.EDITOR_URL && env.EDITOR_TOKEN && isStorageConfigured());
 
 export interface EditOptions {
+  /** Also straighten and crop in the studio's usual style. */
+  readonly framing?: boolean;
   /** false keeps a helper's hand holding the child. */
   readonly helpers?: boolean;
+  /** 1 one model, 2 both (the best is kept), 3 plus a second pass. */
+  readonly level?: number;
+  /** «fondo» (backdrop and floor) or «completa» (all but the faces). */
+  readonly mode?: string;
+  /** With level 1, «gpt» or «nbpro». */
+  readonly model?: string;
   /** Extra instruction for a redo («quita también el cable»). */
   readonly note?: string;
 }

@@ -7,12 +7,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  EDIT_MODELS,
+  type EditModel,
   type EditStatus,
   editState,
   formatCost,
   limitState,
   monthStart,
   type ReviewStatus,
+  toChoice,
 } from "@/lib/editor";
 import { isEditorConfigured } from "@/lib/editor-service";
 import { compareFileNames } from "@/lib/gallery";
@@ -146,7 +149,7 @@ const CleanupPage = async ({ params }: CleanupPageProperties) => {
     supabase
       .from("edit_photos")
       .select(
-        "id, gallery_photo_id, file_name, status, score, needs_review, review_comment, error, note, review_status, downloaded_at"
+        "id, gallery_photo_id, file_name, status, score, needs_review, review_comment, error, note, review_status, downloaded_at, mode, level, model, winner"
       )
       .eq("gallery_id", galleryId),
     supabase
@@ -154,7 +157,10 @@ const CleanupPage = async ({ params }: CleanupPageProperties) => {
       .select("edit_photo_id, cost")
       .eq("gallery_id", galleryId),
     supabase.from("edit_usage").select("cost").gte("created_at", monthStart()),
-    supabase.from("studios").select("editor_monthly_limit").maybeSingle(),
+    supabase
+      .from("studios")
+      .select("editor_monthly_limit, editor_mode, editor_level, editor_model")
+      .maybeSingle(),
   ]);
 
   // RLS hides galleries of other studios and of cards the member can't see.
@@ -202,6 +208,10 @@ const CleanupPage = async ({ params }: CleanupPageProperties) => {
       note: row.note,
       reviewStatus: row.review_status as ReviewStatus,
       downloaded: Boolean(row.downloaded_at),
+      choice: toChoice(row),
+      winner: EDIT_MODELS.includes(row.winner as EditModel)
+        ? (row.winner as EditModel)
+        : null,
       ...(links.get(row.id) ?? NO_LINKS),
       cost: costs.get(row.id) ?? 0,
     }))
@@ -229,9 +239,10 @@ const CleanupPage = async ({ params }: CleanupPageProperties) => {
                 {gallery.card.title}
               </h1>
               <p className="max-w-prose text-muted-foreground text-sm">
-                La IA limpia el fondo y el suelo de las fotos que eligió el
-                cliente. Las personas nunca vienen de la IA: siempre son tus
-                píxeles originales.
+                La IA limpia las fotos que eligió el cliente: solo el fondo y el
+                suelo (las personas quedan intactas) o, en edición completa,
+                todo menos las caras. Las caras siempre son tus píxeles
+                originales.
               </p>
             </div>
             <Button asChild size="sm" variant="outline">
@@ -299,6 +310,11 @@ const CleanupPage = async ({ params }: CleanupPageProperties) => {
               Exportar).
             </p>
             <OriginalUploader
+              defaultChoice={toChoice({
+                mode: settings?.editor_mode,
+                level: settings?.editor_level,
+                model: settings?.editor_model,
+              })}
               galleryId={galleryId}
               picks={pickList.map((pick) => ({
                 fileName: pick.file_name,
