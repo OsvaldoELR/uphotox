@@ -152,6 +152,10 @@ confirma el correo; el de restablecer contraseña pedido desde el formulario
 y abierto en otro navegador deja poner la contraseña nueva y entrar; los dos
 enlaces fallan si se usan dos veces; Supabase envía los dos correos con las
 plantillas nuevas (registros de Auth con estado 200).
+Publicado (app y API en READY, etiqueta `v0.4.1`) y comprobado en
+`https://uphotox-app.vercel.app`: registro con un correo existente → «Ese
+correo ya tiene una cuenta…»; contraseña mal → «Correo o contraseña
+incorrectos…»; dos enlaces seguidos → «Por seguridad, espera 49 segundos…».
 
 ### 15 oct 2026 · «No llega el correo» al crear cuenta y error al recuperar contraseña (diagnóstico, sin cambios)
 **Qué pasaba**: el usuario creó una cuenta y no le llegó el correo; además,
