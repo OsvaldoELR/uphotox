@@ -15,6 +15,9 @@ trabajar, el segundo con funciones nuevas y el tercero con arreglos.
 - Al reintentar, las fotos que ya habían subido no se vuelven a subir: van
   directas a la cola.
 - Una subida cortada se reintenta sola dos veces.
+- Las fotos que se quedaron «sin subir» salen aparte, en una franja
+  «Sin terminar de enviar», con «Reintentar envío» (manda las que ya
+  subieron, sin volver a arrastrarlas) y «Quitar».
 
 **Añadido**
 - Uphotox no deja enviar copias pequeñas (por ejemplo, las de la galería con

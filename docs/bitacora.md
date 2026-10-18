@@ -166,6 +166,11 @@ una copia pequeña).
 - Si el original ya está en R2 con el mismo tamaño, no se vuelve a subir
   (va directo a la cola: `ready`).
 - Subidas a R2 con dos reintentos.
+- Las fotos «sin subir» ya no salen como fichas vacías: franja «Sin
+  terminar de enviar» con «Reintentar envío» (llama a
+  `confirmEditUploads` con las que ya están en R2) y «Quitar»
+  (`removeEditPhotos`: borra filas y archivos; nunca las que el servicio
+  está limpiando, que escribiría después).
 - En el navegador se lee el tamaño del JPEG de su cabecera (`jpegSize` en
   `lib/editor.ts`, sin descodificar) y se rechazan las copias de menos de
   3000 px de lado largo.

@@ -1,10 +1,27 @@
 "use client";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@repo/design-system/components/ui/alert-dialog";
+import { Button } from "@repo/design-system/components/ui/button";
 import { cn } from "@repo/design-system/lib/utils";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { refreshEditPhotos } from "@/app/actions/editor";
+import { useEffect, useState, useTransition } from "react";
+import { toast } from "sonner";
+import {
+  confirmEditUploads,
+  refreshEditPhotos,
+  removeEditPhotos,
+} from "@/app/actions/editor";
 import { EDIT_STATE_LABELS, type EditState, formatCost } from "@/lib/editor";
 
 /** How often the page asks the service while photos are in progress. */
@@ -31,15 +48,10 @@ const TONES: Record<EditState, string> = {
   failed: "border-destructive/40 text-destructive",
 };
 
-// Photos that need the studio first.
-const ORDER: EditState[] = [
-  "review",
-  "failed",
-  "processing",
-  "queued",
-  "done",
-  "uploading",
-];
+// Photos that need the studio first («sin subir» have their own strip).
+const ORDER: EditState[] = ["review", "failed", "processing", "queued", "done"];
+/** Most photos confirmed per server call. */
+const CONFIRM_CHUNK = 50;
 
 const chip =
   "whitespace-nowrap border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em]";
@@ -49,6 +61,153 @@ export const EditStateChip = ({ state }: { readonly state: EditState }) => (
 );
 
 type Filter = EditState | "all";
+
+/** Confirms photos in chunks; the ones that stay, with their reason. */
+const sendAgain = async (galleryId: number, ids: readonly number[]) => {
+  const failed = new Map<number, string>();
+
+  for (let index = 0; index < ids.length; index += CONFIRM_CHUNK) {
+    const result = await confirmEditUploads(
+      galleryId,
+      ids.slice(index, index + CONFIRM_CHUNK)
+    );
+
+    if ("error" in result) {
+      return { error: result.error };
+    }
+
+    for (const photo of result.failed) {
+      failed.set(photo.id, photo.reason);
+    }
+  }
+
+  return { failed };
+};
+
+const announce = (sent: number, left: number) => {
+  if (sent > 0) {
+    toast.success(
+      `${sent} ${sent === 1 ? "foto enviada" : "fotos enviadas"} al editor`
+    );
+  }
+
+  if (left > 0) {
+    toast.error(`${left} ${left === 1 ? "sigue" : "siguen"} sin enviar`);
+  }
+};
+
+/**
+ * Photos registered but never queued (the upload was cut, or the service
+ * refused them). Those already complete in storage can be sent again
+ * without dragging them; the rest are dropped again above.
+ */
+const PendingUploads = ({
+  galleryId,
+  photos,
+}: {
+  readonly galleryId: number;
+  readonly photos: readonly EditPhotoItem[];
+}) => {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [reasons, setReasons] = useState<ReadonlyMap<number, string>>(
+    new Map()
+  );
+
+  const retry = () => {
+    startTransition(async () => {
+      const result = await sendAgain(
+        galleryId,
+        photos.map((photo) => photo.id)
+      );
+
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+
+      setReasons(result.failed);
+      announce(photos.length - result.failed.size, result.failed.size);
+      router.refresh();
+    });
+  };
+
+  const remove = () => {
+    startTransition(async () => {
+      const result = await removeEditPhotos(
+        galleryId,
+        photos.map((photo) => photo.id)
+      );
+
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success("Fotos quitadas del editor");
+      router.refresh();
+    });
+  };
+
+  return (
+    <section className="grid gap-3 border border-dashed bg-card p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="grid max-w-prose gap-1">
+          <span className="font-mono text-[10px] uppercase tracking-[0.16em]">
+            {photos.length} sin terminar de enviar
+          </span>
+          <p className="text-muted-foreground text-sm">
+            Se registraron pero no llegaron a la cola (la subida se cortó o el
+            servicio no las aceptó). «Reintentar envío» manda las que ya
+            subieron completas; las demás, vuelve a arrastrarlas arriba.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button disabled={pending} onClick={retry} size="sm">
+            Reintentar envío
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button disabled={pending} size="sm" variant="ghost">
+                Quitar
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  ¿Quitar estas {photos.length} fotos del editor?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  Se borran los originales que llegaron a subir. Las fotos de la
+                  galería y la selección del cliente no se tocan.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={remove}>Quitar</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </div>
+      <ul className="flex flex-wrap gap-2">
+        {photos.map((photo) => (
+          <li
+            className="border bg-background px-2 py-1 font-mono text-[11px]"
+            key={photo.id}
+          >
+            {photo.fileName}
+            {reasons.get(photo.id) && (
+              <span className="ml-2 font-sans text-destructive text-xs">
+                {reasons.get(photo.id)}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+};
 
 interface EditPhotoListProperties {
   readonly galleryId: number;
@@ -96,26 +255,32 @@ export const EditPhotoList = ({
     );
   }
 
+  const waiting = photos.filter((photo) => photo.state === "uploading");
+  const listed = photos.filter((photo) => photo.state !== "uploading");
   const counts = new Map<EditState, number>();
 
-  for (const photo of photos) {
+  for (const photo of listed) {
     counts.set(photo.state, (counts.get(photo.state) ?? 0) + 1);
   }
 
   const filters: { count: number; id: Filter; label: string }[] = [
-    { id: "all", label: "Todas", count: photos.length },
+    { id: "all", label: "Todas", count: listed.length },
     ...ORDER.filter((state) => counts.get(state)).map((state) => ({
       id: state,
       label: EDIT_STATE_LABELS[state],
       count: counts.get(state) ?? 0,
     })),
   ];
-  const visible = [...photos]
+  const visible = listed
     .filter((photo) => filter === "all" || photo.state === filter)
     .sort((a, b) => ORDER.indexOf(a.state) - ORDER.indexOf(b.state));
 
   return (
     <div className="grid gap-4">
+      {waiting.length > 0 && (
+        <PendingUploads galleryId={galleryId} photos={waiting} />
+      )}
+
       {filters.length > 2 && (
         <div className="flex flex-wrap gap-2">
           {filters.map((option) => (

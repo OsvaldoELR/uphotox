@@ -20,7 +20,9 @@ import {
   queueEditPhoto,
 } from "@/lib/editor-service";
 import { isJpegName } from "@/lib/gallery";
+import { scheduleStorageCleanup } from "@/lib/storage-cleanup";
 import { requireStudio } from "@/lib/studio";
+import type { ActionResult } from "./boards";
 
 /**
  * Editor module: the studio uploads the full-size exports of the photos the
@@ -467,4 +469,39 @@ export const refreshEditPhotos = async (
     .in("status", ["queued", "processing"]);
 
   return { active: count ?? 0, changed };
+};
+
+/**
+ * Takes photos out of the editor (rows and their files in R2). Photos the
+ * service is working on stay: it would write their results afterwards.
+ */
+export const removeEditPhotos = async (
+  galleryId: number,
+  photoIds: number[]
+): Promise<ActionResult> => {
+  if (!(await requireEditor())) {
+    return { error: NO_ACCESS };
+  }
+
+  const ids = z.array(id).min(1).max(1000).safeParse(photoIds);
+
+  if (!(ids.success && id.safeParse(galleryId).success)) {
+    return { error: "Revisa las fotos." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("edit_photos")
+    .delete()
+    .eq("gallery_id", galleryId)
+    .in("id", ids.data)
+    .in("status", ["uploading", "failed", "done"]);
+
+  if (error) {
+    return { error: "No se pudieron quitar las fotos." };
+  }
+
+  scheduleStorageCleanup();
+  revalidateEditor(galleryId);
+  return { ok: true };
 };
