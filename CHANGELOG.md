@@ -7,6 +7,20 @@ en `docs/bitacora.md`.
 Numeración: el primer número cambia con cambios grandes que rompen la forma de
 trabajar, el segundo con funciones nuevas y el tercero con arreglos.
 
+## [0.7.0] · 18 oct 2026 · Editor: edición completa
+
+**Añadido**
+- **Edición completa**: además de «Solo fondo», la IA puede retocar todo
+  menos las caras (piel, ropa, pelo, decoración y fondo). Las caras siempre
+  son las originales.
+- **Exigencia** con una barra del 1 al 3: 1, un modelo a elegir (GPT Image 2
+  o Nano Banana Pro); 2, los dos modelos y se queda el que mejor puntúa el
+  revisor; 3, además una segunda pasada sobre lo que aún vea mal.
+- Se elige al subir las fotos y al rehacer una, con el coste estimado por
+  foto; los valores por defecto van en Ajustes → Editor.
+- Cada foto dice cómo se editó («Edición completa · mejor de 2: Nano
+  Banana Pro»).
+
 ## [0.6.2] · 18 oct 2026 · Editor: sin caras flotantes
 
 **Corregido**

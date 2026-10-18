@@ -17,9 +17,9 @@ Documentos relacionados:
 
 ---
 
-## Estado actual (18 oct 2026 · versión 0.6.2)
+## Estado actual (18 oct 2026 · versión 0.7.0)
 
-Versión publicada: **v0.6.2** (historial de versiones en `CHANGELOG.md`).
+Versión publicada: **v0.7.0** (historial de versiones en `CHANGELOG.md`).
 
 | Módulo | Estado | Dónde |
 | --- | --- | --- |
@@ -31,7 +31,7 @@ Versión publicada: **v0.6.2** (historial de versiones en `CHANGELOG.md`).
 | Ajustes | Hecho: nombre, WhatsApp, entrada de clientes (webhook) | `/ajustes` |
 | Entrada de clientes (Make/Typeform) | Hecho y publicado | `apps/api` |
 | Galerías (selección, sustituye a Pixieset) | Publicado (v0.4.0): subir fotos a Cloudflare R2, enviar al cliente, página del cliente con guía de primera visita, confirmar, lista para Lightroom, reabrir. Falta el borrado automático diario | `/galerias`, `/g/<código>` |
-| Editor de imágenes | Publicado (v0.6.2): limpieza de fondos en Cloudflare, subida, revisión, visor, descarga, correo, ajustes y consumo. **Edición completa** (todo menos las caras, exigencia 1–3, elección de modelo) construida, pendiente de publicar como v0.7.0 | `/editor`, `/galerias/<id>/limpieza`, `services/editor` |
+| Editor de imágenes | Publicado (v0.7.0): limpieza de fondos o edición completa (todo menos las caras) en Cloudflare, exigencia 1–3 y elección de modelo, subida, revisión, visor, descarga, correo, ajustes y consumo | `/editor`, `/galerias/<id>/limpieza`, `services/editor` |
 
 Publicado en Vercel (equipo «Upgradix's projects», plan Hobby):
 - **App**: https://uphotox-app.vercel.app (proyecto `uphotox-app`, carpeta `apps/app`).
@@ -113,7 +113,7 @@ Del Editor (por programar):
 - [ ] Encuadre con los recortes reales del estudio como ejemplos (hoy usa
       sus recortes medios, sin IA): llegará con el plugin de Lightroom.
 - [ ] Fase 6: plugin de Lightroom Classic (`docs/plan-editor.md`).
-- [ ] **Edición completa · probar la v0.7.0** (cuando se publique): en
+- [ ] **Edición completa · probar la v0.7.0**: en
       Ajustes → Editor elegir los valores por defecto; subir unas fotos con
       «Edición completa» y exigencia 1, 2 y 3, y comparar. Ojo al coste:
       exigencia 3 ronda $1,25 por foto (30 fotos ≈ $38); conviene poner un
@@ -152,7 +152,7 @@ editar, paquetes y pagos.
 
 ## Historial
 
-### 18 oct 2026 · Editor: edición completa, exigencia y modelo (sin publicar)
+### 18 oct 2026 · Editor: edición completa, exigencia y modelo · v0.7.0
 **Pedido** (el usuario y su esposa, que prueba el editor): una edición
 completa, todo menos la cara (piel, ropa, pelo, decoración, fondo), con una
 barra de exigencia y la posibilidad de elegir los modelos más caros. Diseño
