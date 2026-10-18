@@ -215,12 +215,14 @@ const Picture = ({
   readonly view: View;
 }) => {
   const timer = useRef<number | undefined>(undefined);
+  // Photos cleaned before v0.6.0 have no before.jpg: show the result.
+  const [broken, setBroken] = useState<ReadonlySet<View>>(new Set());
   const sources: Record<View, string | null> = {
     after: photo.previewUrl,
     before: photo.beforeUrl ?? photo.previewUrl,
     zones: photo.zonesUrl ?? photo.previewUrl,
   };
-  const source = sources[view];
+  const source = broken.has(view) ? photo.previewUrl : sources[view];
 
   if (!source) {
     return (
@@ -241,24 +243,36 @@ const Picture = ({
   };
 
   return (
-    <Image
-      alt={photo.fileName}
-      className="size-full cursor-zoom-in select-none object-cover"
-      crossOrigin="anonymous"
-      draggable={false}
-      height={600}
-      loading="lazy"
-      onContextMenu={(event) => event.preventDefault()}
-      onPointerCancel={release}
-      onPointerDown={() => {
-        timer.current = window.setTimeout(() => onHold(true), HOLD_MS);
-      }}
-      onPointerLeave={release}
-      onPointerUp={release}
-      src={source}
-      unoptimized
-      width={400}
-    />
+    <>
+      <Image
+        alt={photo.fileName}
+        className="size-full cursor-zoom-in select-none object-cover"
+        crossOrigin="anonymous"
+        draggable={false}
+        height={600}
+        loading="lazy"
+        onContextMenu={(event) => event.preventDefault()}
+        onError={() => {
+          if (view !== "after") {
+            setBroken((current) => new Set(current).add(view));
+          }
+        }}
+        onPointerCancel={release}
+        onPointerDown={() => {
+          timer.current = window.setTimeout(() => onHold(true), HOLD_MS);
+        }}
+        onPointerLeave={release}
+        onPointerUp={release}
+        src={source}
+        unoptimized
+        width={400}
+      />
+      {view === "before" && (
+        <span className="absolute top-1 left-1 bg-background/85 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em]">
+          {broken.has("before") ? "Sin vista de la original" : "Original"}
+        </span>
+      )}
+    </>
   );
 };
 
@@ -368,11 +382,6 @@ export const EditPhotoCard = ({
           photo={photo}
           view={viewFor(holding, zones)}
         />
-        {holding && (
-          <span className="absolute top-1 left-1 bg-background/85 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em]">
-            Original
-          </span>
-        )}
       </div>
       <div className="flex items-center justify-between gap-2">
         <span className="truncate font-mono text-[11px]">{photo.fileName}</span>

@@ -186,6 +186,15 @@ bastante bien menos una foto».
   pasados los días del estudio y las subidas a medias de más de 2 días, y
   vacía `storage_deletions`.
 
+**Publicado como v0.6.0** (con permiso del usuario): `CRON_SECRET` generado
+y puesto en Vercel (`uphotox-app`, Production) y en `apps/app/.env.local`.
+En producción: `/api/editor/callback` responde 401 sin token y 200 con él;
+`/api/cron/purge` 401 sin clave y 200 con ella (0 fotos borradas: ninguna
+caducada). Detalle visto después: las 7 fotos limpiadas con la v0.5.1 no
+tienen `before.jpg`, así que al mantener pulsado salía una imagen rota;
+arreglado en local (se queda la foto limpia y dice «Sin vista de la
+original»), pendiente de publicar.
+
 **Comprobado**: 4 pruebas nuevas (52 en total) y `npm run build` de la app;
 tipos del Worker; Biome sin avisos; el motor en este PC con DSCF6279 real y
 encuadre + nota: 111 s, $0,19, devuelve `before`, `framed` y
