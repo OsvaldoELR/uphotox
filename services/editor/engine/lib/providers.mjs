@@ -6,6 +6,9 @@
 
 const GEMINI = "https://generativelanguage.googleapis.com/v1beta/models";
 
+/** Vision model for the JSON steps (analysis, zones, framing, review). */
+export const TEXT_MODEL = "gemini-flash-latest";
+
 // Per-image list prices by output size (Gemini bills image output per image).
 const GEMINI_IMAGE_PRICE = {
   "gemini-3-pro-image": { "1K": 0.134, "2K": 0.134, "4K": 0.24 },
@@ -14,8 +17,11 @@ const GEMINI_IMAGE_PRICE = {
 
 // gpt-image-2 token rates (USD per token).
 const OPENAI_RATES = { textIn: 5e-6, imageIn: 8e-6, imageOut: 30e-6 };
+// A stuck request fails (and is retried) instead of holding the queue.
+const JSON_TIMEOUT_MS = 120_000;
+const IMAGE_TIMEOUT_MS = 300_000;
 
-const geminiPost = async (model, body) => {
+const geminiPost = async (model, body, timeout = JSON_TIMEOUT_MS) => {
   const response = await fetch(`${GEMINI}/${model}:generateContent`, {
     method: "POST",
     headers: {
@@ -23,6 +29,7 @@ const geminiPost = async (model, body) => {
       "x-goog-api-key": process.env.GEMINI_API_KEY,
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(timeout),
   });
   const json = await response.json();
 
@@ -78,13 +85,17 @@ export const geminiEdit = async ({
   model,
   prompt,
 }) => {
-  const json = await geminiPost(model, {
-    contents: [{ role: "user", parts: [{ text: prompt }, imagePart(image)] }],
-    generationConfig: {
-      responseModalities: ["IMAGE"],
-      imageConfig: { aspectRatio, imageSize },
+  const json = await geminiPost(
+    model,
+    {
+      contents: [{ role: "user", parts: [{ text: prompt }, imagePart(image)] }],
+      generationConfig: {
+        responseModalities: ["IMAGE"],
+        imageConfig: { aspectRatio, imageSize },
+      },
     },
-  });
+    IMAGE_TIMEOUT_MS
+  );
   const candidate = json.candidates?.[0];
   const part = candidate?.content?.parts?.find((item) => item.inlineData?.data);
 
@@ -119,6 +130,7 @@ export const openaiEdit = async ({ image, model, prompt, quality, size }) => {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
     body: form,
+    signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS),
   });
   const json = await response.json();
 

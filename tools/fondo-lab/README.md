@@ -43,13 +43,19 @@ construir el módulo.
 
 ## Uso
 
-Requisitos: `GEMINI_API_KEY` y `OPENAI_API_KEY` en `apps/app/.env.local`, y
-el modelo de recorte en `tools/fondo-lab/models/` (no se sube a Git):
+Los pasos del proceso viven en el motor del Editor
+(`services/editor/engine/lib`), el mismo que corre en Cloudflare; aquí solo
+están las pruebas con varios modelos, la caché y el informe.
+
+Requisitos: `GEMINI_API_KEY` y `OPENAI_API_KEY` en `apps/app/.env.local`, las
+dependencias del motor y el modelo de recorte en
+`services/editor/engine/models/` (no se sube a Git):
 
 ```
-cd tools/fondo-lab
+cd services/editor/engine
 npm install
 curl -L -o models/modnet.onnx https://huggingface.co/Xenova/modnet/resolve/main/onnx/model.onnx
+cd ../../../tools/fondo-lab
 npm run lab -- --fotos "D:/PROGRAMACION/uphotox/FOTOS PARA PRUEBA DE EDICON"
 ```
 
@@ -65,5 +71,5 @@ Opciones: `--solo DSCF6279,DSCF7317`, `--variantes nb2,nbpro,gpt2`,
 guardado y no se repite si no se pide).
 
 Recorte alternativo: `FONDO_LAB_MASK=birefnet` o `portrait` usa BiRefNet (MIT,
-mejores bordes de pelo) si se descarga en `models/`, pero necesita varios GB
+mejores bordes de pelo) si se descarga en `services/editor/engine/models/`, pero necesita varios GB
 de memoria libre.

@@ -1,4 +1,11 @@
 import sharp from "sharp";
+import {
+  FRAMING_INTRO,
+  FRAMING_SCHEMA,
+  framingExample,
+  framingTask,
+} from "./prompts.mjs";
+import { geminiJson, TEXT_MODEL } from "./providers.mjs";
 
 /**
  * Framing (straighten + crop), never done by the image model: it is pure
@@ -17,7 +24,7 @@ const LEVEL_WIDTH = 160; // coarse search
 const FINE_WIDTH = 480; // refinement
 const MAX_ANGLE = 5;
 
-export const grey = async (input, width) => {
+const grey = async (input, width) => {
   const { data, info } = await sharp(input)
     .rotate()
     .resize({ width })
@@ -229,7 +236,7 @@ const LINE_SHARPNESS = 1.8;
 const MAX_SPREAD = 1; // degrees: lines that disagree more mean no tilt
 
 /** Vertical-ish edge points on the background (people excluded). */
-export const verticalEdges = (image, people) => {
+const verticalEdges = (image, people) => {
   const { width, height, data } = image;
   const points = { xs: [], ys: [] };
 
@@ -266,7 +273,7 @@ export const verticalEdges = (image, people) => {
 };
 
 /** Long straight near-vertical lines (Hough), strongest first. */
-export const houghLines = ({ xs, ys }, width, height) => {
+const houghLines = ({ xs, ys }, width, height) => {
   const angles = range(-TILT_RANGE, TILT_RANGE, TILT_STEP);
   const bins = width * 2;
   const votes = angles.map(() => new Uint16Array(bins));
@@ -497,42 +504,135 @@ const fitInside = (framing, width, height) => {
 
 /**
  * Applies a framing to a full-size photo: rotate about the centre, then
- * crop (shrunk if needed so no empty corner shows). JPEG at full quality.
+ * crop (shrunk if needed so no empty corner shows). One libvips pipeline,
+ * so the camera data (EXIF) and the colour profile are kept.
  */
 export const applyFraming = async (input, framing) => {
-  const { data, info } = await sharp(input)
-    .rotate()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  const box = fitInside(framing, info.width, info.height);
-  let image = { data, info };
+  const meta = await sharp(input).metadata();
+  const orientation = meta.orientation ?? 1;
+  // Results are already upright; anything else is made upright first.
+  const source =
+    orientation > 1
+      ? await sharp(input)
+          .rotate()
+          .keepExif()
+          .keepIccProfile()
+          .jpeg({ quality: 100, chromaSubsampling: "4:4:4" })
+          .toBuffer()
+      : input;
+  const width = orientation > 4 ? meta.height : meta.width;
+  const height = orientation > 4 ? meta.width : meta.height;
+  const box = fitInside(framing, width, height);
+  // libvips puts the rotated photo in the centre of its bounding box.
+  const rad = Math.abs((framing.angle * Math.PI) / 180);
+  const outWidth = width * Math.cos(rad) + height * Math.sin(rad);
+  const outHeight = width * Math.sin(rad) + height * Math.cos(rad);
+  const left = Math.max(
+    0,
+    Math.round((outWidth - width) / 2 + box.left * width)
+  );
+  const top = Math.max(
+    0,
+    Math.round((outHeight - height) / 2 + box.top * height)
+  );
+  let image = sharp(source);
 
   if (framing.angle) {
-    image = await sharp(data, { raw: info })
-      .rotate(framing.angle, { background: "#000000" })
-      .raw()
-      .toBuffer({ resolveWithObject: true });
+    image = image.rotate(framing.angle, { background: "#000000" });
   }
 
-  // The rotated canvas grows; the photo's own canvas sits in its centre.
-  const ox = (image.info.width - info.width) / 2;
-  const oy = (image.info.height - info.height) / 2;
-  const left = Math.max(0, Math.round(ox + box.left * info.width));
-  const top = Math.max(0, Math.round(oy + box.top * info.height));
-
-  return sharp(image.data, { raw: image.info })
+  return image
     .extract({
       left,
       top,
       width: Math.min(
-        image.info.width - left,
-        Math.round(box.width * info.width)
+        Math.floor(outWidth) - left,
+        Math.round(box.width * width)
       ),
       height: Math.min(
-        image.info.height - top,
-        Math.round(box.height * info.height)
+        Math.floor(outHeight) - top,
+        Math.round(box.height * height)
       ),
     })
+    .keepExif()
+    .keepIccProfile()
     .jpeg({ quality: 92, chromaSubsampling: "4:4:4" })
     .toBuffer();
+};
+
+/** A model box made safe: inside the photo and at least half of it. */
+export const safeBox = ([y0, x0, y1, x1]) => {
+  const box = [y0, x0, y1, x1].map((v) => Math.min(1000, Math.max(0, v)));
+  return box[2] - box[0] >= 500 && box[3] - box[1] >= 500
+    ? box
+    : [0, 0, 1000, 1000];
+};
+
+/** Median, minimum and maximum trim per side of the studio's crops. */
+export const cropStyle = (framings) => {
+  const side = (pick) => {
+    const values = framings.map(pick).sort((a, b) => a - b);
+    return {
+      median: values[Math.floor(values.length / 2)],
+      min: values[0],
+      max: values.at(-1),
+    };
+  };
+  const bottom = (f) => Math.max(0, 1 - f.top - f.height);
+
+  return {
+    top: side((f) => f.top),
+    bottom: side(bottom),
+    left: side((f) => f.left),
+    right: side((f) => Math.max(0, 1 - f.left - f.width)),
+    bottomKept: framings.filter((f) => bottom(f) < 0.02).length,
+    count: framings.length,
+  };
+};
+
+/**
+ * Suggests a framing for a photo: tilt from the backdrop's lines, crop from
+ * the framing agent shown examples of the studio's own crops (most similar
+ * set first).
+ * @param image the uncropped photo (path or buffer)
+ * @param working its 2048 px copy; person: its person mask (PNG)
+ * @param keep prop boxes (excluded from the tilt lines)
+ * @param examples [{ image, scene, framing }] the studio's crops
+ */
+export const suggestFraming = async ({
+  examples,
+  image,
+  keep = [],
+  person,
+  scene,
+  working,
+}) => {
+  const tilt = await estimateTilt(working, person, keep);
+  const parts = [FRAMING_INTRO];
+
+  for (const [index, example] of examples.entries()) {
+    parts.push(
+      framingExample(index + 1, example.scene, framingToBox(example.framing)),
+      await drawFramings(example.image, [
+        { framing: example.framing, colour: "#ff2a2a" },
+      ])
+    );
+  }
+
+  parts.push(
+    framingTask(scene, cropStyle(examples.map((example) => example.framing))),
+    await drawFramings(image, [])
+  );
+
+  const answer = await geminiJson({
+    model: TEXT_MODEL,
+    parts,
+    schema: FRAMING_SCHEMA,
+  });
+
+  return {
+    tilt,
+    suggested: boxToFraming(safeBox(answer.data.box_2d), tilt.angle),
+    cost: answer.cost,
+  };
 };

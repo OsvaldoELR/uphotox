@@ -17,45 +17,45 @@
  * result as the studio's editor would, scored against the editor's crops.
  * Every step is cached on disk; --rehacer analysis,zones,mask,edit,final,review
  * redoes the listed steps.
+ *
+ * The pipeline itself lives in the Editor engine (services/editor/engine),
+ * shared with the production service; this file only adds several models,
+ * caching and the blind-vote report.
  */
 
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
-import { estimateAlignment } from "./lib/align.mjs";
-import { compositeBackground } from "./lib/composite.mjs";
+import { estimateAlignment } from "../../services/editor/engine/lib/align.mjs";
+import { compositeBackground } from "../../services/editor/engine/lib/composite.mjs";
 import {
   applyFraming,
-  boxToFraming,
   drawFramings,
-  estimateTilt,
-  framingToBox,
   matchEditorCrop,
   overlap,
-} from "./lib/framing.mjs";
+  suggestFraming,
+} from "../../services/editor/engine/lib/framing.mjs";
+import { editPrompt } from "../../services/editor/engine/lib/prompts.mjs";
 import {
-  ANALYSIS_PROMPT,
-  ANALYSIS_SCHEMA,
-  editPrompt,
-  FRAMING_INTRO,
-  FRAMING_SCHEMA,
-  framingExample,
-  framingTask,
-  REVIEW_SCHEMA,
-  reviewPrompt,
-  ZONES_SCHEMA,
-  zonesPrompt,
-} from "./lib/prompts.mjs";
-import { geminiEdit, geminiJson, openaiEdit } from "./lib/providers.mjs";
+  geminiEdit,
+  openaiEdit,
+} from "../../services/editor/engine/lib/providers.mjs";
+import { personMask } from "../../services/editor/engine/lib/segment.mjs";
+import {
+  analyse,
+  boxesFromZones,
+  isReframed,
+  locate,
+  reviewResult,
+  timed,
+  tintedPreview,
+  WEB_EDGE,
+  webPreview,
+  workingCopy,
+} from "../../services/editor/engine/lib/steps.mjs";
 import { writeReport } from "./lib/report.mjs";
-import { personMask } from "./lib/segment.mjs";
 
-const MODEL_INPUT_EDGE = 2048;
-const WEB_EDGE = 1600;
-// Largest scale or shift (fraction of the frame) accepted from a model.
-const MAX_REFRAME = 0.03;
-const TEXT_MODEL = "gemini-flash-latest";
 const JPEG_NAME = /\.jpe?g$/i;
 const FRAMING_EXAMPLES = 6;
 const FULL_FRAME = { angle: 0, left: 0, top: 0, width: 1, height: 1 };
@@ -111,12 +111,6 @@ const parseArgs = (argv) => {
 
 const readJson = async (file) => JSON.parse(await readFile(file, "utf8"));
 
-const timed = async (task) => {
-  const start = performance.now();
-  const result = await task();
-  return { result, seconds: (performance.now() - start) / 1000 };
-};
-
 /** Runs `compute` unless `file` exists (and the step is not being redone). */
 const cached = async (file, redo, compute) => {
   if (existsSync(file) && !redo) {
@@ -132,55 +126,8 @@ const cached = async (file, redo, compute) => {
   return value;
 };
 
-const web = (source, target) =>
-  sharp(source)
-    .rotate()
-    .resize({ width: WEB_EDGE, height: WEB_EDGE, fit: "inside" })
-    .jpeg({ quality: 84 })
-    .toFile(target);
-
-const small = (source) =>
-  sharp(source)
-    .rotate()
-    .resize({ width: 1024, height: 1024, fit: "inside" })
-    .jpeg({ quality: 85 })
-    .toBuffer();
-
-/** Change map preview: the result with the model areas tinted. */
-const tintedPreview = async (finalWeb, changeMask, target) => {
-  const { data, info } = await sharp(finalWeb)
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  const alpha = await sharp(changeMask)
-    .resize(info.width, info.height, { fit: "fill" })
-    .extractChannel(0)
-    .linear(0.55, 0)
-    .raw()
-    .toBuffer();
-  const tint = await sharp({
-    create: {
-      width: info.width,
-      height: info.height,
-      channels: 3,
-      background: "#00c8ff",
-    },
-  })
-    .raw()
-    .toBuffer();
-  const layer = await sharp(tint, {
-    raw: { width: info.width, height: info.height, channels: 3 },
-  })
-    .joinChannel(alpha, {
-      raw: { width: info.width, height: info.height, channels: 1 },
-    })
-    .png()
-    .toBuffer();
-
-  await sharp(data, { raw: info })
-    .composite([{ input: layer }])
-    .jpeg({ quality: 80 })
-    .toFile(target);
-};
+const web = async (source, target) =>
+  writeFile(target, await webPreview(source));
 
 const processPhoto = async ({ args, name, outDir, redo, variants }) => {
   const id = path.parse(name).name;
@@ -196,68 +143,23 @@ const processPhoto = async ({ args, name, outDir, redo, variants }) => {
     (meta.autoOrient?.width ?? meta.width);
 
   if (!existsSync(inputFile)) {
-    await sharp(source)
-      .rotate()
-      .resize({
-        width: MODEL_INPUT_EDGE,
-        height: MODEL_INPUT_EDGE,
-        fit: "inside",
-      })
-      .jpeg({ quality: 90 })
-      .toFile(inputFile);
+    await writeFile(inputFile, await workingCopy(source));
   }
 
   const input = await readFile(inputFile);
-  const review = await small(source);
 
   const analysis = await cached(
     path.join(folder, "analysis.json"),
     redo.has("analysis"),
-    async () => {
-      const { result, seconds } = await timed(() =>
-        geminiJson({
-          model: TEXT_MODEL,
-          prompt: ANALYSIS_PROMPT,
-          schema: ANALYSIS_SCHEMA,
-          images: [input],
-        })
-      );
-      return {
-        ...result.data,
-        model: result.model,
-        cost: result.cost,
-        seconds,
-      };
-    }
+    () => analyse(input)
   );
 
   const zones = await cached(
     path.join(folder, "zones.json"),
     redo.has("zones"),
-    async () => {
-      const { result } = await timed(() =>
-        geminiJson({
-          model: TEXT_MODEL,
-          prompt: zonesPrompt(analysis),
-          schema: ZONES_SCHEMA,
-          images: [input],
-        })
-      );
-      return { ...result.data, cost: result.cost };
-    }
+    () => locate(input, analysis)
   );
-  const boxes = {
-    fixes: zones.fixes.map((zone) => zone.box_2d),
-    smooth: zones.fixes
-      .filter((zone) => zone.kind === "smooth")
-      .map((zone) => zone.box_2d),
-    // A parent's hand holding the child: removed, even over the child.
-    helpers: zones.fixes
-      .filter((zone) => zone.kind === "helper")
-      .map((zone) => zone.box_2d),
-    keep: zones.keep.map((zone) => zone.box_2d),
-    faces: (zones.faces ?? []).map((face) => face.box_2d),
-  };
+  const boxes = boxesFromZones(zones);
   const mode = args.modo === "zonas" ? "zonas" : "completo";
 
   const maskFile = path.join(folder, "mask.png");
@@ -316,12 +218,8 @@ const processPhoto = async ({ args, name, outDir, redo, variants }) => {
           const alignment = await estimateAlignment(inputFile, output);
 
           // A model that reframes the photo cannot be composited on the
-          // original (ghost faces): reject it; production would retry.
-          if (
-            Math.abs(alignment.s - 1) > MAX_REFRAME ||
-            Math.abs(alignment.dx) > MAX_REFRAME ||
-            Math.abs(alignment.dy) > MAX_REFRAME
-          ) {
+          // original (ghost faces): reject it; production retries.
+          if (isReframed(alignment)) {
             await web(output, path.join(folder, `${base}-web.jpg`));
             await web(output, path.join(folder, `${base}-zonas.jpg`));
             return {
@@ -353,10 +251,12 @@ const processPhoto = async ({ args, name, outDir, redo, variants }) => {
             };
           });
           await web(finalFile, path.join(folder, `${base}-web.jpg`));
-          await tintedPreview(
-            path.join(folder, `${base}-web.jpg`),
-            path.join(folder, `${base}-cambios.png`),
-            path.join(folder, `${base}-zonas.jpg`)
+          await writeFile(
+            path.join(folder, `${base}-zonas.jpg`),
+            await tintedPreview(
+              path.join(folder, `${base}-web.jpg`),
+              path.join(folder, `${base}-cambios.png`)
+            )
           );
           return { ...result, seconds };
         }
@@ -365,7 +265,7 @@ const processPhoto = async ({ args, name, outDir, redo, variants }) => {
       const verdict = await cached(
         path.join(folder, `${base}-review.json`),
         redo.has("review"),
-        async () => {
+        () => {
           if (final.rejected) {
             return {
               score: 0,
@@ -376,15 +276,7 @@ const processPhoto = async ({ args, name, outDir, redo, variants }) => {
             };
           }
 
-          const { result } = await timed(async () =>
-            geminiJson({
-              model: TEXT_MODEL,
-              prompt: reviewPrompt(analysis.fixes),
-              schema: REVIEW_SCHEMA,
-              images: [review, await small(finalFile)],
-            })
-          );
-          return { ...result.data, cost: result.cost };
+          return reviewResult(source, finalFile, analysis.fixes);
         }
       );
 
@@ -411,36 +303,6 @@ const editorFraming = ({ args, outDir, photo, redo }) => {
   );
 };
 
-/** A model box made safe: inside the photo and at least half of it. */
-const safeBox = ([y0, x0, y1, x1]) => {
-  const box = [y0, x0, y1, x1].map((v) => Math.min(1000, Math.max(0, v)));
-  return box[2] - box[0] >= 500 && box[3] - box[1] >= 500
-    ? box
-    : [0, 0, 1000, 1000];
-};
-
-/** Median, minimum and maximum trim per side of the studio's crops. */
-const cropStyle = (framings) => {
-  const side = (pick) => {
-    const values = framings.map(pick).sort((a, b) => a - b);
-    return {
-      median: values[Math.floor(values.length / 2)],
-      min: values[0],
-      max: values.at(-1),
-    };
-  };
-  const bottom = (f) => Math.max(0, 1 - f.top - f.height);
-
-  return {
-    top: side((f) => f.top),
-    bottom: side(bottom),
-    left: side((f) => f.left),
-    right: side((f) => Math.max(0, 1 - f.left - f.width)),
-    bottomKept: framings.filter((f) => bottom(f) < 0.02).length,
-    count: framings.length,
-  };
-};
-
 /** Average of the studio's other crops (a baseline to beat). */
 const averageFraming = (framings) => {
   const mean = (key) =>
@@ -455,16 +317,11 @@ const averageFraming = (framings) => {
 };
 
 /**
- * Suggests a framing for one photo: tilt from the backdrop's lines, crop
- * from the framing agent shown the studio's crops of other photos (same set
- * first). The editor's crop of this photo is never shown: it only scores.
+ * Suggests a framing for one photo with the engine, shown the studio's
+ * crops of the other photos (same set first). The editor's crop of this
+ * photo is never shown: it only scores the suggestion.
  */
-const suggestFraming = async ({ args, folder, photo, photos, studio }) => {
-  const tilt = await estimateTilt(
-    path.join(folder, "input.jpg"),
-    path.join(folder, "mask.png"),
-    photo.zones.keep.map((zone) => zone.box_2d)
-  );
+const frameOne = async ({ args, folder, photo, photos, studio }) => {
   const examples = photos
     .filter((other) => other.id !== photo.id && studio[other.id])
     .sort(
@@ -473,32 +330,20 @@ const suggestFraming = async ({ args, folder, photo, photos, studio }) => {
         Number(a.analysis.scene === photo.analysis.scene)
     )
     .slice(0, FRAMING_EXAMPLES);
-  const parts = [FRAMING_INTRO];
-
-  for (const [index, other] of examples.entries()) {
-    parts.push(
-      framingExample(
-        index + 1,
-        other.analysis.scene,
-        framingToBox(studio[other.id])
-      ),
-      await drawFramings(path.join(args.fotos, "sin editar", other.name), [
-        { framing: studio[other.id], colour: "#ff2a2a" },
-      ])
-    );
-  }
-
-  const others = examples.map((other) => studio[other.id]);
-  parts.push(
-    framingTask(photo.analysis.scene, cropStyle(others)),
-    await drawFramings(path.join(args.fotos, "sin editar", photo.name), [])
-  );
-
-  const { result } = await timed(() =>
-    geminiJson({ model: TEXT_MODEL, parts, schema: FRAMING_SCHEMA })
-  );
-  const suggested = boxToFraming(safeBox(result.data.box_2d), tilt.angle);
+  const { tilt, suggested, cost } = await suggestFraming({
+    examples: examples.map((other) => ({
+      image: path.join(args.fotos, "sin editar", other.name),
+      scene: other.analysis.scene,
+      framing: studio[other.id],
+    })),
+    image: path.join(args.fotos, "sin editar", photo.name),
+    keep: photo.zones.keep.map((zone) => zone.box_2d),
+    person: path.join(folder, "mask.png"),
+    scene: photo.analysis.scene,
+    working: path.join(folder, "input.jpg"),
+  });
   const editor = studio[photo.id];
+  const others = examples.map((other) => studio[other.id]);
 
   return {
     tilt,
@@ -512,7 +357,7 @@ const suggestFraming = async ({ args, folder, photo, photos, studio }) => {
           average: overlap(averageFraming(others), editor),
         }
       : undefined,
-    cost: result.cost,
+    cost,
   };
 };
 
@@ -534,7 +379,7 @@ const frameAll = async ({ args, outDir, photos, redo, variant }) => {
     photo.framing = await cached(
       path.join(folder, "framing.json"),
       redo.has("framing"),
-      () => suggestFraming({ args, folder, photo, photos, studio })
+      () => frameOne({ args, folder, photo, photos, studio })
     );
 
     await writeFile(

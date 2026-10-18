@@ -675,9 +675,13 @@ export const compositeBackground = async ({
     .png({ compressionLevel: 1 })
     .toBuffer();
 
+  // Camera data (EXIF) and colour profile travel with the result, so
+  // Lightroom treats it like the original.
   const final = await sharp(original)
     .rotate()
     .composite([{ input: patch }])
+    .keepExif()
+    .keepIccProfile()
     .jpeg({ quality: 92, chromaSubsampling: "4:4:4" })
     .toBuffer();
 

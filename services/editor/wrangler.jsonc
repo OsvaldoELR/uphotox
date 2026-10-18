@@ -1,0 +1,37 @@
+{
+  // Editor service: the app sends photos here, a queue feeds the engine
+  // container, results go to R2 next to the original. Secrets (set in the
+  // Cloudflare dashboard or with `wrangler secret put`): EDITOR_TOKEN,
+  // GEMINI_API_KEY, OPENAI_API_KEY.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "uphotox-editor",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "observability": { "enabled": true },
+  "containers": [
+    {
+      "class_name": "Engine",
+      "image": "./engine/Dockerfile",
+      // 2 vCPU, 8 GiB: two 40 MP photos at a time per instance.
+      "instance_type": "standard-3",
+      "max_instances": 4
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "ENGINE", "class_name": "Engine" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Engine"] }],
+  "queues": {
+    "producers": [{ "queue": "uphotox-editor-photos", "binding": "PHOTOS" }],
+    "consumers": [
+      {
+        "queue": "uphotox-editor-photos",
+        "max_batch_size": 1,
+        "max_concurrency": 6,
+        "max_retries": 2,
+        "dead_letter_queue": "uphotox-editor-photos-failed"
+      }
+    ]
+  },
+  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "uphotox-galerias" }]
+}

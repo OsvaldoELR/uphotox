@@ -19,7 +19,8 @@
       "!apps/email/.react-email",
       "!packages/cms/basehub-types.d.ts",
       "!packages/database/types.ts",
-      "!packages/database/supabase/.temp"
+      "!packages/database/supabase/.temp",
+      "!services/editor/worker-configuration.d.ts"
     ]
   }
 }

@@ -51,10 +51,11 @@ Configuración:
 ## Pendientes
 
 Del usuario:
-- [ ] **Editor · elegir dónde se hace el montaje** (sin plataformas nuevas):
-      A) en el navegador del estudio (recomendado, tras una prueba con una
-      foto de 40 MP) o B) Cloudflare Containers en la cuenta de R2. Después,
-      aprobar el plan de `docs/plan-editor.md`.
+- [ ] **Editor · poner en marcha el servicio en Cloudflare** (pasos en
+      `services/editor/README.md`): activar el plan Workers de pago ($5 al
+      mes), conectar el repositorio con Workers Builds (después de que yo
+      suba el código) y poner los secretos `EDITOR_TOKEN`, `GEMINI_API_KEY` y
+      `OPENAI_API_KEY`. Pasarme la dirección del Worker.
 - [ ] **Editor · opcional**: abrir el informe
       (`D:\PROGRAMACION\uphotox\FOTOS PARA PRUEBA DE EDICON\resultados-ia\informe.html`)
       y mirar la fila «Encuadre automático» de cada foto: ¿el recorte azul de
@@ -101,9 +102,9 @@ Del Editor (por programar):
       en DSCF7339) o mueve el encuadre (Nano Banana 2 en DSCF6298).
 - [ ] Probar las manos de ayuda y la protección de caras con más fotos
       (solo hubo un caso, DSCF6322).
-- [ ] Construir el módulo según `docs/plan-editor.md` cuando se apruebe:
-      motor y trabajador en Cloud Run → datos y subida → revisión y
-      descarga → prueba real → plugin de Lightroom Classic.
+- [ ] Probar el servicio publicado con `npm run try` (una foto de punta a
+      punta) y después seguir `docs/plan-editor.md`: datos y subida →
+      revisión y descarga → prueba real → plugin de Lightroom Classic.
 
 Detectado al probar (no es de Galerías):
 - [ ] Si se borra un usuario con la sesión abierta (p. ej. un miembro del
@@ -137,6 +138,51 @@ editar, paquetes y pagos.
 ---
 
 ## Historial
+
+### 18 oct 2026 · Editor: servicio en Cloudflare (fase 1, sin desplegar)
+**Decisión del usuario**: procesar en **Cloudflare** (opción B), en la misma
+cuenta que R2, para no sumar plataformas. Google Cloud Run descartado.
+
+**Qué se hizo**
+- `services/editor/` (proyecto aparte, como `tools/fondo-lab`, para que
+  Vercel no instale sus dependencias):
+  - **Worker** `uphotox-editor` (`src/index.ts`): `POST /photos` con token
+    pone la foto en una cola; el consumidor lee el original de R2 (enlace
+    directo al bucket, sin claves), se lo pasa a un contenedor y guarda el
+    resultado, las vistas previas, `info.json` y `status.json` junto al
+    original. Reintenta si el contenedor no responde.
+  - **Motor** (`engine/`, Docker): el proceso de la prueba en Node.
+    `lib/pipeline.mjs` hace una foto entera con GPT Image 2: análisis →
+    zonas y caras → recorte de personas → edición (reintenta si la API
+    falla o mueve el encuadre más de un 3 %) → montaje a 40 MP → revisor →
+    encuadre si hay ejemplos. Ahora **conserva los datos de la cámara (EXIF)
+    y el perfil de color**. Contenedor de 2 vCPU y 8 GB, dos fotos a la vez,
+    hasta 4 contenedores.
+  - `scripts/try.mjs`: prueba de punta a punta contra el servicio publicado
+    (sube a `editor/pruebas/`, espera, descarga y borra).
+- El laboratorio usa ahora los mismos pasos del motor (una sola copia del
+  proceso); los modelos de recorte se movieron a
+  `services/editor/engine/models/`.
+- `EDITOR_URL` (vacío) y `EDITOR_TOKEN` (generado) añadidos a
+  `apps/app/.env.local`.
+- Descartado reintentar cuando «la IA cambia poco»: en DSCF7758 (fondo
+  blanco) una salida buena cambia el fondo solo 3–5 niveles de media, así
+  que no hay un umbral fiable; el revisor marca lo que quede mal.
+
+**Comprobado**
+- Montaje del motor idéntico al anterior, píxel a píxel (DSCF6322), y ahora
+  con EXIF y perfil de color.
+- Servidor del motor en este PC con DSCF6322 real, como lo llamará el
+  Worker: 105 s, $0,19, brazo de ayuda quitado, un solo puño, nota 6/10,
+  5152×7728 con EXIF e ICC.
+- Worker: tipos sin errores y empaquetado (`wrangler deploy --dry-run`,
+  58 KB); el contenedor no se construyó aquí (no hay Docker): lo hará
+  Cloudflare.
+- Laboratorio: informe completo regenerado (12 fotos, 36 opciones, 260
+  imágenes); Biome sin avisos.
+
+**Falta**: que el usuario active el plan y conecte el repositorio, subir el
+código a GitHub y la prueba `npm run try` en la nube.
 
 ### 18 oct 2026 · Editor: plan del módulo
 Plan propuesto en `docs/plan-editor.md` (pendiente de aprobar). Resumen:

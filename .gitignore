@@ -280,7 +280,8 @@ packages/database/generated
 # Claude Code (personal settings and permissions)
 .claude/settings.local.json
 
-# fondo-lab: downloaded models (hundreds of MB)
-tools/fondo-lab/models/
+# Editor engine: downloaded models (hundreds of MB) and local installs
+services/editor/engine/models/
+services/editor/.wrangler/
 # Client photos copied into the app folder for the AI lab: never commit
 apps/app/photos test ia/
