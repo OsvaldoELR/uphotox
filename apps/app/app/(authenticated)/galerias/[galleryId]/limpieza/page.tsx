@@ -211,6 +211,21 @@ const CleanupPage = async ({ params }: CleanupPageProperties) => {
             <h2 className={sectionLabel}>
               <span className="text-signal-ink">01</span> Subir las elegidas
             </h2>
+            <p className="max-w-prose text-muted-foreground text-sm">
+              En Lightroom, filtra las elegidas y usa{" "}
+              <em>Archivo → Exportar con ajuste preestablecido</em> →
+              «Uphotox - Limpieza de fondos» (van a la carpeta «Uphotox para
+              limpiar» del escritorio).{" "}
+              <a
+                className="text-signal-ink underline underline-offset-2"
+                download="Uphotox - Limpieza de fondos.lrtemplate"
+                href="/lightroom/uphotox-limpieza-fondos.lrtemplate"
+              >
+                Descargar el ajuste para Lightroom
+              </a>{" "}
+              (se importa una vez desde el panel de ajustes del diálogo
+              Exportar).
+            </p>
             <OriginalUploader
               galleryId={galleryId}
               picks={pickList.map((pick) => ({
