@@ -17,9 +17,9 @@ Documentos relacionados:
 
 ---
 
-## Estado actual (18 oct 2026 · versión 0.4.1)
+## Estado actual (18 oct 2026 · versión 0.5.0)
 
-Versión publicada: **v0.4.1** (historial de versiones en `CHANGELOG.md`).
+Versión publicada: **v0.5.0** (historial de versiones en `CHANGELOG.md`).
 
 | Módulo | Estado | Dónde |
 | --- | --- | --- |
@@ -101,10 +101,8 @@ Del Editor (por programar):
       en DSCF7339) o mueve el encuadre (Nano Banana 2 en DSCF6298).
 - [ ] Probar las manos de ayuda y la protección de caras con más fotos
       (solo hubo un caso, DSCF6322).
-- [ ] Publicar la fase 2: poner `EDITOR_URL` y `EDITOR_TOKEN` en el proyecto
-      `uphotox-app` de Vercel y subir el código (también publica el cambio
-      del Worker: el coste de las fotos que fallan). Probar con una galería
-      real.
+- [ ] Probar la v0.5.0 con una galería real: «Limpiar fondos», arrastrar
+      las elegidas a tamaño completo y ver cómo terminan (usuario).
 - [ ] Fase 3 de `docs/plan-editor.md`: revisión antes/después (aprobar,
       rehacer con nota, descartar), descarga a la carpeta de la sesión,
       correo al terminar, ajustes del editor (enderezar y encuadrar, manos de
@@ -144,7 +142,7 @@ editar, paquetes y pagos.
 
 ## Historial
 
-### 18 oct 2026 · Editor: fase 2 en la app (sin publicar)
+### 18 oct 2026 · Editor: fase 2 en la app · v0.5.0
 **Decisiones del usuario**
 - **Sin confirmar el coste antes de empezar**: en su lugar, el estudio ve su
   **consumo** (por galería y por mes; más adelante en créditos).
@@ -178,9 +176,13 @@ editar, paquetes y pagos.
 - Motor y Worker: una foto que falla informa de lo que ya costó.
 
 **Comprobado**: 9 pruebas nuevas (46 en total) y `npm run build` de la app
-sin errores; tipos del Worker sin errores; Biome sin avisos. La prueba con
-una galería real necesita publicar (o `npm run dev` con la sesión del
-usuario).
+sin errores; tipos del Worker sin errores; Biome sin avisos.
+
+**Publicado como v0.5.0** (con permiso del usuario): `EDITOR_URL` y
+`EDITOR_TOKEN` añadidos al proyecto `uphotox-app` de Vercel (Production);
+subida a `main` con la etiqueta `v0.5.0`; Vercel publica la app y Workers
+Builds el servicio. Falta la prueba con una galería real (necesita la sesión
+del usuario).
 
 ### 18 oct 2026 · Editor: servicio en Cloudflare (fase 1, sin desplegar)
 **Decisión del usuario**: procesar en **Cloudflare** (opción B), en la misma

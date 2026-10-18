@@ -7,6 +7,27 @@ en `docs/bitacora.md`.
 Numeración: el primer número cambia con cambios grandes que rompen la forma de
 trabajar, el segundo con funciones nuevas y el tercero con arreglos.
 
+## [0.5.0] · 18 oct 2026 · Editor: limpieza de fondos (primera parte)
+
+**Añadido**
+- Módulo **Editor** (menú propio, permiso «Usar el editor»): la IA limpia el
+  fondo y el suelo de las fotos que eligió el cliente sin tocar a las
+  personas (siempre son los píxeles originales). También quita la mano de un
+  adulto que sujeta al niño; las caras nunca se tocan.
+  - En una galería con la selección recibida, «Limpiar fondos»: se arrastran
+    las elegidas exportadas a tamaño completo, Uphotox las empareja por
+    nombre con la selección y avisa de las que faltan o sobran.
+  - Las fotos suben directas al almacenamiento y se limpian en la nube
+    (Cloudflare, con GPT Image 2): se puede cerrar la página.
+  - Lista con el estado en vivo (en cola, limpiando, lista, revisar, falló),
+    la vista previa limpia, la nota del revisor automático y el coste.
+  - **Consumo** del estudio: por galería y por mes en la página del Editor.
+- Las fotos limpias conservan los datos de la cámara y el perfil de color.
+
+**Pendiente** (próxima versión): aprobar o rehacer cada foto, descargarlas a
+tamaño completo en la carpeta de la sesión, aviso por correo y ajustes del
+editor.
+
 ## [0.4.1] · 18 oct 2026 · Correos de cuenta
 
 **Corregido**
