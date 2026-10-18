@@ -51,9 +51,10 @@ Configuración:
 ## Pendientes
 
 Del usuario:
-- [ ] **Editor · aprobar el plan** de `docs/plan-editor.md` (o cambiar el
-      orden de las fases) y confirmar Google Cloud con facturación para el
-      trabajador.
+- [ ] **Editor · elegir dónde se hace el montaje** (sin plataformas nuevas):
+      A) en el navegador del estudio (recomendado, tras una prueba con una
+      foto de 40 MP) o B) Cloudflare Containers en la cuenta de R2. Después,
+      aprobar el plan de `docs/plan-editor.md`.
 - [ ] **Editor · opcional**: abrir el informe
       (`D:\PROGRAMACION\uphotox\FOTOS PARA PRUEBA DE EDICON\resultados-ia\informe.html`)
       y mirar la fila «Encuadre automático» de cada foto: ¿el recorte azul de

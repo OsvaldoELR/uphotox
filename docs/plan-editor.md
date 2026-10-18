@@ -73,6 +73,15 @@ otros estudios.
 
 ## Dónde se procesa
 
+> **En revisión (18 oct 2026):** el usuario no quiere sumar plataformas.
+> Google Cloud Run queda descartado. Opciones sin plataforma nueva:
+> **A) el montaje en el navegador del estudio** (sube solo ~2 MB por foto,
+> $0 extra, la pestaña abierta mientras procesa) o **B) Cloudflare
+> Containers + Queues** en la cuenta de R2 (plan Workers de $5/mes, reutiliza
+> el código de la prueba, subidas de ~600 MB por sesión). Recomendado: A,
+> tras probar una foto de 40 MP en Chrome. Lo de abajo es la versión
+> anterior.
+
 El proceso necesita varios GB de memoria (fotos de 40 MP y el recorte de
 personas BiRefNet, mejor que el de la prueba) y ~1,5 min por foto. Las
 funciones de Vercel del plan actual se quedan cortas, así que:
