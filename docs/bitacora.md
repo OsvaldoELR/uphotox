@@ -142,6 +142,23 @@ editar, paquetes y pagos.
 
 ## Historial
 
+### 18 oct 2026 · Editor: ajuste de exportación para Lightroom
+- `apps/app/public/lightroom/uphotox-limpieza-fondos.lrtemplate`: ajuste
+  preestablecido de exportación «Uphotox - Limpieza de fondos» (JPEG calidad
+  95, sRGB, tamaño completo sin redimensionar, nombre original, sin marca de
+  agua ni enfoque de salida, metadatos de cámara sí, caras y ubicación no;
+  va a `Escritorio\Uphotox para limpiar` y sobrescribe al repetir). Se
+  descarga desde la página de limpieza (sale con la próxima publicación);
+  copia en el escritorio del usuario.
+- Para importarlo: *Archivo → Exportar* → panel izquierdo de ajustes
+  preestablecidos → clic derecho en *Ajustes preestablecidos del usuario* →
+  *Importar…*.
+- Escrito a mano (no se pudo probar en Lightroom): al importarlo hay que
+  comprobar que el diálogo muestra esos valores.
+- Workers Builds falló una vez: el usuario puso `/services/editor/*` como
+  directorio raíz; va `/services/editor`, y el `*` solo en las rutas de
+  compilación.
+
 ### 18 oct 2026 · Editor: fase 2 en la app · v0.5.0
 **Decisiones del usuario**
 - **Sin confirmar el coste antes de empezar**: en su lugar, el estudio ve su
