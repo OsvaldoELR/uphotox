@@ -24,7 +24,7 @@ interface PhotoJob {
 type Status =
   | { state: "queued" | "processing"; at: string; attempt?: number }
   | { state: "done"; at: string; info: unknown }
-  | { state: "failed"; at: string; error: string };
+  | { state: "failed"; at: string; error: string; cost?: number };
 
 // Engine instances to spread photos over (≤ max_instances in wrangler).
 const ENGINE_SLOTS = 4;
@@ -153,12 +153,14 @@ const processPhoto = async (job: PhotoJob, env: Env, attempt: number) => {
 
   if (!response.ok) {
     const body = (await response.json().catch(() => ({}))) as {
+      cost?: number;
       error?: string;
     };
     await setStatus(env, job.prefix, {
       state: "failed",
       at: now(),
       error: body.error ?? `El motor respondió ${response.status}.`,
+      cost: body.cost ?? 0,
     });
     return;
   }

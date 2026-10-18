@@ -118,6 +118,22 @@ export const objectSize = async (key: string) => {
   return Number(response.headers.get("content-length") ?? 0);
 };
 
+/** Text of a stored object (e.g. a JSON status), or null when missing. */
+export const readObjectText = async (key: string) => {
+  const { client, url } = requireBucket();
+  const response = await client.fetch(`${url}/${key}`);
+
+  if (response.status === 404) {
+    return null;
+  }
+
+  if (!response.ok) {
+    throw new Error(`R2 GET failed with ${response.status}`);
+  }
+
+  return response.text();
+};
+
 const escapeXml = (value: string) =>
   value
     .replaceAll("&", "&amp;")

@@ -101,10 +101,15 @@ Del Editor (por programar):
       en DSCF7339) o mueve el encuadre (Nano Banana 2 en DSCF6298).
 - [ ] Probar las manos de ayuda y la protección de caras con más fotos
       (solo hubo un caso, DSCF6322).
-- [ ] Fase 2 de `docs/plan-editor.md`: tablas `edit_jobs` / `edit_photos`,
-      permisos, subida a R2 y pantalla «Limpiar fondos» en la galería; el
-      estado pasará de `status.json` a Supabase. Después: revisión y
-      descarga → prueba real → plugin de Lightroom Classic.
+- [ ] Publicar la fase 2: poner `EDITOR_URL` y `EDITOR_TOKEN` en el proyecto
+      `uphotox-app` de Vercel y subir el código (también publica el cambio
+      del Worker: el coste de las fotos que fallan). Probar con una galería
+      real.
+- [ ] Fase 3 de `docs/plan-editor.md`: revisión antes/después (aprobar,
+      rehacer con nota, descartar), descarga a la carpeta de la sesión,
+      correo al terminar, ajustes del editor (enderezar y encuadrar, manos de
+      ayuda, límite de gasto, días que se guardan) y borrado automático. La
+      tarea diaria de Galerías tiene que borrar también `editor/…` al purgar.
 
 Detectado al probar (no es de Galerías):
 - [ ] Si se borra un usuario con la sesión abierta (p. ej. un miembro del
@@ -138,6 +143,44 @@ editar, paquetes y pagos.
 ---
 
 ## Historial
+
+### 18 oct 2026 · Editor: fase 2 en la app (sin publicar)
+**Decisiones del usuario**
+- **Sin confirmar el coste antes de empezar**: en su lugar, el estudio ve su
+  **consumo** (por galería y por mes; más adelante en créditos).
+- Lightroom: las fotos limpias se guardarán **en la carpeta de la sesión** y
+  se añaden con «Sincronizar carpeta…», para que queden al lado de su
+  original (Lightroom muestra cada foto en su carpeta). Escrito en
+  `docs/plan-editor.md`.
+
+**Qué se hizo**
+- Migración `20261018175841_editor.sql` (aplicada): `edit_photos` (una por
+  foto elegida; estado, nota y comentario del revisor, intentos) y
+  `edit_usage` (coste de cada intento; se conserva aunque se borre la foto,
+  para el consumo). RLS con `editor.access`; el estado y el coste solo los
+  escribe el servidor. Al borrar fotos o galerías, sus archivos de `editor/`
+  van a `storage_deletions` (disparador). Asesores de Supabase: sin avisos
+  nuevos.
+- `@repo/storage/editor` (rutas en R2) y `readObjectText`.
+- `app/actions/editor.ts`: registrar originales y dar enlaces de subida
+  directa a R2 → confirmar que llegaron y mandarlos al Worker → leer el
+  estado (`status.json`) y guardar resultado y coste. `lib/editor.ts`:
+  emparejar por nombre con la selección (sin distinguir mayúsculas ni
+  extensión), leer el estado del servicio con desconfianza (notas y costes
+  raros se descartan), consumo del mes (9 pruebas).
+- Pantallas: **«Limpiar fondos»** en la galería (si hay elegidas y permiso
+  «Usar el editor») → `/galerias/[id]/limpieza`: arrastrar las elegidas a
+  tamaño completo, progreso de subida, lista con estado en vivo (cada 10 s
+  mientras haya fotos en la nube; se puede cerrar la página), vista previa
+  limpia, nota del revisor, coste por foto, de la galería y del mes. Menú
+  **Editor** (ya no «Pronto») → `/editor`: consumo de este mes y del pasado,
+  selecciones por limpiar y galerías en el editor.
+- Motor y Worker: una foto que falla informa de lo que ya costó.
+
+**Comprobado**: 9 pruebas nuevas (46 en total) y `npm run build` de la app
+sin errores; tipos del Worker sin errores; Biome sin avisos. La prueba con
+una galería real necesita publicar (o `npm run dev` con la sesión del
+usuario).
 
 ### 18 oct 2026 · Editor: servicio en Cloudflare (fase 1, sin desplegar)
 **Decisión del usuario**: procesar en **Cloudflare** (opción B), en la misma

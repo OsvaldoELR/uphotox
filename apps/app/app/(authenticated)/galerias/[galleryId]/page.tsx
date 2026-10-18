@@ -102,7 +102,11 @@ const GalleryPage = async ({ params }: GalleryPageProperties) => {
         ]}
       />
       <GalleryWorkspace
-        access={{ canManage, storageReady }}
+        access={{
+          canEdit: context.can("editor.access"),
+          canManage,
+          storageReady,
+        }}
         card={{
           id: gallery.card.id,
           boardId: gallery.card.board_id,

@@ -6,6 +6,7 @@ import { keys as observability } from "@repo/observability/keys";
 import { keys as security } from "@repo/security/keys";
 import { keys as storage } from "@repo/storage/keys";
 import { createEnv } from "@t3-oss/env-nextjs";
+import { z } from "zod";
 
 export const env = createEnv({
   skipValidation: process.env.SKIP_ENV_VALIDATION === "true",
@@ -19,7 +20,15 @@ export const env = createEnv({
     security(),
     storage(),
   ],
-  server: {},
+  server: {
+    // Editor service on Cloudflare (services/editor). Without them the
+    // background clean-up is off.
+    EDITOR_URL: z.url().optional(),
+    EDITOR_TOKEN: z.string().min(32).optional(),
+  },
   client: {},
-  runtimeEnv: {},
+  runtimeEnv: {
+    EDITOR_URL: process.env.EDITOR_URL,
+    EDITOR_TOKEN: process.env.EDITOR_TOKEN,
+  },
 });

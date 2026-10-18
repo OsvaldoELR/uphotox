@@ -75,7 +75,12 @@ const studio: NavItem[] = [
     icon: ImagesIcon,
     permission: ["galleries.view", "galleries.manage"],
   },
-  { title: "Editor", icon: ApertureIcon, permission: "editor.access" },
+  {
+    title: "Editor",
+    url: "/editor",
+    icon: ApertureIcon,
+    permission: "editor.access",
+  },
 ];
 
 const admin: NavItem[] = [

@@ -32,6 +32,8 @@ import { PhotoUploader } from "./photo-uploader";
 
 export interface GalleryWorkspaceProperties {
   readonly access: {
+    /** Can send the picks to the Editor (background clean-up). */
+    readonly canEdit: boolean;
     readonly canManage: boolean;
     readonly storageReady: boolean;
   };
@@ -267,6 +269,13 @@ export const GalleryWorkspace = ({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <GalleryStateChip state={gallery.state} />
+            {access.canEdit && totals.picked > 0 && !gallery.purged && (
+              <Button asChild size="sm">
+                <Link href={`/galerias/${gallery.id}/limpieza`}>
+                  Limpiar fondos
+                </Link>
+              </Button>
+            )}
             <Button asChild size="sm" variant="outline">
               <Link href={`/tableros/${card.boardId}?tarjeta=${card.id}`}>
                 Ver tarjeta

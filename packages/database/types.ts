@@ -328,6 +328,147 @@ export type Database = {
           },
         ]
       }
+      edit_photos: {
+        Row: {
+          bytes: number
+          created_at: string
+          created_by: string | null
+          error: string | null
+          file_name: string
+          finished_at: string | null
+          gallery_id: number
+          gallery_photo_id: number
+          id: number
+          needs_review: boolean
+          queued_at: string | null
+          review_comment: string | null
+          runs: number
+          score: number | null
+          status: string
+          studio_id: number
+        }
+        Insert: {
+          bytes: number
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          file_name: string
+          finished_at?: string | null
+          gallery_id: number
+          gallery_photo_id: number
+          id?: never
+          needs_review?: boolean
+          queued_at?: string | null
+          review_comment?: string | null
+          runs?: number
+          score?: number | null
+          status?: string
+          studio_id: number
+        }
+        Update: {
+          bytes?: number
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          file_name?: string
+          finished_at?: string | null
+          gallery_id?: number
+          gallery_photo_id?: number
+          id?: never
+          needs_review?: boolean
+          queued_at?: string | null
+          review_comment?: string | null
+          runs?: number
+          score?: number | null
+          status?: string
+          studio_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "edit_photos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "edit_photos_gallery_id_studio_id_fkey"
+            columns: ["gallery_id", "studio_id"]
+            isOneToOne: false
+            referencedRelation: "galleries"
+            referencedColumns: ["id", "studio_id"]
+          },
+          {
+            foreignKeyName: "edit_photos_gallery_photo_id_gallery_id_studio_id_fkey"
+            columns: ["gallery_photo_id", "gallery_id", "studio_id"]
+            isOneToOne: false
+            referencedRelation: "gallery_photos"
+            referencedColumns: ["id", "gallery_id", "studio_id"]
+          },
+          {
+            foreignKeyName: "edit_photos_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      edit_usage: {
+        Row: {
+          cost: number
+          created_at: string
+          edit_photo_id: number | null
+          gallery_id: number | null
+          id: number
+          run: number
+          studio_id: number
+          succeeded: boolean
+        }
+        Insert: {
+          cost: number
+          created_at?: string
+          edit_photo_id?: number | null
+          gallery_id?: number | null
+          id?: never
+          run: number
+          studio_id: number
+          succeeded: boolean
+        }
+        Update: {
+          cost?: number
+          created_at?: string
+          edit_photo_id?: number | null
+          gallery_id?: number | null
+          id?: never
+          run?: number
+          studio_id?: number
+          succeeded?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "edit_usage_edit_photo_id_studio_id_fkey"
+            columns: ["edit_photo_id", "studio_id"]
+            isOneToOne: false
+            referencedRelation: "edit_photos"
+            referencedColumns: ["id", "studio_id"]
+          },
+          {
+            foreignKeyName: "edit_usage_gallery_id_studio_id_fkey"
+            columns: ["gallery_id", "studio_id"]
+            isOneToOne: false
+            referencedRelation: "galleries"
+            referencedColumns: ["id", "studio_id"]
+          },
+          {
+            foreignKeyName: "edit_usage_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       galleries: {
         Row: {
           card_id: number

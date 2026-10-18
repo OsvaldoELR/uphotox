@@ -34,7 +34,7 @@ const editWithGpt = ({ image, portrait, prompt }) =>
     prompt,
   });
 
-const editWithRetries = async ({ log, portrait, prompt, working }) => {
+const editWithRetries = async ({ log, portrait, prompt, spend, working }) => {
   const attempts = [];
   let cost = 0;
 
@@ -45,7 +45,7 @@ const editWithRetries = async ({ log, portrait, prompt, working }) => {
       const { result, seconds } = await timed(() =>
         editWithGpt({ image: working, portrait, prompt })
       );
-      cost += result.cost;
+      cost += spend(result.cost);
       const alignment = await estimateAlignment(working, result.image);
 
       if (!isReframed(alignment)) {
@@ -65,26 +65,12 @@ const editWithRetries = async ({ log, portrait, prompt, working }) => {
   );
 };
 
-/**
- * Cleans the backdrop of one photo: the Editor module's job.
- *
- * @param original full-size photo (JPEG buffer, as exported from Lightroom)
- * @param options.helpers false keeps a helper's hand holding the child
- * @param options.note extra instruction from the studio for a redo
- * @param options.framing { examples: [{ image, scene, framing }] } to also
- *   straighten and crop like the studio (off without examples)
- * @param log progress callback (step name)
- * @returns { final, framed?, preview, zones, info } JPEG buffers + JSON info
- */
-export const cleanPhoto = async ({
-  original,
-  options = {},
-  log = () => undefined,
-}) => {
+const runPipeline = async ({ log, options, original, spend }) => {
   const started = performance.now();
   log("analysis");
   const working = await workingCopy(original);
   const analysis = await analyse(working);
+  spend(analysis.cost);
 
   if (options.note) {
     analysis.fixes = [...analysis.fixes, options.note];
@@ -92,6 +78,7 @@ export const cleanPhoto = async ({
 
   log("zones");
   const zones = await locate(working, analysis);
+  spend(zones.cost);
   const boxes = boxesFromZones(zones);
 
   if (options.helpers === false) {
@@ -104,6 +91,7 @@ export const cleanPhoto = async ({
     log,
     portrait: await isPortrait(working),
     prompt: editPrompt(analysis),
+    spend,
     working,
   });
 
@@ -120,6 +108,7 @@ export const cleanPhoto = async ({
 
   log("review");
   const review = await reviewResult(original, composite.final, analysis.fixes);
+  spend(review.cost);
 
   let framing;
   let framed;
@@ -134,6 +123,7 @@ export const cleanPhoto = async ({
       scene: analysis.scene,
       working,
     });
+    spend(framing.cost);
     framed = await applyFraming(composite.final, framing.suggested);
   }
 
@@ -171,4 +161,37 @@ export const cleanPhoto = async ({
       seconds: (performance.now() - started) / 1000,
     },
   };
+};
+
+/**
+ * Cleans the backdrop of one photo: the Editor module's job.
+ *
+ * @param original full-size photo (JPEG buffer, as exported from Lightroom)
+ * @param options.helpers false keeps a helper's hand holding the child
+ * @param options.note extra instruction from the studio for a redo
+ * @param options.framing { examples: [{ image, scene, framing }] } to also
+ *   straighten and crop like the studio (off without examples)
+ * @param log progress callback (step name)
+ * @returns { final, framed?, preview, zones, info } JPEG buffers + JSON info
+ */
+export const cleanPhoto = async ({
+  original,
+  options = {},
+  log = () => undefined,
+}) => {
+  let spent = 0;
+  const spend = (cost = 0) => {
+    spent += cost;
+    return cost;
+  };
+
+  try {
+    return await runPipeline({ log, options, original, spend });
+  } catch (error) {
+    // A failed photo still cost something: the studio's consumption counts it.
+    throw Object.assign(
+      error instanceof Error ? error : new Error(String(error)),
+      { cost: spent }
+    );
+  }
 };

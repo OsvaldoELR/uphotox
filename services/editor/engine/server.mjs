@@ -138,7 +138,10 @@ const server = createServer((request, response) => {
       log(request.headers["x-photo"] ?? "?", `error: ${error.message}`);
 
       if (!response.headersSent) {
-        sendJson(response, 500, { error: String(error.message ?? error) });
+        sendJson(response, 500, {
+          error: String(error.message ?? error),
+          cost: error.cost ?? 0,
+        });
       }
     });
     return;

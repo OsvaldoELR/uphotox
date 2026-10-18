@@ -1,7 +1,7 @@
 # Plan del módulo Editor (limpieza de fondos con IA)
 
 Propuesta del 18 oct 2026; el usuario eligió procesar en Cloudflare y la
-fase 1 está publicada y probada (18 oct 2026). Sale de la prueba de
+fase 1 está publicada y probada y la fase 2 construida (18 oct 2026). Sale de la prueba de
 `tools/fondo-lab` (historial en `docs/bitacora.md`) y de las decisiones del
 usuario: se limpian **solo las fotos que el cliente elige en la galería**, con
 **GPT Image 2**, y enderezar y encuadrar es **opcional** en los ajustes.
@@ -29,10 +29,16 @@ Desde una galería ya confirmada por el cliente:
    baja del revisor o avisos), *falló*. Acciones por foto: **aprobar**,
    **rehacer con una nota** («quita también el cable de la izquierda», se
    añade a las instrucciones) o **descartar** (se queda la original).
-5. **Descargar las aprobadas**: en Chrome o Edge, de una vez en una carpeta
-   que elijas (sin zip), con el nombre original y un sufijo (`DSCF7325-fondo.jpg`)
-   para importarlas en Lightroom junto a la original. Conservan los datos de la
-   cámara (EXIF) y el perfil de color.
+5. **Descargar las aprobadas**: en Chrome o Edge, de una vez **en la carpeta
+   de la sesión** (donde están los RAF), sin zip, con el nombre original y un
+   sufijo (`DSCF7325-fondo.jpg`). En Lightroom: clic derecho en esa carpeta →
+   **«Sincronizar carpeta…»** → importar fotos nuevas. Quedan en la misma
+   carpeta, al lado de su original (por nombre y por hora de captura, porque
+   conservan los datos de la cámara y el perfil de color). Apilar es opcional
+   (*Foto → Apilar → Apilar automáticamente por hora de captura*, 0 s; puede
+   juntar dos disparos del mismo segundo). Lightroom no crea otra biblioteca:
+   todo va al mismo catálogo, pero muestra cada foto en su carpeta, por eso
+   hay que guardarlas en la de la sesión.
 6. **Aviso** al terminar (correo al miembro que lo lanzó: «Tus 30 fotos están
    listas para revisar») y una línea en la actividad de la tarjeta con el
    número de fotos y el coste. La tarjeta no se mueve sola de etapa.
@@ -42,7 +48,10 @@ Desde una galería ya confirmada por el cliente:
   resultado. Mientras no haya plugin, se guarda también la versión sin
   encuadrar.
 - **Quitar manos de ayuda** (encendido por defecto).
-- **Límite de gasto al mes** (aviso al 80 % y bloqueo al 100 %).
+- **Límite de gasto al mes** (opcional; aviso al 80 % y bloqueo al 100 %).
+  No se pide confirmar el coste antes de empezar (decisión del usuario): el
+  estudio ve su **consumo** en la página del editor y en cada galería («Este
+  mes: 47 fotos · $8,93»; al venderlo, en créditos: 1 crédito = 1 foto).
 - **Días que se guardan las fotos** del editor (30 por defecto; luego se
   borran solas).
 
@@ -122,7 +131,7 @@ las APIs de pago no entrenan con ellas).
    proceso de la prueba (fondo completo, manos de ayuda, caras, reintentos,
    conserva EXIF y perfil de color), Worker con cola y contenedor, y una foto
    de punta a punta con `npm run try` en `services/editor`.
-2. **Datos y subida**: tablas, permisos, R2, pantalla «Limpiar fondos» en la
+2. **Datos y subida** (construida): tablas, permisos, R2, pantalla «Limpiar fondos» en la
    galería con emparejado por nombre, cola y progreso en vivo.
 3. **Revisión y descarga**: cuadrícula antes/después, aprobar, rehacer con
    nota, descartar, descargar a una carpeta, aviso por correo, ajustes del
