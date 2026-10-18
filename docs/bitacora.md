@@ -31,7 +31,7 @@ Versión publicada: **v0.4.1** (historial de versiones en `CHANGELOG.md`).
 | Ajustes | Hecho: nombre, WhatsApp, entrada de clientes (webhook) | `/ajustes` |
 | Entrada de clientes (Make/Typeform) | Hecho y publicado | `apps/api` |
 | Galerías (selección, sustituye a Pixieset) | Publicado (v0.4.0): subir fotos a Cloudflare R2, enviar al cliente, página del cliente con guía de primera visita, confirmar, lista para Lightroom, reabrir. Falta el borrado automático diario | `/galerias`, `/g/<código>` |
-| Editor de imágenes | En prueba: laboratorio local de limpieza de fondos con IA sin tocar a las personas («Pronto» en el menú) | `tools/fondo-lab` |
+| Editor de imágenes | En construcción: servicio de limpieza de fondos publicado en Cloudflare y probado con una foto; falta la pantalla en la app («Pronto» en el menú) | `services/editor`, `tools/fondo-lab` |
 
 Publicado en Vercel (equipo «Upgradix's projects», plan Hobby):
 - **App**: https://uphotox-app.vercel.app (proyecto `uphotox-app`, carpeta `apps/app`).
@@ -51,11 +51,10 @@ Configuración:
 ## Pendientes
 
 Del usuario:
-- [ ] **Editor · poner en marcha el servicio en Cloudflare** (pasos en
-      `services/editor/README.md`): activar el plan Workers de pago ($5 al
-      mes), conectar el repositorio con Workers Builds (después de que yo
-      suba el código) y poner los secretos `EDITOR_TOKEN`, `GEMINI_API_KEY` y
-      `OPENAI_API_KEY`. Pasarme la dirección del Worker.
+- [ ] **Editor · revisar en Cloudflare** (Workers → `uphotox-editor` →
+      *Settings* → *Build*): que *Build watch paths* sea `services/editor/*`
+      y que *Preview builds* esté apagado, para que los cambios de la app no
+      reconstruyan el servicio.
 - [ ] **Editor · opcional**: abrir el informe
       (`D:\PROGRAMACION\uphotox\FOTOS PARA PRUEBA DE EDICON\resultados-ia\informe.html`)
       y mirar la fila «Encuadre automático» de cada foto: ¿el recorte azul de
@@ -102,9 +101,10 @@ Del Editor (por programar):
       en DSCF7339) o mueve el encuadre (Nano Banana 2 en DSCF6298).
 - [ ] Probar las manos de ayuda y la protección de caras con más fotos
       (solo hubo un caso, DSCF6322).
-- [ ] Probar el servicio publicado con `npm run try` (una foto de punta a
-      punta) y después seguir `docs/plan-editor.md`: datos y subida →
-      revisión y descarga → prueba real → plugin de Lightroom Classic.
+- [ ] Fase 2 de `docs/plan-editor.md`: tablas `edit_jobs` / `edit_photos`,
+      permisos, subida a R2 y pantalla «Limpiar fondos» en la galería; el
+      estado pasará de `status.json` a Supabase. Después: revisión y
+      descarga → prueba real → plugin de Lightroom Classic.
 
 Detectado al probar (no es de Galerías):
 - [ ] Si se borra un usuario con la sesión abierta (p. ej. un miembro del
@@ -181,8 +181,17 @@ cuenta que R2, para no sumar plataformas. Google Cloud Run descartado.
 - Laboratorio: informe completo regenerado (12 fotos, 36 opciones, 260
   imágenes); Biome sin avisos.
 
-**Falta**: que el usuario active el plan y conecte el repositorio, subir el
-código a GitHub y la prueba `npm run try` en la nube.
+**Publicado** (mismo día): el usuario activó el plan Workers de pago,
+conectó el repositorio con Workers Builds (raíz `services/editor`) y puso
+los tres secretos. Worker: https://uphotox-editor.osvaldo-ac2.workers.dev
+(`EDITOR_URL` en `apps/app/.env.local`). Cloudflare construyó el
+contenedor y creó la cola sola.
+
+**Prueba en la nube** (`npm run try` con DSCF6322): 135 s de principio a fin
+(120 s en el motor, incluido el arranque del contenedor), $0,186, un intento,
+nota 6/10, brazo de ayuda quitado, 5152×7728 con EXIF y perfil de color;
+los archivos de prueba se borraron de R2 (0 objetos en `editor/`). El
+resultado quedó en `FOTOS PARA PRUEBA DE EDICON\sin editar\resultados-editor\`.
 
 ### 18 oct 2026 · Editor: plan del módulo
 Plan propuesto en `docs/plan-editor.md` (pendiente de aprobar). Resumen:
