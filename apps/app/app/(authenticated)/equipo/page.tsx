@@ -52,6 +52,7 @@ const TeamPage = async () => {
           currentUserId={context.userId}
           emailEnabled={isEmailEnabled()}
           members={members}
+          modules={context.studio.modules}
         />
       </div>
     </>

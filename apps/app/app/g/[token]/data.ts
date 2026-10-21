@@ -11,6 +11,7 @@ import {
   galleryState,
   MAX_GALLERY_PHOTOS,
 } from "@/lib/gallery";
+import { moduleAvailable } from "@/lib/permissions";
 import { whatsappUrl } from "@/lib/whatsapp";
 
 const TOKEN = /^[\w-]{32,64}$/;
@@ -33,8 +34,11 @@ export interface ClientGallery {
   readonly extraPrice: number;
   readonly includedCount: number | null;
   readonly photos: ClientPhoto[];
-  /** "purged": the photos were removed after the retention period. */
-  readonly state: GalleryState | "purged";
+  /**
+   * "purged": the photos were removed after the retention period. "paused":
+   * the studio has no Galleries now (switched off or paused by Uphotox).
+   */
+  readonly state: GalleryState | "purged" | "paused";
   readonly studioName: string;
   readonly submittedAt: string | null;
   readonly token: string;
@@ -57,7 +61,7 @@ export const loadClientGallery = cache(
     const { data: gallery } = await admin
       .from("galleries")
       .select(
-        "id, studio_id, status, expires_at, submitted_at, purged_at, included_count, extra_price, studio:studios(name, whatsapp), card:cards!galleries_card_id_studio_id_fkey(title, client:clients(full_name))"
+        "id, studio_id, status, expires_at, submitted_at, purged_at, included_count, extra_price, studio:studios(name, whatsapp, modules, suspended_at), card:cards!galleries_card_id_studio_id_fkey(title, client:clients(full_name))"
       )
       .eq("token", token)
       .maybeSingle();
@@ -66,12 +70,15 @@ export const loadClientGallery = cache(
       return null;
     }
 
-    const state = gallery.purged_at
+    const galleryStatus = gallery.purged_at
       ? "purged"
       : galleryState({
           status: gallery.status,
           expiresAt: gallery.expires_at,
         });
+    const state = moduleAvailable(gallery.studio, "galleries")
+      ? galleryStatus
+      : "paused";
     const clientName = gallery.card.client?.full_name ?? "";
     const studioName = gallery.studio.name;
     let photos: ClientPhoto[] = [];

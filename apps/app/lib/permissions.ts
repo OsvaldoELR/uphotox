@@ -73,6 +73,68 @@ export const ALL_PERMISSIONS: Permission[] = PERMISSION_GROUPS.flatMap(
 export const isPermission = (value: string): value is Permission =>
   (ALL_PERMISSIONS as string[]).includes(value);
 
+// Modules the platform can switch off per studio (studios.modules). A
+// module's key is the prefix of its permissions. Keep in sync with the
+// studios.modules check constraint and private.has_permission. Boards,
+// clients, team and settings are always on.
+export const MODULES = [
+  {
+    key: "galleries",
+    label: "Galerías",
+    short: "Galerías",
+    description: "Selección de fotos por el cliente con su enlace privado.",
+  },
+  {
+    key: "editor",
+    label: "Editor de imágenes",
+    short: "Editor",
+    description: "Limpieza de fondos y edición con IA (gasta en modelos).",
+  },
+] as const;
+
+export type Module = (typeof MODULES)[number]["key"];
+
+export const ALL_MODULES: Module[] = MODULES.map((module) => module.key);
+
+export const isModule = (value: string): value is Module =>
+  (ALL_MODULES as string[]).includes(value);
+
+/** Stored modules made safe, in catalog order (so lists compare equal). */
+export const toModules = (stored: readonly string[] | null | undefined) =>
+  ALL_MODULES.filter((module) => stored?.includes(module));
+
+/** The module a permission belongs to, or null when it is always on. */
+export const moduleOf = (permission: Permission): Module | null => {
+  const prefix = permission.split(".")[0] ?? "";
+  return isModule(prefix) ? prefix : null;
+};
+
+/**
+ * For service-role code, which skips RLS (client gallery, notifications):
+ * whether the studio can use a module right now (on and not paused).
+ */
+export const moduleAvailable = (
+  studio:
+    | {
+        readonly modules: readonly string[] | null;
+        readonly suspended_at: string | null;
+      }
+    | null
+    | undefined,
+  module: Module
+) =>
+  Boolean(studio && !studio.suspended_at && studio.modules?.includes(module));
+
+/** Drops the permissions of modules the studio does not have. */
+export const withModules = (
+  permissions: readonly Permission[],
+  modules: readonly Module[]
+) =>
+  permissions.filter((permission) => {
+    const module = moduleOf(permission);
+    return module === null || modules.includes(module);
+  });
+
 export type Role = Enums<"studio_role">;
 export type MemberRole = Exclude<Role, "owner">;
 

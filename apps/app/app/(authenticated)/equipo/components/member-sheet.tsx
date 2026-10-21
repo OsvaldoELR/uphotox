@@ -34,8 +34,10 @@ import { type FormEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { createMember, removeMember, updateMember } from "@/app/actions/team";
 import {
+  isModule,
   MEMBER_ROLES,
   type MemberRole,
+  type Module,
   PERMISSION_GROUPS,
   type Permission,
   ROLE_DEFAULTS,
@@ -58,12 +60,18 @@ interface MemberSheetProperties {
   readonly emailEnabled: boolean;
   /** Absent when creating a new user. */
   readonly member?: TeamMember;
+  /**
+   * Modules the studio has. Groups of the others are hidden but their
+   * permissions stay in the list, so they come back if the module does.
+   */
+  readonly modules: Module[];
   readonly onClose: () => void;
 }
 
 export const MemberSheet = ({
   emailEnabled,
   member,
+  modules,
   onClose,
 }: MemberSheetProperties) => {
   const editing = Boolean(member);
@@ -274,7 +282,9 @@ export const MemberSheet = ({
             </div>
 
             <div className="grid gap-2">
-              {PERMISSION_GROUPS.map((group) => {
+              {PERMISSION_GROUPS.filter(
+                (group) => !isModule(group.id) || modules.includes(group.id)
+              ).map((group) => {
                 const keys = group.permissions.map(
                   (permission) => permission.key
                 ) as Permission[];

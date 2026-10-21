@@ -15,6 +15,7 @@ import {
   limitState,
   monthStart,
   type ReviewStatus,
+  spendingLimit,
   toChoice,
 } from "@/lib/editor";
 import { isEditorConfigured } from "@/lib/editor-service";
@@ -117,6 +118,36 @@ const costsByPhoto = (
   return costs;
 };
 
+/** Warning from 80 % of the month's limit; says who can raise it. */
+const SpendingNotice = ({
+  byPlatform,
+  spending,
+}: {
+  readonly byPlatform: boolean;
+  readonly spending: ReturnType<typeof limitState>;
+}) => {
+  if (!spending.warning) {
+    return null;
+  }
+
+  const what = byPlatform ? "tope de IA de tu plan" : "límite de gasto";
+
+  return (
+    <p className="border border-flare/40 bg-flare/10 px-4 py-3 text-flare text-sm">
+      {spending.reached
+        ? `Llegaste al ${what} de este mes: no se envían más fotos.`
+        : `Te quedan ${formatCost(spending.left ?? 0)} del ${what} de este mes.`}{" "}
+      {byPlatform ? (
+        "Para ampliarlo, habla con Uphotox."
+      ) : (
+        <Link className="underline underline-offset-2" href="/ajustes">
+          Cambiarlo en Ajustes
+        </Link>
+      )}
+    </p>
+  );
+};
+
 const CleanupPage = async ({ params }: CleanupPageProperties) => {
   await requirePermission("editor.access");
   const galleryId = Number((await params).galleryId);
@@ -159,7 +190,9 @@ const CleanupPage = async ({ params }: CleanupPageProperties) => {
     supabase.from("edit_usage").select("cost").gte("created_at", monthStart()),
     supabase
       .from("studios")
-      .select("editor_monthly_limit, editor_mode, editor_level, editor_model")
+      .select(
+        "editor_monthly_limit, editor_platform_limit, editor_mode, editor_level, editor_model"
+      )
       .maybeSingle(),
   ]);
 
@@ -178,10 +211,10 @@ const CleanupPage = async ({ params }: CleanupPageProperties) => {
       )
     : new Map();
   const monthUsed = sum(monthUsage.data);
-  const limit =
-    settings?.editor_monthly_limit == null
-      ? null
-      : Number(settings.editor_monthly_limit);
+  const { limit, byPlatform } = spendingLimit(
+    settings?.editor_monthly_limit,
+    settings?.editor_platform_limit
+  );
   const spending = limitState(monthUsed, limit);
   const costs = costsByPhoto(galleryUsage.data ?? []);
 
@@ -265,16 +298,7 @@ const CleanupPage = async ({ params }: CleanupPageProperties) => {
               }
             />
           </dl>
-          {spending.warning && (
-            <p className="border border-flare/40 bg-flare/10 px-4 py-3 text-flare text-sm">
-              {spending.reached
-                ? "Llegaste al límite de gasto de este mes: no se envían más fotos."
-                : `Te quedan ${formatCost(spending.left ?? 0)} del límite de este mes.`}{" "}
-              <Link className="underline underline-offset-2" href="/ajustes">
-                Cambiarlo en Ajustes
-              </Link>
-            </p>
-          )}
+          <SpendingNotice byPlatform={byPlatform} spending={spending} />
         </section>
 
         {pickList.length === 0 && (

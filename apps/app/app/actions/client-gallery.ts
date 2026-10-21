@@ -6,6 +6,7 @@ import { after } from "next/server";
 import { z } from "zod";
 import { galleryState } from "@/lib/gallery";
 import { notifyGallerySubmitted } from "@/lib/gallery-notify";
+import { moduleAvailable } from "@/lib/permissions";
 
 /**
  * Actions of the public client page (/g/<token>). There is no session: the
@@ -29,13 +30,16 @@ const openGalleryByToken = async (token: string) => {
   const admin = createAdminClient();
   const { data } = await admin
     .from("galleries")
-    .select("id, status, expires_at, purged_at")
+    .select(
+      "id, status, expires_at, purged_at, studio:studios(modules, suspended_at)"
+    )
     .eq("token", token)
     .maybeSingle();
 
   if (
     !data ||
     data.purged_at ||
+    !moduleAvailable(data.studio, "galleries") ||
     galleryState({ status: data.status, expiresAt: data.expires_at }) !== "open"
   ) {
     return null;

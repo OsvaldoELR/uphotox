@@ -39,7 +39,7 @@ const SettingsPage = async () => {
       supabase
         .from("studios")
         .select(
-          "editor_helpers, editor_framing, editor_monthly_limit, editor_keep_days, editor_mode, editor_level, editor_model"
+          "editor_helpers, editor_framing, editor_monthly_limit, editor_platform_limit, editor_keep_days, editor_mode, editor_level, editor_model"
         )
         .eq("id", context.studio.id)
         .maybeSingle(),
@@ -105,34 +105,41 @@ const SettingsPage = async () => {
           </Panel>
         </section>
 
-        <section className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <HudLabel align="start">Editor</HudLabel>
-            <p className="max-w-prose text-muted-foreground text-sm">
-              Cómo trabaja la edición con IA de las fotos que elige cada
-              cliente: qué se edita, con cuánta exigencia y con qué modelo.
-            </p>
-          </div>
-          <Panel className="max-w-3xl p-6">
-            <EditorSettingsForm
-              settings={{
-                choice: toChoice({
-                  mode: editor?.editor_mode,
-                  level: editor?.editor_level,
-                  model: editor?.editor_model,
-                }),
-                helpers: editor?.editor_helpers ?? true,
-                framing: editor?.editor_framing ?? false,
-                monthlyLimit:
-                  editor?.editor_monthly_limit === null ||
-                  editor?.editor_monthly_limit === undefined
+        {context.studio.modules.includes("editor") && (
+          <section className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <HudLabel align="start">Editor</HudLabel>
+              <p className="max-w-prose text-muted-foreground text-sm">
+                Cómo trabaja la edición con IA de las fotos que elige cada
+                cliente: qué se edita, con cuánta exigencia y con qué modelo.
+              </p>
+            </div>
+            <Panel className="max-w-3xl p-6">
+              <EditorSettingsForm
+                platformLimit={
+                  editor?.editor_platform_limit == null
                     ? null
-                    : Number(editor.editor_monthly_limit),
-                keepDays: editor?.editor_keep_days ?? 30,
-              }}
-            />
-          </Panel>
-        </section>
+                    : Number(editor.editor_platform_limit)
+                }
+                settings={{
+                  choice: toChoice({
+                    mode: editor?.editor_mode,
+                    level: editor?.editor_level,
+                    model: editor?.editor_model,
+                  }),
+                  helpers: editor?.editor_helpers ?? true,
+                  framing: editor?.editor_framing ?? false,
+                  monthlyLimit:
+                    editor?.editor_monthly_limit === null ||
+                    editor?.editor_monthly_limit === undefined
+                      ? null
+                      : Number(editor.editor_monthly_limit),
+                  keepDays: editor?.editor_keep_days ?? 30,
+                }}
+              />
+            </Panel>
+          </section>
+        )}
       </div>
     </>
   );

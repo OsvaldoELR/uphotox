@@ -6,9 +6,11 @@ import { ChevronRightIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import {
   ALL_PERMISSIONS,
+  type Module,
   type Permission,
   ROLES,
   type Role,
+  withModules,
 } from "@/lib/permissions";
 import { MemberSheet } from "./member-sheet";
 
@@ -35,6 +37,8 @@ interface TeamManagerProperties {
   readonly currentUserId: string;
   readonly emailEnabled: boolean;
   readonly members: TeamMember[];
+  /** Modules the studio has: permission groups of the others are hidden. */
+  readonly modules: Module[];
 }
 
 type SheetState =
@@ -46,6 +50,7 @@ export const TeamManager = ({
   currentUserId,
   emailEnabled,
   members,
+  modules,
 }: TeamManagerProperties) => {
   const [sheet, setSheet] = useState<SheetState>(null);
 
@@ -92,7 +97,7 @@ export const TeamManager = ({
                 <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.12em]">
                   {isOwner
                     ? "Todos los permisos"
-                    : `${member.permissions.length}/${ALL_PERMISSIONS.length} permisos`}
+                    : `${withModules(member.permissions, modules).length}/${withModules(ALL_PERMISSIONS, modules).length} permisos`}
                   {member.onlyAssigned && " · solo asignados"}
                 </span>
               </span>
@@ -127,6 +132,7 @@ export const TeamManager = ({
           emailEnabled={emailEnabled}
           key={sheet.mode === "edit" ? sheet.member.id : "create"}
           member={sheet.mode === "edit" ? sheet.member : undefined}
+          modules={modules}
           onClose={() => setSheet(null)}
         />
       )}

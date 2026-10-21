@@ -44,28 +44,41 @@ delete from public.platform_admins
 where user_id = (select id from public.profiles where email = 'correo@ejemplo.com');
 ```
 
-## Fase 2 · Decidir a qué tiene acceso cada estudio (pendiente)
+## Fase 2 · Decidir a qué tiene acceso cada estudio (hecha, v0.9.0)
 
-- Columnas nuevas en `studios`, que el estudio no puede cambiar (los
-  permisos de edición de `studios` van columna a columna y estas no se le
-  dan):
-  - `modules`: módulos que se pueden apagar, para empezar **Galerías** y
-    **Editor**. Tableros, clientes, equipo y ajustes siempre activos.
-  - Un tope mensual de IA que pone la plataforma, distinto del
-    `editor_monthly_limit` que pone el propio estudio (manda el más bajo).
-  - `suspended_at` para suspender un estudio, con su propia página de
-    «cuenta suspendida» (si no, la app lo mandaría al alta de estudio).
-- Un único cambio en `private.has_permission`: además del permiso del
-  miembro, el módulo de ese permiso tiene que estar activo en su estudio.
-  Todas las reglas de seguridad ya llaman a esa función, así que el bloqueo
-  es real en la base de datos sin tocar ninguna regla.
-- `getStudioContext()` quita los permisos de los módulos apagados: menú,
-  404 de `requirePermission()` y botones se ajustan solos.
-- Tres sitios no pasan por esa seguridad (usan la clave de servicio) y
-  necesitan la comprobación a mano: la galería del cliente (`/g/<token>`),
-  el webhook de la API y la cola y el callback del Editor.
-- La migración deja todo activado por defecto: ningún estudio nota nada.
-- Registro de cada cambio hecho desde el panel (qué, a qué estudio, cuándo).
+En la ficha de cada estudio (`/admin/estudios/<id>`), sección **Acceso**:
+
+- **Módulos**: Galerías y Editor se pueden apagar. Tableros, clientes, equipo
+  y ajustes siempre están. Apagado: desaparece del menú, sus páginas dan 404,
+  Equipo oculta sus permisos (sin borrarlos: vuelven al activarlo) y la base
+  de datos lo bloquea. Con Galerías apagadas, el enlace del cliente dice
+  «Esta galería no está disponible» y los correos no llevan «Elegir mis
+  fotos».
+- **Tope de IA al mes**: lo pone Uphotox. Si el estudio tiene su propio
+  límite en Ajustes, manda el más bajo; el estudio ve el tope en Ajustes y,
+  al llegar, el aviso le dice que hable con Uphotox.
+- **Pausar el estudio**, con un mensaje opcional: el equipo solo ve la página
+  «Estudio pausado» (con el mensaje y «Cerrar sesión»), sus clientes no
+  pueden abrir las galerías y el formulario de reservas (webhook) responde
+  «El estudio está pausado» y lo deja anotado. No se borra nada.
+- **Registro** debajo del formulario: qué cambió, quién y cuándo.
+
+Cómo funciona por dentro:
+- Columnas `studios.modules`, `editor_platform_limit`, `suspended_at`,
+  `suspended_reason`. El estudio puede leerlas pero no cambiarlas.
+- `private.has_permission` exige además un estudio activo y el módulo del
+  permiso encendido. Todas las reglas de seguridad ya la usan, así que el
+  bloqueo es real en la base de datos sin tocar ninguna regla.
+- Los cambios pasan solo por `platform_set_studio_access`, que actualiza el
+  estudio y apunta el cambio en `platform_audit` en la misma transacción.
+- Lo que usa la clave de servicio (y por eso se salta esas reglas) lo
+  comprueba a mano: galería del cliente y sus acciones, el enlace de los
+  correos y el webhook. El Editor no lo necesita: la cola solo envía fotos
+  que el miembro puede leer con sus permisos, y lo que ya estaba en marcha
+  termina normalmente.
+- Para añadir un módulo nuevo: prefijo de permisos nuevo, entrada en
+  `MODULES` (`apps/app/lib/permissions.ts`), y añadirlo a la restricción de
+  `studios.modules` y a la lista de `has_permission` en una migración.
 
 ## Fase 3 · Si hace falta
 

@@ -13,13 +13,14 @@ import {
   EDIT_MODELS,
   EDIT_MODES,
   type EditChoice,
-  formatCost,
+  limitReachedMessage,
   limitState,
   MAX_NOTE_LENGTH,
   MAX_ORIGINAL_BYTES,
   MIN_ORIGINAL_BYTES,
   matchOriginals,
   monthStart,
+  spendingLimit,
   toChoice,
 } from "@/lib/editor";
 import {
@@ -112,25 +113,25 @@ type ServerClient = Awaited<ReturnType<typeof createClient>>;
 
 /**
  * How the studio set the editor up (Ajustes → Editor) and where this
- * month's consumption stands against its optional limit.
+ * month's consumption stands against the limit that applies (its own or the
+ * platform's cap, the lower one).
  */
 const editorPolicy = async (supabase: ServerClient, studioId: number) => {
   const [{ data: studio }, { data: usage }] = await Promise.all([
     supabase
       .from("studios")
       .select(
-        "editor_helpers, editor_framing, editor_monthly_limit, editor_mode, editor_level, editor_model"
+        "editor_helpers, editor_framing, editor_monthly_limit, editor_platform_limit, editor_mode, editor_level, editor_model"
       )
       .eq("id", studioId)
       .maybeSingle(),
     supabase.from("edit_usage").select("cost").gte("created_at", monthStart()),
   ]);
   const used = (usage ?? []).reduce((sum, row) => sum + Number(row.cost), 0);
-  const limit =
-    studio?.editor_monthly_limit === null ||
-    studio?.editor_monthly_limit === undefined
-      ? null
-      : Number(studio.editor_monthly_limit);
+  const { limit, byPlatform } = spendingLimit(
+    studio?.editor_monthly_limit,
+    studio?.editor_platform_limit
+  );
 
   return {
     choice: toChoice({
@@ -144,12 +145,15 @@ const editorPolicy = async (supabase: ServerClient, studioId: number) => {
       framing: studio?.editor_framing ?? false,
     },
     limit,
+    byPlatform,
     state: limitState(used, limit),
   };
 };
 
-const limitReached = (limit: number | null) =>
-  `Llegaste al límite de gasto de este mes (${formatCost(limit ?? 0)}). Súbelo en Ajustes → Editor para seguir.`;
+const limitReached = (policy: {
+  readonly byPlatform: boolean;
+  readonly limit: number | null;
+}) => limitReachedMessage(policy.limit ?? 0, policy.byPlatform);
 
 /** In batches, so a long list does not open dozens of requests at once. */
 const inBatches = async <T, R>(
@@ -391,7 +395,7 @@ export const confirmEditUploads = async (
   const policy = studioId ? await editorPolicy(supabase, studioId) : null;
 
   if (policy?.state.reached) {
-    return { error: limitReached(policy.limit) };
+    return { error: limitReached(policy) };
   }
 
   const admin = createAdminClient();
@@ -656,7 +660,7 @@ export const redoEditPhoto = async (
   const policy = await editorPolicy(supabase, row.studio_id);
 
   if (policy.state.reached) {
-    return { error: limitReached(policy.limit) };
+    return { error: limitReached(policy) };
   }
 
   const keys = editPhotoKeys({

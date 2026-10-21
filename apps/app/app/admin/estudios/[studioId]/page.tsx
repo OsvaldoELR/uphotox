@@ -14,10 +14,12 @@ import {
   toChoice,
 } from "@/lib/editor";
 import { formatMoney, galleryState } from "@/lib/gallery";
-import { ALL_PERMISSIONS, ROLES } from "@/lib/permissions";
+import { ALL_PERMISSIONS, ROLES, toModules } from "@/lib/permissions";
 import { requirePlatformAdmin } from "@/lib/platform";
 import {
+  type AccessSnapshot,
   countOf,
+  describeAccessChange,
   describeActivity,
   formatBytes,
   formatDay,
@@ -27,6 +29,7 @@ import {
 } from "@/lib/platform-format";
 import { formatWhatsapp } from "@/lib/whatsapp";
 import { Header } from "../../../(authenticated)/components/header";
+import { AccessForm } from "./components/access-form";
 
 export const metadata: Metadata = {
   title: "Estudio · Superadmin · Uphotox",
@@ -35,6 +38,7 @@ export const metadata: Metadata = {
 
 const USAGE_MONTHS = 6;
 const ACTIVITY_LIMIT = 40;
+const AUDIT_LIMIT = 20;
 
 const meta =
   "font-mono text-[10px] text-muted-foreground uppercase tracking-[0.16em]";
@@ -56,6 +60,7 @@ const loadStudio = async (admin: AdminClient, studioId: number) => {
     { data: galleries },
     { data: usage },
     { data: integrations },
+    { data: audit },
   ] = await Promise.all([
     admin
       .from("studios")
@@ -100,6 +105,14 @@ const loadStudio = async (admin: AdminClient, studioId: number) => {
       .from("studio_integrations")
       .select("provider, enabled, last_received_at, last_error")
       .eq("studio_id", studioId),
+    admin
+      .from("platform_audit")
+      .select(
+        "id, detail, created_at, actor:profiles!platform_audit_actor_id_fkey(full_name, email)"
+      )
+      .eq("studio_id", studioId)
+      .order("id", { ascending: false })
+      .limit(AUDIT_LIMIT),
   ]);
 
   if (!studio) {
@@ -154,6 +167,19 @@ const loadStudio = async (admin: AdminClient, studioId: number) => {
     galleries: galleries ?? [],
     usage: usage ?? [],
     integrations: integrations ?? [],
+    audit: (audit ?? []).map((entry) => {
+      const detail = (entry.detail ?? {}) as {
+        readonly after?: AccessSnapshot;
+        readonly before?: AccessSnapshot;
+      };
+
+      return {
+        id: entry.id,
+        at: entry.created_at,
+        actor: entry.actor?.full_name ?? entry.actor?.email ?? "Uphotox",
+        lines: describeAccessChange(detail.before ?? {}, detail.after ?? {}),
+      };
+    }),
   };
 };
 
@@ -228,6 +254,13 @@ const Summary = ({ studio, stats }: Pick<StudioData, "studio" | "stats">) => {
           {timeAgo(stats?.last_activity ?? null)}
         </p>
       </div>
+      {studio.suspended_at && (
+        <p className="border border-flare/40 bg-flare/10 px-4 py-3 text-flare text-sm">
+          Pausado {timeAgo(studio.suspended_at)}
+          {studio.suspended_reason ? ` · «${studio.suspended_reason}»` : ""}.
+          Nadie del equipo puede entrar.
+        </p>
+      )}
       <dl className="grid grid-cols-2 gap-px border bg-border sm:grid-cols-4">
         <Stat label="Usuarios" value={n(stats?.members)} />
         <Stat label="Tarjetas" value={n(stats?.cards)} />
@@ -415,6 +448,11 @@ const EditorUsage = ({
             ? "Sin límite"
             : formatCost(Number(studio.editor_monthly_limit))}
         </Setting>
+        <Setting label="Tope de la plataforma">
+          {studio.editor_platform_limit === null
+            ? "Sin tope"
+            : formatCost(Number(studio.editor_platform_limit))}
+        </Setting>
         <Setting label="Consumo total">
           {formatCost(Number(stats?.ai_cost_total ?? 0))}
         </Setting>
@@ -454,6 +492,45 @@ const EditorUsage = ({
     </>
   );
 };
+
+const Access = ({
+  audit,
+  stats,
+  studio,
+}: Pick<StudioData, "audit" | "stats" | "studio">) => (
+  <>
+    <AccessForm
+      access={{
+        modules: toModules(studio.modules),
+        aiLimit:
+          studio.editor_platform_limit === null
+            ? null
+            : Number(studio.editor_platform_limit),
+        paused: Boolean(studio.suspended_at),
+        reason: studio.suspended_reason ?? "",
+      }}
+      monthUsed={Number(stats?.ai_cost_since ?? 0)}
+      studioId={studio.id}
+    />
+    {audit.length > 0 && (
+      <ol className="divide-y border bg-card">
+        {audit.map((entry) => (
+          <li
+            className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-0.5 px-4 py-2.5"
+            key={entry.id}
+          >
+            <span className="text-sm">
+              {entry.lines.join(" · ") || "Sin cambios visibles"}
+            </span>
+            <span className={cn(meta, "shrink-0")}>
+              {entry.actor} · {timeAgo(entry.at)}
+            </span>
+          </li>
+        ))}
+      </ol>
+    )}
+  </>
+);
 
 const Settings = ({
   studio,
@@ -513,26 +590,29 @@ const StudioPage = async ({ params }: StudioPageProperties) => {
       />
       <div className="flex flex-1 flex-col gap-10 px-4 pt-4 pb-12 md:px-10">
         <Summary stats={data.stats} studio={data.studio} />
-        <Section index={1} title="Equipo">
+        <Section index={1} title="Acceso">
+          <Access audit={data.audit} stats={data.stats} studio={data.studio} />
+        </Section>
+        <Section index={2} title="Equipo">
           <Members members={data.members} />
         </Section>
-        <Section index={2} title="Tableros">
+        <Section index={3} title="Tableros">
           <Boards boards={data.boards} />
         </Section>
-        <Section index={3} title="Actividad reciente">
+        <Section index={4} title="Actividad reciente">
           <Activity events={data.events} />
         </Section>
-        <Section index={4} title="Galerías">
+        <Section index={5} title="Galerías">
           <Galleries galleries={data.galleries} />
         </Section>
-        <Section index={5} title="Editor">
+        <Section index={6} title="Editor">
           <EditorUsage
             stats={data.stats}
             studio={data.studio}
             usage={data.usage}
           />
         </Section>
-        <Section index={6} title="Ajustes">
+        <Section index={7} title="Ajustes">
           <Settings integrations={data.integrations} studio={data.studio} />
         </Section>
       </div>

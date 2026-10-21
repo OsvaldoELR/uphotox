@@ -75,6 +75,16 @@ const ClientGalleryPage = async ({ params }: ClientGalleryPageProperties) => {
     );
   }
 
+  if (gallery.state === "paused") {
+    return (
+      <GalleryUnavailable
+        {...studio}
+        message="Ahora mismo no se puede abrir. Escríbenos y te ayudamos."
+        title="Esta galería no está disponible"
+      />
+    );
+  }
+
   if (gallery.state === "purged") {
     return (
       <GalleryUnavailable

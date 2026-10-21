@@ -140,7 +140,9 @@ export const POST = async (request: Request, { params }: RouteContext) => {
   const supabase = createAdminClient();
   const { data: integration } = await supabase
     .from("studio_integrations")
-    .select("id, studio_id, enabled, board_id, stage_id")
+    .select(
+      "id, studio_id, enabled, board_id, stage_id, studio:studios(suspended_at)"
+    )
     .eq("provider", "webhook")
     .eq("token", token)
     .maybeSingle();
@@ -160,6 +162,11 @@ export const POST = async (request: Request, { params }: RouteContext) => {
       .eq("id", integration.id);
     return json({ error: message }, status);
   };
+
+  // Paused by Uphotox: nothing comes in until it is reactivated.
+  if (integration.studio?.suspended_at) {
+    return fail(403, "El estudio está pausado en Uphotox.");
+  }
 
   const body: unknown = await request.json().catch(() => undefined);
   const parsed = inboundClientSchema.safeParse(body);

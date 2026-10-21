@@ -639,6 +639,48 @@ export type Database = {
           },
         ]
       }
+      platform_audit: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          detail: Json
+          id: number
+          studio_id: number
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json
+          id?: never
+          studio_id: number
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json
+          id?: never
+          studio_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_audit_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_audit_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -803,10 +845,14 @@ export type Database = {
           editor_mode: string
           editor_model: string
           editor_monthly_limit: number | null
+          editor_platform_limit: number | null
           extra_photo_price: number
           id: number
+          modules: string[]
           name: string
           owner_id: string
+          suspended_at: string | null
+          suspended_reason: string | null
           updated_at: string
           whatsapp: string | null
         }
@@ -819,10 +865,14 @@ export type Database = {
           editor_mode?: string
           editor_model?: string
           editor_monthly_limit?: number | null
+          editor_platform_limit?: number | null
           extra_photo_price?: number
           id?: never
+          modules?: string[]
           name: string
           owner_id: string
+          suspended_at?: string | null
+          suspended_reason?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
@@ -835,10 +885,14 @@ export type Database = {
           editor_mode?: string
           editor_model?: string
           editor_monthly_limit?: number | null
+          editor_platform_limit?: number | null
           extra_photo_price?: number
           id?: never
+          modules?: string[]
           name?: string
           owner_id?: string
+          suspended_at?: string | null
+          suspended_reason?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
@@ -863,6 +917,17 @@ export type Database = {
           entries: Json
           target_board_id: number
           target_stage_id: number
+        }
+        Returns: Json
+      }
+      platform_set_studio_access: {
+        Args: {
+          actor: string
+          new_ai_limit: number
+          new_modules: string[]
+          reason: string
+          suspend: boolean
+          target_studio: number
         }
         Returns: Json
       }

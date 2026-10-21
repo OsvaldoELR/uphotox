@@ -1,9 +1,11 @@
 import { HudLabel } from "@repo/design-system/components/hud/hud-label";
+import { cn } from "@repo/design-system/lib/utils";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { formatCost, monthStart } from "@/lib/editor";
 import { requirePlatformAdmin } from "@/lib/platform";
 import {
+  accessNotes,
   countOf,
   formatBytes,
   formatDay,
@@ -41,7 +43,7 @@ const AdminPage = async () => {
     admin
       .from("studios")
       .select(
-        "id, name, created_at, owner:profiles!studios_owner_id_fkey(full_name, email)"
+        "id, name, created_at, modules, editor_platform_limit, suspended_at, owner:profiles!studios_owner_id_fkey(full_name, email)"
       )
       .order("created_at"),
     admin.rpc("platform_studio_stats", { since: monthStart() }),
@@ -67,7 +69,8 @@ const AdminPage = async () => {
             </h1>
             <p className="max-w-prose text-muted-foreground text-sm">
               Todos los estudios de Uphotox, lo que tienen dentro y lo que
-              consumen. Solo lectura: aquí no se cambia nada de ningún estudio.
+              consumen. Abre uno para ver el detalle y decidir a qué tiene
+              acceso.
             </p>
           </div>
           <dl className="grid grid-cols-2 gap-px border bg-border sm:grid-cols-4">
@@ -118,6 +121,23 @@ const AdminPage = async () => {
                           {studio.owner?.email ?? "Sin dueño"} · desde{" "}
                           {formatDay(studio.created_at)}
                         </p>
+                        {accessNotes(studio).length > 0 && (
+                          <p className="mt-1.5 flex flex-wrap gap-1.5">
+                            {accessNotes(studio).map((note) => (
+                              <span
+                                className={cn(
+                                  "border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em]",
+                                  note.warning
+                                    ? "border-flare/40 bg-flare/10 text-flare"
+                                    : "text-muted-foreground"
+                                )}
+                                key={note.label}
+                              >
+                                {note.label}
+                              </span>
+                            ))}
+                          </p>
+                        )}
                       </td>
                       <td className={td}>{studio.stats?.members ?? 0}</td>
                       <td className={td}>{studio.stats?.cards ?? 0}</td>

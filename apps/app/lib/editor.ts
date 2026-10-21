@@ -358,6 +358,34 @@ export const downloadName = (fileName: string) =>
 /** Share of the monthly limit at which the studio is warned. */
 export const LIMIT_WARNING = 0.8;
 
+const toAmount = (value: number | string | null | undefined) =>
+  value === null || value === undefined ? null : Number(value);
+
+/**
+ * The monthly limit that applies: the lower of the studio's own
+ * (Ajustes → Editor) and the cap the platform set. `byPlatform` says the
+ * studio cannot raise it itself.
+ */
+export const spendingLimit = (
+  studioLimit: number | string | null | undefined,
+  platformLimit: number | string | null | undefined
+) => {
+  const own = toAmount(studioLimit);
+  const cap = toAmount(platformLimit);
+
+  if (cap === null || (own !== null && own <= cap)) {
+    return { limit: own, byPlatform: false };
+  }
+
+  return { limit: cap, byPlatform: true };
+};
+
+/** Error when a send would pass the limit. */
+export const limitReachedMessage = (limit: number, byPlatform: boolean) =>
+  byPlatform
+    ? `Llegaste al tope de IA de tu plan este mes (${formatCost(limit)}). Habla con Uphotox para ampliarlo.`
+    : `Llegaste al límite de gasto de este mes (${formatCost(limit)}). Súbelo en Ajustes → Editor para seguir.`;
+
 /**
  * Where the month's consumption stands against the optional limit: no new
  * photos once it is reached, a warning from 80 %.

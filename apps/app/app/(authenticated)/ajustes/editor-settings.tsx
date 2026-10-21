@@ -11,6 +11,7 @@ import {
   updateEditorSettings,
 } from "@/app/actions/editor";
 import { EditChoiceFields } from "@/components/edit-choice-fields";
+import { formatCost } from "@/lib/editor";
 
 const Toggle = ({
   checked,
@@ -35,8 +36,11 @@ const Toggle = ({
 );
 
 export const EditorSettingsForm = ({
+  platformLimit,
   settings,
 }: {
+  /** Monthly AI cap set by Uphotox (USD), or null when there is none. */
+  readonly platformLimit: number | null;
   readonly settings: EditorSettings;
 }) => {
   const [pending, startTransition] = useTransition();
@@ -113,6 +117,12 @@ export const EditorSettingsForm = ({
             Aviso al 80 %; al llegar, no se envían más fotos hasta el mes
             siguiente o hasta subirlo. Vacío = sin límite.
           </p>
+          {platformLimit !== null && (
+            <p className="text-flare text-xs">
+              Tu plan incluye hasta {formatCost(platformLimit)} al mes: si pones
+              más (o lo dejas vacío), se aplica ese tope.
+            </p>
+          )}
         </div>
         <div className="grid gap-2">
           <Label htmlFor="editor-keep">Días que se guardan las fotos</Label>

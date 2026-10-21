@@ -7,8 +7,11 @@ import { cache } from "react";
 import {
   ALL_PERMISSIONS,
   isPermission,
+  type Module,
   type Permission,
   type Role,
+  toModules,
+  withModules,
 } from "./permissions";
 import { isPlatformAdmin } from "./platform";
 
@@ -20,11 +23,22 @@ export interface StudioContext {
     readonly onlyAssigned: boolean;
     readonly role: Role;
   };
-  /** Effective permissions (owners get all of them). */
+  /**
+   * Effective permissions: owners get all of them, minus the modules the
+   * platform switched off (none while the studio is paused). Mirrors
+   * private.has_permission.
+   */
   readonly permissions: Permission[];
   readonly studio: {
     readonly id: number;
+    /** Modules the platform left on for this studio. */
+    readonly modules: Module[];
     readonly name: string;
+    /** Set when the platform paused the studio. */
+    readonly paused: {
+      readonly at: string;
+      readonly reason: string | null;
+    } | null;
     /** Digits only (international format), or null when not set. */
     readonly whatsapp: string | null;
   };
@@ -47,7 +61,7 @@ export const getStudioContext = cache(
     const { data } = await supabase
       .from("studio_members")
       .select(
-        "role, permissions, only_assigned, studios(id, name, whatsapp), profiles(full_name, email)"
+        "role, permissions, only_assigned, studios(id, name, whatsapp, modules, suspended_at, suspended_reason), profiles(full_name, email)"
       )
       .eq("user_id", userId)
       .maybeSingle();
@@ -56,14 +70,25 @@ export const getStudioContext = cache(
       return null;
     }
 
-    const permissions =
+    const { suspended_at, suspended_reason, ...studio } = data.studios;
+    const modules = toModules(studio.modules);
+    const granted =
       data.role === "owner"
         ? ALL_PERMISSIONS
         : data.permissions.filter(isPermission);
+    const permissions = suspended_at ? [] : withModules(granted, modules);
 
     return {
       userId,
-      studio: data.studios,
+      studio: {
+        id: studio.id,
+        name: studio.name,
+        whatsapp: studio.whatsapp,
+        modules,
+        paused: suspended_at
+          ? { at: suspended_at, reason: suspended_reason }
+          : null,
+      },
       member: {
         role: data.role,
         onlyAssigned: data.role !== "owner" && data.only_assigned,
@@ -78,13 +103,18 @@ export const getStudioContext = cache(
 
 /**
  * For pages inside the app: no studio yet means onboarding, except for
- * platform admins, whose account has no studio and lives in /admin.
+ * platform admins, whose account has no studio and lives in /admin. A paused
+ * studio only sees the notice (RLS already hides its data).
  */
 export const requireStudio = async () => {
   const context = await getStudioContext();
 
   if (!context) {
     redirect((await isPlatformAdmin()) ? "/admin" : "/onboarding");
+  }
+
+  if (context.studio.paused) {
+    redirect("/estudio-pausado");
   }
 
   return context;

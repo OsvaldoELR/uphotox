@@ -9,6 +9,7 @@ import { env } from "@/env";
 import { defaultStageMessage } from "./board-templates";
 import { isEmailEnabled, type SendEmailResult, sendEmail } from "./email";
 import { formatMoney, galleryState, selectionTotals } from "./gallery";
+import { moduleAvailable } from "./permissions";
 import { whatsappUrl } from "./whatsapp";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -70,11 +71,13 @@ const logEmail = async (
 export const openGalleryUrlForCard = async (cardId: number) => {
   const { data } = await createAdminClient()
     .from("galleries")
-    .select("token, status, expires_at")
+    .select("token, status, expires_at, studio:studios(modules, suspended_at)")
     .eq("card_id", cardId)
     .maybeSingle();
 
+  // No «Elegir mis fotos» when the studio has no Galleries right now.
   return data &&
+    moduleAvailable(data.studio, "galleries") &&
     galleryState({ status: data.status, expiresAt: data.expires_at }) === "open"
     ? clientGalleryUrl(data.token)
     : null;
