@@ -2,6 +2,7 @@ import { auth } from "@repo/auth/server";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { publicPageMetadata } from "@/lib/metadata";
+import { isPlatformAdmin } from "@/lib/platform";
 import { getStudioContext } from "@/lib/studio";
 import { AuthHeader } from "../components/auth-header";
 import { OnboardingForm } from "./onboarding-form";
@@ -23,6 +24,11 @@ const OnboardingPage = async () => {
 
   if (await getStudioContext()) {
     redirect("/");
+  }
+
+  // The platform admin account has no studio on purpose.
+  if (await isPlatformAdmin()) {
+    redirect("/admin");
   }
 
   return (

@@ -616,6 +616,29 @@ export type Database = {
           },
         ]
       }
+      platform_admins: {
+        Row: {
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_admins_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -842,6 +865,40 @@ export type Database = {
           target_stage_id: number
         }
         Returns: Json
+      }
+      platform_stage_counts: {
+        Args: { target_studio: number }
+        Returns: {
+          cards: number
+          stage_id: number
+        }[]
+      }
+      platform_studio_stats: {
+        Args: { since: string }
+        Returns: {
+          ai_cost_since: number
+          ai_cost_total: number
+          boards: number
+          cards: number
+          clients: number
+          edits_since: number
+          galleries_sent: number
+          galleries_submitted: number
+          last_activity: string
+          members: number
+          photos: number
+          storage_bytes: number
+          studio_id: number
+        }[]
+      }
+      platform_studio_usage: {
+        Args: { since: string; target_studio: number }
+        Returns: {
+          cost: number
+          month: string
+          photos: number
+          runs: number
+        }[]
       }
       submit_gallery_selection: {
         Args: { p_client_note?: string; p_gallery_id: number }

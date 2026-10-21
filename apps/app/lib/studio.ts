@@ -10,6 +10,7 @@ import {
   type Permission,
   type Role,
 } from "./permissions";
+import { isPlatformAdmin } from "./platform";
 
 export interface StudioContext {
   readonly can: (permission: Permission) => boolean;
@@ -75,12 +76,15 @@ export const getStudioContext = cache(
   }
 );
 
-/** For pages inside the app: no studio yet means onboarding. */
+/**
+ * For pages inside the app: no studio yet means onboarding, except for
+ * platform admins, whose account has no studio and lives in /admin.
+ */
 export const requireStudio = async () => {
   const context = await getStudioContext();
 
   if (!context) {
-    redirect("/onboarding");
+    redirect((await isPlatformAdmin()) ? "/admin" : "/onboarding");
   }
 
   return context;
