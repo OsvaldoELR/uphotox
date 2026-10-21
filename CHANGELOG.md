@@ -7,6 +7,20 @@ en `docs/bitacora.md`.
 Numeración: el primer número cambia con cambios grandes que rompen la forma de
 trabajar, el segundo con funciones nuevas y el tercero con arreglos.
 
+## [0.9.0] · 20 oct 2026 · Superadmin: acceso por estudio
+
+**Añadido**
+- En la ficha de cada estudio del panel de superadmin, sección **Acceso**:
+  apagar **Galerías** o el **Editor**, poner un **tope de IA al mes** y
+  **pausar el estudio** con un mensaje. Debajo, el registro de cada cambio.
+- Un módulo apagado desaparece del menú y la base de datos lo bloquea; lo
+  que ya tenía el estudio se guarda y vuelve al activarlo.
+- Estudio pausado: su equipo ve la página «Estudio pausado» con el mensaje,
+  sus clientes no pueden abrir las galerías y el formulario de reservas deja
+  de crear tarjetas. No se borra nada.
+- El estudio ve el tope de su plan en Ajustes → Editor; manda el más bajo
+  entre ese tope y su propio límite.
+
 ## [0.8.0] · 20 oct 2026 · Panel de superadmin
 
 **Añadido**

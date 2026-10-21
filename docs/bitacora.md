@@ -18,9 +18,9 @@ Documentos relacionados:
 
 ---
 
-## Estado actual (20 oct 2026 · versión 0.8.0)
+## Estado actual (20 oct 2026 · versión 0.9.0)
 
-Versión publicada: **v0.8.0** (historial de versiones en `CHANGELOG.md`).
+Versión publicada: **v0.9.0** (historial de versiones en `CHANGELOG.md`).
 
 | Módulo | Estado | Dónde |
 | --- | --- | --- |
@@ -33,7 +33,7 @@ Versión publicada: **v0.8.0** (historial de versiones en `CHANGELOG.md`).
 | Entrada de clientes (Make/Typeform) | Hecho y publicado | `apps/api` |
 | Galerías (selección, sustituye a Pixieset) | Publicado (v0.4.0): subir fotos a Cloudflare R2, enviar al cliente, página del cliente con guía de primera visita, confirmar, lista para Lightroom, reabrir. Falta el borrado automático diario | `/galerias`, `/g/<código>` |
 | Editor de imágenes | Publicado (v0.7.0): limpieza de fondos o edición completa (todo menos las caras) en Cloudflare, exigencia 1–3 y elección de modelo, subida, revisión, visor, descarga, correo, ajustes y consumo | `/editor`, `/galerias/<id>/limpieza`, `services/editor` |
-| Superadmin (plataforma) | Fase 1 publicada (v0.8.0): ver todos los estudios en solo lectura. Fase 2 (módulos y topes por estudio) pendiente | `/admin`, `docs/plan-superadmin.md` |
+| Superadmin (plataforma) | Publicado (v0.9.0): ver todos los estudios; apagar Galerías o Editor, tope de IA y pausar cada estudio, con registro de cambios | `/admin`, `docs/plan-superadmin.md` |
 
 Publicado en Vercel (equipo «Upgradix's projects», plan Hobby):
 - **App**: https://uphotox-app.vercel.app (proyecto `uphotox-app`, carpeta `apps/app`).
@@ -128,9 +128,9 @@ Del Editor (por programar):
       límite de gasto al mes.
 
 Del superadmin (detalle en `docs/plan-superadmin.md`):
-- [ ] Fase 2: módulos que se pueden apagar por estudio (Galerías, Editor),
-      tope de IA puesto por la plataforma y suspender un estudio, con
-      registro de cada cambio.
+- [ ] Antes de que entre el estudio nuevo: decidir su acceso en
+      `/admin` (¿Editor sí o no?, ¿tope de IA?). Al crearse, todo viene
+      activado y sin tope.
 - [ ] Fase 3, si hace falta: verificación en dos pasos para la cuenta
       superadmin y «entrar como el estudio».
 
@@ -166,6 +166,57 @@ editar, paquetes y pagos.
 ---
 
 ## Historial
+
+### 20 oct 2026 · Superadmin: fase 2, acceso por estudio · v0.9.0
+**Pedido**: seguir con la fase 2 del panel de superadmin: decidir a qué
+tiene acceso cada estudio.
+
+**Qué se hizo**
+- Base de datos (`20261021022119_platform_access.sql`): en `studios`,
+  `modules` (`galleries`, `editor`; por defecto los dos),
+  `editor_platform_limit` (tope de IA al mes, null = sin tope),
+  `suspended_at` y `suspended_reason`. El estudio las lee pero no puede
+  cambiarlas (sus permisos de edición van columna a columna).
+  `private.has_permission` ahora exige además estudio activo y el módulo
+  del permiso encendido: **todas las reglas de seguridad lo aplican sin
+  tocar ninguna**. Tabla `platform_audit` (solo clave de servicio) y
+  función `platform_set_studio_access`, que cambia el acceso y lo apunta en
+  la misma transacción (un guardado sin cambios no apunta nada).
+- App: catálogo `MODULES`, `moduleOf`, `withModules`, `toModules` y
+  `moduleAvailable` en `lib/permissions.ts`. `getStudioContext()` quita
+  los permisos de módulos apagados (ninguno si está pausado) y
+  `requireStudio()` manda a `/estudio-pausado` (mensaje y «Cerrar
+  sesión»). Menú, páginas (404) y botones se ajustan solos. Equipo oculta
+  los grupos de permisos de módulos apagados sin borrarlos. Ajustes oculta
+  el Editor si está apagado y avisa del tope del plan.
+- Tope: `spendingLimit()` y `limitReachedMessage()` en `lib/editor.ts`
+  (manda el más bajo entre el del estudio y el de la plataforma); lo usan
+  las acciones del Editor y la página de limpieza (`SpendingNotice`).
+- Lo que va con clave de servicio: la galería del cliente y sus acciones
+  muestran «Esta galería no está disponible» (estado `paused`), el enlace
+  «Elegir mis fotos» de los correos desaparece y el webhook de la API
+  responde 403 «El estudio está pausado en Uphotox» (y lo anota).
+- Panel: sección **Acceso** en `/admin/estudios/<id>`
+  (`components/access-form.tsx`, acción `app/admin/actions.ts`) con
+  interruptores de módulos, tope, pausa con mensaje y el registro debajo;
+  aviso de estudio pausado en la ficha y chips en la lista («Pausado»,
+  «Sin Editor», «Tope IA $15.00»).
+
+**Prueba**
+- Base de datos con un estudio temporal, entrando como su dueña y como
+  fotógrafa: con Galerías apagadas no ven ni crean galerías pero sí
+  tableros; pausado no ven nada y el estudio sigue leyendo su ficha; el
+  estudio no puede cambiar su acceso, ni llamar a la función, ni leer el
+  registro.
+- Navegador (Playwright, local): el superadmin apaga Galerías y pone tope
+  $15 → la dueña no tiene Galerías en el menú, `/galerias` da 404, Ajustes
+  muestra el tope y Equipo no muestra el grupo; el enlace del cliente dice
+  «no está disponible». Pausa con mensaje → la dueña solo ve la página de
+  pausa con el mensaje y puede cerrar sesión. Reactivar lo devuelve todo.
+  El registro muestra cada cambio con quién y cuándo.
+- Webhook en local: 403 pausado (con el error anotado), 201 activo.
+- Todo lo temporal borrado. Compilación de app y API con 76 + 8 pruebas en
+  verde; revisor de seguridad de Supabase: solo el aviso de siempre.
 
 ### 20 oct 2026 · Superadmin: fase 1, ver todos los estudios · v0.8.0
 **Pedido**: otro estudio va a empezar a usar Uphotox y el usuario quiere un
