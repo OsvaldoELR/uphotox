@@ -7,6 +7,18 @@ en `docs/bitacora.md`.
 Numeración: el primer número cambia con cambios grandes que rompen la forma de
 trabajar, el segundo con funciones nuevas y el tercero con arreglos.
 
+## [0.8.0] · 20 oct 2026 · Panel de superadmin
+
+**Añadido**
+- **Superadmin** en `/admin`, con una cuenta aparte que no pertenece a
+  ningún estudio: todos los estudios con su equipo, tarjetas, clientes,
+  galerías, almacenamiento, coste de IA del mes y última actividad.
+- **Ficha de cada estudio**: equipo con rol, permisos y último acceso,
+  embudo de cada tablero, últimos movimientos, galerías, consumo del Editor
+  por mes y ajustes. Solo lectura.
+- Para cualquier otra cuenta, `/admin` no existe (404). La seguridad que
+  separa a los estudios no cambia.
+
 ## [0.7.0] · 18 oct 2026 · Editor: edición completa
 
 **Añadido**

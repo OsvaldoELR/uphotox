@@ -13,13 +13,14 @@ Documentos relacionados:
 - `docs/flujo-estudio.md`: cómo trabaja el estudio, análisis del formulario de
   reserva y hoja de ruta de automatización con IA.
 - `docs/plan-editor.md`: plan del módulo Editor (limpieza de fondos con IA).
+- `docs/plan-superadmin.md`: panel de superadmin (fases, cómo dar acceso).
 - `.interface-design/system.md`: estilo visual y patrones de pantalla.
 
 ---
 
-## Estado actual (18 oct 2026 · versión 0.7.0)
+## Estado actual (20 oct 2026 · versión 0.8.0)
 
-Versión publicada: **v0.7.0** (historial de versiones en `CHANGELOG.md`).
+Versión publicada: **v0.8.0** (historial de versiones en `CHANGELOG.md`).
 
 | Módulo | Estado | Dónde |
 | --- | --- | --- |
@@ -32,6 +33,7 @@ Versión publicada: **v0.7.0** (historial de versiones en `CHANGELOG.md`).
 | Entrada de clientes (Make/Typeform) | Hecho y publicado | `apps/api` |
 | Galerías (selección, sustituye a Pixieset) | Publicado (v0.4.0): subir fotos a Cloudflare R2, enviar al cliente, página del cliente con guía de primera visita, confirmar, lista para Lightroom, reabrir. Falta el borrado automático diario | `/galerias`, `/g/<código>` |
 | Editor de imágenes | Publicado (v0.7.0): limpieza de fondos o edición completa (todo menos las caras) en Cloudflare, exigencia 1–3 y elección de modelo, subida, revisión, visor, descarga, correo, ajustes y consumo | `/editor`, `/galerias/<id>/limpieza`, `services/editor` |
+| Superadmin (plataforma) | Fase 1 publicada (v0.8.0): ver todos los estudios en solo lectura. Fase 2 (módulos y topes por estudio) pendiente | `/admin`, `docs/plan-superadmin.md` |
 
 Publicado en Vercel (equipo «Upgradix's projects», plan Hobby):
 - **App**: https://uphotox-app.vercel.app (proyecto `uphotox-app`, carpeta `apps/app`).
@@ -51,6 +53,12 @@ Configuración:
 ## Pendientes
 
 Del usuario:
+- [ ] **Superadmin · poner tu contraseña**: en una ventana de incógnito
+      (con tu cuenta del estudio abierta, esa página te devuelve al panel),
+      abre https://uphotox-app.vercel.app/forgot-password, escribe
+      `osvaldo+admin@upgradixagency.com`, abre el correo (llega a tu buzón de
+      siempre) y elige una contraseña. Desde entonces, entrando con ese
+      correo vas directo a `/admin`.
 - [ ] **Editor · revisar en Cloudflare** (Workers → `uphotox-editor` →
       *Settings* → *Build*): que *Build watch paths* sea `services/editor/*`
       y que *Preview builds* esté apagado, para que los cambios de la app no
@@ -119,6 +127,13 @@ Del Editor (por programar):
       exigencia 3 ronda $1,25 por foto (30 fotos ≈ $38); conviene poner un
       límite de gasto al mes.
 
+Del superadmin (detalle en `docs/plan-superadmin.md`):
+- [ ] Fase 2: módulos que se pueden apagar por estudio (Galerías, Editor),
+      tope de IA puesto por la plataforma y suspender un estudio, con
+      registro de cada cambio.
+- [ ] Fase 3, si hace falta: verificación en dos pasos para la cuenta
+      superadmin y «entrar como el estudio».
+
 Detectado al probar (no es de Galerías):
 - [ ] Si se borra un usuario con la sesión abierta (p. ej. un miembro del
       equipo), su navegador entra en un bucle de redirecciones hasta que caduca
@@ -151,6 +166,52 @@ editar, paquetes y pagos.
 ---
 
 ## Historial
+
+### 20 oct 2026 · Superadmin: fase 1, ver todos los estudios · v0.8.0
+**Pedido**: otro estudio va a empezar a usar Uphotox y el usuario quiere un
+panel de superadmin para ver lo que hace cada estudio y, más adelante,
+decidir a qué tiene acceso, sin romper nada. Se propuso una capa aparte en
+tres fases; el usuario aceptó lo recomendado: cuenta aparte, módulos
+apagables Galerías y Editor (fase 2) y empezar por la fase 1 (solo lectura).
+
+**Qué se hizo**
+- Base de datos (`20261021012454_platform_admins.sql`): tabla
+  `platform_admins` (solo la clave de servicio; sin reglas, invisible desde
+  el navegador) y tres funciones de recuento que solo puede llamar la clave
+  de servicio: `platform_studio_stats(since)` (por estudio: miembros,
+  tableros, tarjetas, clientes, galerías enviadas y elegidas, fotos,
+  almacenamiento en R2, coste de IA desde una fecha y total, última
+  actividad), `platform_stage_counts(target_studio)` y
+  `platform_studio_usage(target_studio, since)` (Editor por mes). En SQL
+  porque la API de datos corta en 1000 filas. **Ninguna regla de seguridad
+  de los estudios se ha tocado.**
+- App: `lib/platform.ts` (`isPlatformAdmin()`, `requirePlatformAdmin()`:
+  comprueba la tabla y devuelve el cliente admin; a los demás, 404).
+  `requireStudio()` y `/onboarding` mandan a `/admin` a un superadmin sin
+  estudio (para los demás no cambia nada). Textos y formatos puros en
+  `lib/platform-format.ts` (tiempo relativo, bytes, meses, plurales y la
+  frase de cada movimiento; probados).
+- Páginas en `app/admin/` (fuera de `(authenticated)`, que exige estudio),
+  con su menú lateral (`components/platform-sidebar.tsx`, «Superadmin» en
+  violeta): `/admin` (totales y tabla de estudios) y
+  `/admin/estudios/<id>` (resumen, equipo con último acceso, embudo de
+  tableros, últimos 40 movimientos, galerías, Editor por mes y ajustes).
+  Solo lectura: no cambia nada de ningún estudio.
+- Cuenta `osvaldo+admin@upgradixagency.com` creada sin estudio y dada de
+  alta en `platform_admins`. Su contraseña de prueba se anuló (y se
+  cerraron sus sesiones): el usuario pone la suya con «¿Olvidaste tu
+  contraseña?».
+- Plan y cómo dar o quitar acceso: `docs/plan-superadmin.md`.
+
+**Prueba**: funciones con datos reales (2 estudios) y, sin clave de
+servicio, «permission denied» en la tabla y en las funciones. En el
+navegador (local, puerto 3005): sin sesión `/admin` lleva al login; con la
+cuenta superadmin, `/`, `/tableros` y `/onboarding` llevan a `/admin`; la
+lista y las dos fichas muestran los datos; un estudio que no existe o un id
+que no es número dan 404. Quitando la fila de `platform_admins`, `/admin`
+y la ficha dan 404 y `/` va al alta normal (la fila se volvió a poner).
+Revisor de seguridad de Supabase: solo el aviso de siempre. Compilación y
+65 pruebas de la app en verde; Biome limpio en los archivos nuevos.
 
 ### 18 oct 2026 · Editor: edición completa, exigencia y modelo · v0.7.0
 **Pedido** (el usuario y su esposa, que prueba el editor): una edición
