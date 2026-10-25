@@ -22,7 +22,7 @@
     "@repo/typescript-config": "*",
     "@types/node": "25.3.5",
     "@types/react": "19.2.14",
-    "@types/react-dom": "19.2.3",
+    "@types/react-dom": "19.3.0",
     "typescript": "^5.9.3"
   }
 }
