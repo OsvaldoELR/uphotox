@@ -140,6 +140,15 @@ Del superadmin (detalle en `docs/plan-superadmin.md`):
       superadmin y «entrar como el estudio».
 
 Detectado al probar (no es de Galerías):
+- [ ] Fechas de la galería desfasadas entre servidor y navegador: Vercel
+      formatea en UTC y el navegador en hora local, así que de 8 de la noche
+      a medianoche (Miami) «Hasta el 24 dic» de la página del cliente y las
+      fechas del bloque «Cliente» de la galería del estudio salen con un día
+      de diferencia y React avisa (error #418, se corrige solo y el cliente ve
+      su fecha local). Arreglo: formatear esas fechas solo en el navegador o
+      con la zona horaria del estudio (`shortDate` en `client-gallery.tsx`,
+      `longDate` en `client-share.tsx`). Visto el 25 oct al probar la v0.10.0;
+      ya pasaba antes.
 - [ ] Si se borra un usuario con la sesión abierta (p. ej. un miembro del
       equipo), su navegador entra en un bucle de redirecciones hasta que caduca
       la sesión (≈1 h): el proxy ve la sesión válida, la página no encuentra el
@@ -217,6 +226,8 @@ portada vertical borra la contraportada horizontal; quitar el corazón a la
 contraportada la borra; al confirmar sale el resumen, la tarjeta pasa a
 «Escogidas» y el estudio ve lo elegido. Capturas en escritorio y móvil, sin
 errores en el navegador.
+Publicado (app y API en READY, etiqueta `v0.10.0`) y la misma prueba completa
+pasó en `https://uphotox-app.vercel.app` (28 de 28; estudio temporal borrado).
 
 **Nota**: el servidor local de pruebas tiene que ir en el puerto 3000; el
 CORS del bucket de R2 solo admite ese puerto en local.
