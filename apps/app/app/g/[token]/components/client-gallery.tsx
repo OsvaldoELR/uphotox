@@ -23,10 +23,23 @@ import {
   useTransition,
 } from "react";
 import { toast } from "sonner";
-import { confirmSelection, setPhotoPicked } from "@/app/actions/client-gallery";
+import {
+  confirmSelection,
+  setPhotoPicked,
+  setProductPhoto,
+} from "@/app/actions/client-gallery";
 import { formatMoney, selectionTotals } from "@/lib/gallery";
+import {
+  type ChoicePhoto,
+  type ChoiceSlot,
+  choiceProblem,
+  choiceSummary,
+  type ProductChoice,
+  productName,
+} from "@/lib/gallery-products";
 import type { ClientGallery, ClientPhoto } from "../data";
 import { PhotoViewer } from "./photo-viewer";
+import { choiceRules, ProductPicker } from "./product-picker";
 
 const OFFLINE = "No se pudo guardar. Revisa tu conexión e inténtalo de nuevo.";
 const NAME_SPLIT = /\s+/;
@@ -75,11 +88,14 @@ const counterLine = (
 };
 
 const PhotoGrid = ({
+  badges,
   onOpen,
   onToggle,
   photos,
   picked,
 }: {
+  /** «Portada», «Contraportada», «Canvas» on the photos chosen for them. */
+  readonly badges: ReadonlyMap<number, string>;
   readonly onOpen: (index: number) => void;
   readonly onToggle?: (photoId: number) => void;
   readonly photos: readonly ClientPhoto[];
@@ -122,6 +138,11 @@ const PhotoGrid = ({
               width={photo.width}
             />
           </button>
+          {badges.has(photo.id) ? (
+            <span className="pointer-events-none absolute top-1.5 left-1.5 bg-signal px-1.5 py-0.5 font-bold font-mono text-[9px] text-primary-foreground uppercase tracking-[0.14em]">
+              {badges.get(photo.id)}
+            </span>
+          ) : null}
           {onToggle ? (
             <button
               aria-label={
@@ -156,6 +177,7 @@ const ConfirmDialog = ({
   onClose,
   open,
   picked,
+  productLines,
   token,
   whatsapp,
 }: {
@@ -164,6 +186,8 @@ const ConfirmDialog = ({
   readonly onClose: () => void;
   readonly open: boolean;
   readonly picked: number;
+  /** One line per book/canvas with the photos chosen for it. */
+  readonly productLines: readonly string[];
   readonly token: string;
   readonly whatsapp: boolean;
 }) => {
@@ -208,6 +232,13 @@ const ConfirmDialog = ({
             Elegiste {plural(picked, "foto", "fotos")}. {summary}
           </DialogDescription>
         </DialogHeader>
+        {productLines.length > 0 ? (
+          <ul className="grid gap-1 border-signal-ink/40 border-l-2 pl-3 text-sm">
+            {productLines.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        ) : null}
         <div className="grid gap-2">
           <Label htmlFor="client-note">
             ¿Algo que debamos saber? (opcional)
@@ -296,6 +327,103 @@ const usePicks = (token: string, photos: readonly ClientPhoto[]) => {
   );
 
   return { picked, toggle };
+};
+
+/**
+ * Covers and canvas photo, saved at once like the hearts (and put back with
+ * a message if the server refuses). A new front cover drops a back cover
+ * that no longer fits, as the server does.
+ */
+const useProductChoices = (
+  token: string,
+  products: readonly ProductChoice[]
+) => {
+  const [choices, setChoices] = useState(products);
+
+  useEffect(() => {
+    setChoices(products);
+  }, [products]);
+
+  const choose = useCallback(
+    (
+      productId: number,
+      slot: ChoiceSlot,
+      photoId: number | null,
+      rules: ReadonlyMap<number, ChoicePhoto>
+    ) => {
+      const previous = choices;
+      const apply = (product: ProductChoice): ProductChoice => {
+        if (slot === "back") {
+          return { ...product, backPhotoId: photoId };
+        }
+
+        const next = { ...product, photoId };
+        const backFits =
+          next.backPhotoId === null ||
+          photoId === null ||
+          choiceProblem({
+            photoId: next.backPhotoId,
+            photos: rules,
+            product: next,
+            slot: "back",
+          }) === null;
+
+        return backFits ? next : { ...next, backPhotoId: null };
+      };
+
+      setChoices((current) =>
+        current.map((product) =>
+          product.id === productId ? apply(product) : product
+        )
+      );
+      setProductPhoto(token, productId, slot, photoId)
+        .then((result) => {
+          if ("error" in result) {
+            setChoices(previous);
+            toast.error(result.error);
+          }
+        })
+        .catch(() => {
+          setChoices(previous);
+          toast.error(OFFLINE);
+        });
+    },
+    [token, choices]
+  );
+
+  // A photo taken out of the favourites stops being a cover (the server
+  // clears it too).
+  const forgetPhoto = useCallback((photoId: number) => {
+    setChoices((current) =>
+      current.map((product) => ({
+        ...product,
+        photoId: product.photoId === photoId ? null : product.photoId,
+        backPhotoId:
+          product.backPhotoId === photoId ? null : product.backPhotoId,
+      }))
+    );
+  }, []);
+
+  return { choices, choose, forgetPhoto };
+};
+
+/** «Portada», «Contraportada», «Canvas» for the photos chosen for them. */
+const choiceBadges = (choices: readonly ProductChoice[]) => {
+  const badges = new Map<number, string[]>();
+  const add = (photoId: number | null, label: string) => {
+    if (photoId !== null) {
+      badges.set(photoId, [...(badges.get(photoId) ?? []), label]);
+    }
+  };
+
+  for (const product of choices) {
+    add(product.photoId, product.kind === "book" ? "Portada" : "Canvas");
+    add(product.backPhotoId, "Contraportada");
+  }
+
+  return new Map(
+    [...badges].map(([photoId, labels]) => [photoId, labels.join(" · ")])
+  );
 };
 
 interface TourInput {
@@ -387,6 +515,14 @@ const GalleryHeader = ({
               Extra · {formatMoney(gallery.extraPrice)} c/u
             </li>
           )}
+          {gallery.products.map((product) => (
+            <li
+              className={cn(chip, "border-signal-ink/40 text-signal-ink")}
+              key={product.id}
+            >
+              {productName(product)}
+            </li>
+          ))}
           {gallery.expiresAt ? (
             <li className={cn(chip, "text-muted-foreground")}>
               Hasta el {shortDate.format(new Date(gallery.expiresAt))}
@@ -445,12 +581,14 @@ const SubmittedNotice = ({
   firstName,
   hasExtras,
   picked,
+  productLines,
   whatsappUrl,
 }: {
   readonly extrasText: string;
   readonly firstName: string;
   readonly hasExtras: boolean;
   readonly picked: number;
+  readonly productLines: readonly string[];
   readonly whatsappUrl: string | null;
 }) => (
   <section className="mx-2.5 mb-6 grid gap-3 border border-signal-ink/30 bg-card p-5 md:mx-0">
@@ -462,6 +600,13 @@ const SubmittedNotice = ({
       {hasExtras ? ` (${extrasText}; las extras las coordinamos contigo)` : ""}.
       Ya estamos trabajando en ellas.
     </p>
+    {productLines.length > 0 ? (
+      <ul className="grid gap-1 border-signal-ink/40 border-l-2 pl-3 text-sm">
+        {productLines.map((line) => (
+          <li key={line}>{line}</li>
+        ))}
+      </ul>
+    ) : null}
     {whatsappUrl ? (
       <Button asChild className="justify-self-start" variant="outline">
         <a href={whatsappUrl} rel="noopener" target="_blank">
@@ -475,12 +620,15 @@ const SubmittedNotice = ({
 const SelectionBar = ({
   extras,
   extrasText,
+  hasProducts,
   includedCount,
   onConfirm,
   picked,
 }: {
   readonly extras: number;
   readonly extrasText: string;
+  /** Book or canvas to decide next: the button leads there first. */
+  readonly hasProducts: boolean;
   readonly includedCount: number | null;
   readonly onConfirm: () => void;
   readonly picked: number;
@@ -526,8 +674,14 @@ const SelectionBar = ({
           onClick={onConfirm}
           size="lg"
         >
-          <span className="sm:hidden">Confirmar</span>
-          <span className="hidden sm:inline">Confirmar selección</span>
+          {hasProducts ? (
+            "Continuar"
+          ) : (
+            <>
+              <span className="sm:hidden">Confirmar</span>
+              <span className="hidden sm:inline">Confirmar selección</span>
+            </>
+          )}
         </Button>
       </div>
     </div>
@@ -541,9 +695,13 @@ export const ClientGalleryView = ({
 }) => {
   const readOnly = gallery.state === "submitted";
   const { picked, toggle } = usePicks(gallery.token, gallery.photos);
+  const { choices, choose, forgetPhoto } = useProductChoices(
+    gallery.token,
+    gallery.products
+  );
   const [filter, setFilter] = useState<Filter>("all");
   const [viewer, setViewer] = useState<Viewer | null>(null);
-  const [confirming, setConfirming] = useState(false);
+  const [step, setStep] = useState<"products" | "confirm" | null>(null);
   const firstName = gallery.clientName.trim().split(NAME_SPLIT)[0] ?? "";
   const tourInput = useMemo(
     () => ({
@@ -567,6 +725,15 @@ export const ClientGalleryView = ({
     extraPrice: gallery.extraPrice,
   });
   const extrasText = `${plural(totals.extras, "extra", "extras")} · ${formatMoney(totals.extraTotal)}`;
+  const rules = choiceRules(favorites);
+  const productLines = choices.map((product) => choiceSummary(product, rules));
+  const badges = choiceBadges(choices);
+  const toggleFavorite = (photoId: number) => {
+    if (picked.has(photoId)) {
+      forgetPhoto(photoId);
+    }
+    toggle(photoId);
+  };
 
   return (
     <div className="min-h-dvh bg-background">
@@ -592,6 +759,7 @@ export const ClientGalleryView = ({
             firstName={firstName}
             hasExtras={totals.extras > 0}
             picked={picked.size}
+            productLines={productLines}
             whatsappUrl={gallery.whatsappUrl}
           />
         ) : (
@@ -605,8 +773,9 @@ export const ClientGalleryView = ({
 
         {visible.length > 0 ? (
           <PhotoGrid
+            badges={badges}
             onOpen={(index) => setViewer({ index, photos: visible })}
-            onToggle={readOnly ? undefined : toggle}
+            onToggle={readOnly ? undefined : toggleFavorite}
             photos={visible}
             picked={picked}
           />
@@ -622,19 +791,35 @@ export const ClientGalleryView = ({
           <SelectionBar
             extras={totals.extras}
             extrasText={extrasText}
+            hasProducts={choices.length > 0}
             includedCount={gallery.includedCount}
-            onConfirm={() => setConfirming(true)}
+            onConfirm={() =>
+              setStep(choices.length > 0 ? "products" : "confirm")
+            }
             picked={picked.size}
           />
+          {choices.length > 0 ? (
+            <ProductPicker
+              favorites={favorites}
+              onChoose={(productId, slot, photoId) =>
+                choose(productId, slot, photoId, rules)
+              }
+              onClose={() => setStep(null)}
+              onContinue={() => setStep("confirm")}
+              open={step === "products"}
+              products={choices}
+            />
+          ) : null}
           <ConfirmDialog
             extras={{
               count: totals.extras,
               total: formatMoney(totals.extraTotal),
             }}
             includedCount={gallery.includedCount}
-            onClose={() => setConfirming(false)}
-            open={confirming}
+            onClose={() => setStep(null)}
+            open={step === "confirm"}
             picked={picked.size}
+            productLines={productLines}
             token={gallery.token}
             whatsapp={Boolean(gallery.whatsappUrl)}
           />
@@ -648,7 +833,7 @@ export const ClientGalleryView = ({
           onIndexChange={(index) =>
             setViewer((current) => (current ? { ...current, index } : null))
           }
-          onToggle={readOnly ? undefined : toggle}
+          onToggle={readOnly ? undefined : toggleFavorite}
           photos={viewer.photos}
           picked={picked}
         />

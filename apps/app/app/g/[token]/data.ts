@@ -11,6 +11,7 @@ import {
   galleryState,
   MAX_GALLERY_PHOTOS,
 } from "@/lib/gallery";
+import type { ProductChoice, ProductKind } from "@/lib/gallery-products";
 import { moduleAvailable } from "@/lib/permissions";
 import { whatsappUrl } from "@/lib/whatsapp";
 
@@ -34,6 +35,8 @@ export interface ClientGallery {
   readonly extraPrice: number;
   readonly includedCount: number | null;
   readonly photos: ClientPhoto[];
+  /** Book and canvas of the package, with the client's choices. */
+  readonly products: ProductChoice[];
   /**
    * "purged": the photos were removed after the retention period. "paused":
    * the studio has no Galleries now (switched off or paused by Uphotox).
@@ -82,6 +85,7 @@ export const loadClientGallery = cache(
     const clientName = gallery.card.client?.full_name ?? "";
     const studioName = gallery.studio.name;
     let photos: ClientPhoto[] = [];
+    let products: ProductChoice[] = [];
 
     if ((state === "open" || state === "submitted") && isStorageConfigured()) {
       const { data: rows } = await admin
@@ -103,6 +107,21 @@ export const loadClientGallery = cache(
       const urls = await signedGetUrls(
         keys.flatMap((key) => [key.thumbnail, key.preview])
       );
+
+      const { data: productRows } = await admin
+        .from("gallery_products")
+        .select("id, kind, size_short, size_long, photo_id, back_photo_id")
+        .eq("gallery_id", gallery.id)
+        .order("id");
+
+      products = (productRows ?? []).map((row) => ({
+        id: row.id,
+        kind: row.kind as ProductKind,
+        short: row.size_short,
+        long: row.size_long,
+        photoId: row.photo_id,
+        backPhotoId: row.back_photo_id,
+      }));
 
       photos = sorted.map((row, index) => ({
         id: row.id,
@@ -126,6 +145,7 @@ export const loadClientGallery = cache(
       expiresAt: gallery.expires_at,
       submittedAt: gallery.submitted_at,
       photos,
+      products,
       whatsappUrl: gallery.studio.whatsapp
         ? whatsappUrl(
             gallery.studio.whatsapp,

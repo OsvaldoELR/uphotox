@@ -51,7 +51,7 @@ está comprobado todavía.
 | 1 Solicitud | Typeform → Make → webhook de Uphotox: crea cliente y tarjeta con todas las respuestas en las notas (Ajustes → Entrada de clientes). No envía correo al cliente. |
 | 2 Agenda | Fecha de sesión en la tarjeta (sin Google Calendar todavía). Los clientes que ya estaban agendados antes de Uphotox se cargan con **Clientes → Importar CSV** directamente en «Agendado». |
 | 3 Preparación | Correo de etapa al cliente; botón de WhatsApp del estudio en cada correo. |
-| 6–9 | **Galerías** (sin publicar): se suben los JPG de Lightroom a la tarjeta, «Enviar al cliente» le manda el enlace, el cliente elige con corazones (guía la primera vez, extras a $20) y confirma; la tarjeta pasa sola a «Escogidas», llega aviso al estudio y «Copiar para Lightroom» da la lista de nombres para filtrar. |
+| 6–9 | **Galerías** (sin publicar): se suben los JPG de Lightroom a la tarjeta, «Enviar al cliente» le manda el enlace, el cliente elige con corazones (guía la primera vez, extras a $20) y confirma; la tarjeta pasa sola a «Escogidas», llega aviso al estudio y «Copiar para Lightroom» da la lista de nombres para filtrar. Si el paquete trae **libro** (6×6, 8×8, 8×11…) o **canvas**, antes de confirmar el cliente elige entre sus favoritas la portada y la contraportada (en libros rectangulares, la portada decide si sale vertical u horizontal y la contraportada debe coincidir) y la foto del canvas; el estudio lo ve en la galería y en el aviso. |
 | 4–13 | Etapas del tablero «Sesiones» con aviso al cliente en cada una; responsable por tarjeta; foto de la tarjeta (miniatura); álbum de Google Fotos en «Álbum de entrega». |
 
 **Recomendación de etapas.** La tarjeta llega del Typeform *antes* de

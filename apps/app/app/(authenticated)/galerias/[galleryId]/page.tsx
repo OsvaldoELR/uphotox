@@ -11,6 +11,7 @@ import {
   packageCountFromNotes,
 } from "@/lib/gallery";
 import { clientGalleryUrl } from "@/lib/gallery-notify";
+import { type ProductKind, productsFromNotes } from "@/lib/gallery-products";
 import { requireStudio } from "@/lib/studio";
 import { clientWhatsappDigits, whatsappUrl } from "@/lib/whatsapp";
 import { Header } from "../../components/header";
@@ -40,20 +41,26 @@ const GalleryPage = async ({ params }: GalleryPageProperties) => {
   }
 
   const supabase = await createClient();
-  const [{ data: gallery }, { data: rows }] = await Promise.all([
-    supabase
-      .from("galleries")
-      .select(
-        "id, studio_id, token, status, included_count, extra_price, expires_at, submitted_at, client_note, purged_at, card:cards!galleries_card_id_studio_id_fkey(id, title, board_id, notes, client:clients(full_name, email, phone))"
-      )
-      .eq("id", galleryId)
-      .maybeSingle(),
-    supabase
-      .from("gallery_photos")
-      .select("id, file_name, uploaded_at, picked_at")
-      .eq("gallery_id", galleryId)
-      .limit(MAX_GALLERY_PHOTOS),
-  ]);
+  const [{ data: gallery }, { data: rows }, { data: productRows }] =
+    await Promise.all([
+      supabase
+        .from("galleries")
+        .select(
+          "id, studio_id, token, status, included_count, extra_price, expires_at, submitted_at, client_note, purged_at, card:cards!galleries_card_id_studio_id_fkey(id, title, board_id, notes, client:clients(full_name, email, phone))"
+        )
+        .eq("id", galleryId)
+        .maybeSingle(),
+      supabase
+        .from("gallery_photos")
+        .select("id, file_name, width, height, uploaded_at, picked_at")
+        .eq("gallery_id", galleryId)
+        .limit(MAX_GALLERY_PHOTOS),
+      supabase
+        .from("gallery_products")
+        .select("id, kind, size_short, size_long, photo_id, back_photo_id")
+        .eq("gallery_id", galleryId)
+        .order("id"),
+    ]);
 
   // RLS hides galleries of other studios and of cards the member can't see.
   if (!gallery?.card) {
@@ -88,6 +95,19 @@ const GalleryPage = async ({ params }: GalleryPageProperties) => {
   const firstName = client?.full_name.trim().split(" ")[0] ?? "";
   const clientUrl = clientGalleryUrl(gallery.token);
   const clientDigits = clientWhatsappDigits(client?.phone);
+  const products = (productRows ?? []).map((row) => ({
+    id: row.id,
+    kind: row.kind as ProductKind,
+    short: row.size_short,
+    long: row.size_long,
+    photoId: row.photo_id,
+    backPhotoId: row.back_photo_id,
+  }));
+  const productKeys = new Set(
+    products.map(
+      (product) => `${product.kind}:${product.short}x${product.long}`
+    )
+  );
   const thumbnails = new Map(
     uploaded.map((photo, index) => [photo.id, thumbnailUrls[index] ?? null])
   );
@@ -128,10 +148,17 @@ const GalleryPage = async ({ params }: GalleryPageProperties) => {
         photos={photos.map((photo) => ({
           id: photo.id,
           fileName: photo.file_name,
+          width: photo.width,
+          height: photo.height,
           uploaded: Boolean(photo.uploaded_at),
           picked: Boolean(photo.picked_at),
           thumbnailUrl: thumbnails.get(photo.id) ?? null,
         }))}
+        productSuggestions={productsFromNotes(gallery.card.notes).filter(
+          (product) =>
+            !productKeys.has(`${product.kind}:${product.short}x${product.long}`)
+        )}
+        products={products}
         share={{
           client: {
             email: client?.email ?? null,

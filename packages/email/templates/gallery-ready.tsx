@@ -16,6 +16,8 @@ interface GalleryReadyTemplateProps {
   readonly extraPrice: string;
   /** Photos in the package; null = no limit. */
   readonly includedCount: number | null;
+  /** Book/canvas the client will decide, as one sentence; omitted if none. */
+  readonly products?: string | null;
   readonly selectionUrl: string;
   readonly sessionTitle: string;
   readonly studioName: string;
@@ -28,6 +30,7 @@ export const GalleryReadyTemplate = ({
   deadline,
   extraPrice,
   includedCount,
+  products,
   selectionUrl,
   sessionTitle,
   studioName,
@@ -52,6 +55,9 @@ export const GalleryReadyTemplate = ({
           ? "Elige todas las que quieras."
           : `Tu paquete incluye ${includedCount} ${includedCount === 1 ? "foto" : "fotos"}. Si quieres más, cada foto extra cuesta ${extraPrice}.`}
       </Text>
+      {products ? (
+        <Text className="m-0 mt-2 text-[15px] leading-relaxed">{products}</Text>
+      ) : null}
       <Text
         className="m-0 mt-2 text-[12px] uppercase"
         style={{
@@ -92,7 +98,9 @@ GalleryReadyTemplate.PreviewProps = {
   clientName: "Ana García",
   deadline: "12 de diciembre",
   extraPrice: "$20",
-  includedCount: 12,
+  includedCount: 24,
+  products:
+    "Tu paquete incluye un libro 8×11 y un canvas 16×20: al terminar de elegir tus favoritas escogerás entre ellas la portada y la contraportada del libro y la foto del canvas. La portada decide si el libro sale vertical u horizontal.",
   selectionUrl: "http://localhost:3000/g/ejemplo",
   sessionTitle: "Mateo · Smash Cake",
   studioName: "Estudio Luz",

@@ -153,6 +153,22 @@ Patrones de la app:
   borde, radio 6px, título mono 13px mayúsculas, texto sans 15px muted, progreso «2 de 8»
   mono 10px, «Siguiente» en signal y «Atrás» con borde; capa `#0b1220` al 62 %, recorte
   con radio 6px. Sin animaciones propias.
+- **Libro y canvas del cliente** (paso «Tu libro y tu canvas», entre las favoritas y
+  confirmar): diálogo a pantalla completa en el móvil (`h-dvh`, sin radio) y `sm:max-w-3xl`
+  `90dvh` en escritorio; cabecera con borde y la frase de `productsIntro`; cada producto en
+  `border bg-card p-4` con título mono bold, chip signal-ink «Horizontal · 11×8», maqueta
+  (portada y contraportada con la proporción real, `object-cover`, sombra suave, recuadro
+  discontinuo si falta) y miniaturas de las favoritas en filas justificadas (`--row`
+  4.5rem / 6rem); la elegida con anillo signal y etiqueta signal «✓ Portada»; las que no
+  valen, `opacity-30 grayscale` y deshabilitadas con el motivo en `title`. Pie fijo: en el
+  móvil el mensaje («Falta elegir…» en flare o «¡Listo!») va en su línea y los botones
+  debajo. En la cuadrícula principal, etiqueta signal arriba a la izquierda en las fotos
+  elegidas como portada, contraportada o canvas.
+- **Libro y canvas en la galería del estudio**: en «02 Paquete», lista de productos en filas
+  `border bg-card` con quitar (×), botón outline «Añadir lo de la oferta: …» si las notas
+  traen más, y alta con dos pestañas (Libro / Canvas) + medida («8x11»). Sección numerada
+  «Libro y canvas» con una tarjeta por producto (resumen + miniaturas cuadradas
+  `object-contain` de portada/contraportada) y «Copiar portadas y canvas».
 
 ## Movimiento
 

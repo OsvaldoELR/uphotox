@@ -7,6 +7,29 @@ en `docs/bitacora.md`.
 Numeración: el primer número cambia con cambios grandes que rompen la forma de
 trabajar, el segundo con funciones nuevas y el tercero con arreglos.
 
+## [0.10.0] · 25 oct 2026 · Libros y canvas en la galería
+
+**Añadido**
+- Si el paquete incluye **libro** o **canvas**, el cliente los decide en la
+  galería antes de confirmar: entre sus favoritas elige la portada y la
+  contraportada de cada libro y la foto de cada canvas.
+  - Paso «Tu libro y tu canvas» con una maqueta de la forma real. En los
+    libros rectangulares la portada decide la orientación (una horizontal
+    convierte el 8×11 en 11×8) y la contraportada tiene que coincidir; los
+    cuadrados (6×6, 8×8) admiten cualquier foto.
+  - Se guarda al tocar, y no deja confirmar hasta tenerlo todo. Si quita el
+    corazón a una portada, hay que volver a elegirla.
+  - En la página, etiquetas «Portada», «Contraportada» y «Canvas» sobre esas
+    fotos, y el resumen al confirmar.
+- Uphotox lee el libro y el canvas de la oferta de la tarjeta al crear la
+  galería («libro 8x11 y una de ellas en un canva 16x20»). En «Paquete» se
+  pueden quitar o añadir, y en galerías anteriores hay un botón «Añadir lo de
+  la oferta».
+- El estudio ve lo elegido en la galería (con las miniaturas, la medida final
+  y «Copiar portadas y canvas») y en el correo de «Selección recibida». El
+  correo «Tus fotos están listas» avisa al cliente de lo que tendrá que
+  elegir.
+
 ## [0.9.0] · 20 oct 2026 · Superadmin: acceso por estudio
 
 **Añadido**

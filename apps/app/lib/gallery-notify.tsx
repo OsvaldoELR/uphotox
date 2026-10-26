@@ -8,7 +8,19 @@ import { log } from "@repo/observability/log";
 import { env } from "@/env";
 import { defaultStageMessage } from "./board-templates";
 import { isEmailEnabled, type SendEmailResult, sendEmail } from "./email";
-import { formatMoney, galleryState, selectionTotals } from "./gallery";
+import {
+  baseName,
+  formatMoney,
+  galleryState,
+  selectionTotals,
+} from "./gallery";
+import {
+  type ChoicePhoto,
+  choiceSummary,
+  type ProductChoice,
+  type ProductKind,
+  productsIntro,
+} from "./gallery-products";
 import { moduleAvailable } from "./permissions";
 import { whatsappUrl } from "./whatsapp";
 
@@ -83,6 +95,62 @@ export const openGalleryUrlForCard = async (cardId: number) => {
     : null;
 };
 
+/** Book and canvas of a gallery, with the client's choices. */
+const loadProducts = async (
+  admin: AdminClient,
+  galleryId: number
+): Promise<ProductChoice[]> => {
+  const { data } = await admin
+    .from("gallery_products")
+    .select("id, kind, size_short, size_long, photo_id, back_photo_id")
+    .eq("gallery_id", galleryId)
+    .order("id");
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    kind: row.kind as ProductKind,
+    short: row.size_short,
+    long: row.size_long,
+    photoId: row.photo_id,
+    backPhotoId: row.back_photo_id,
+  }));
+};
+
+/** «Libro 11×8 horizontal · portada IMG_1234 · …», one line per product. */
+const productLines = async (admin: AdminClient, galleryId: number) => {
+  const products = await loadProducts(admin, galleryId);
+  const ids = products.flatMap((product) =>
+    [product.photoId, product.backPhotoId].filter(
+      (value): value is number => value !== null
+    )
+  );
+
+  if (products.length === 0) {
+    return [];
+  }
+
+  const { data } = ids.length
+    ? await admin
+        .from("gallery_photos")
+        .select("id, file_name, width, height, picked_at")
+        .eq("gallery_id", galleryId)
+        .in("id", ids)
+    : { data: [] };
+  const photos = new Map<number, ChoicePhoto>(
+    (data ?? []).map((photo) => [
+      photo.id,
+      {
+        name: baseName(photo.file_name),
+        width: photo.width ?? 3,
+        height: photo.height ?? 2,
+        picked: Boolean(photo.picked_at),
+      },
+    ])
+  );
+
+  return products.map((product) => choiceSummary(product, photos));
+};
+
 /** «Tus fotos están listas»: sent when the studio sends the gallery. */
 export const emailGalleryReady = async (galleryId: number, sendId: string) => {
   if (!isEmailEnabled()) {
@@ -116,6 +184,7 @@ const sendGalleryReady = async (galleryId: number, sendId: string) => {
   }
 
   const studioName = gallery.studio.name;
+  const products = productsIntro(await loadProducts(admin, gallery.id));
   const result = await sendEmail({
     fromName: studioName,
     to: client.email,
@@ -132,6 +201,7 @@ const sendGalleryReady = async (galleryId: number, sendId: string) => {
         }
         extraPrice={formatMoney(gallery.extra_price)}
         includedCount={gallery.included_count}
+        products={products}
         selectionUrl={clientGalleryUrl(gallery.token)}
         sessionTitle={gallery.card.title}
         studioName={studioName}
@@ -176,7 +246,7 @@ const loadSubmitted = async (
     return null;
   }
 
-  const [{ count: picked }, stage, assignee] = await Promise.all([
+  const [{ count: picked }, stage, assignee, products] = await Promise.all([
     admin
       .from("gallery_photos")
       .select("id", { count: "exact", head: true })
@@ -196,6 +266,7 @@ const loadSubmitted = async (
           .eq("id", gallery.card.assigned_to)
           .single()
       : Promise.resolve({ data: null }),
+    productLines(admin, galleryId),
   ]);
 
   // Owner and assignee, once each.
@@ -210,6 +281,7 @@ const loadSubmitted = async (
   return {
     gallery: { ...gallery, studio: gallery.studio, card: gallery.card },
     picked: picked ?? 0,
+    products,
     stage: stage.data,
     team,
   };
@@ -233,7 +305,7 @@ export const notifyGallerySubmitted = async (input: SubmittedInput) => {
       return;
     }
 
-    const { gallery, picked, stage, team } = loaded;
+    const { gallery, picked, products, stage, team } = loaded;
     const studioName = gallery.studio.name;
     const client = gallery.card.client;
     const clientName = client?.full_name ?? "El cliente";
@@ -297,6 +369,7 @@ export const notifyGallerySubmitted = async (input: SubmittedInput) => {
             galleryUrl={`${env.NEXT_PUBLIC_APP_URL}/galerias/${gallery.id}`}
             includedCount={gallery.included_count}
             picked={totals.picked}
+            products={products}
             stageName={stage?.name}
             studioName={studioName}
           />

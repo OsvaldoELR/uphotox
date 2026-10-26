@@ -18,9 +18,9 @@ Documentos relacionados:
 
 ---
 
-## Estado actual (20 oct 2026 · versión 0.9.0)
+## Estado actual (25 oct 2026 · versión 0.10.0)
 
-Versión publicada: **v0.9.0** (historial de versiones en `CHANGELOG.md`).
+Versión publicada: **v0.10.0** (historial de versiones en `CHANGELOG.md`).
 
 | Módulo | Estado | Dónde |
 | --- | --- | --- |
@@ -31,7 +31,7 @@ Versión publicada: **v0.9.0** (historial de versiones en `CHANGELOG.md`).
 | Equipo | Hecho: usuarios con rol y permisos tipo GoHighLevel | `/equipo` |
 | Ajustes | Hecho: nombre, WhatsApp, entrada de clientes (webhook) | `/ajustes` |
 | Entrada de clientes (Make/Typeform) | Hecho y publicado | `apps/api` |
-| Galerías (selección, sustituye a Pixieset) | Publicado (v0.4.0): subir fotos a Cloudflare R2, enviar al cliente, página del cliente con guía de primera visita, confirmar, lista para Lightroom, reabrir. Falta el borrado automático diario | `/galerias`, `/g/<código>` |
+| Galerías (selección, sustituye a Pixieset) | Publicado (v0.4.0): subir fotos a Cloudflare R2, enviar al cliente, página del cliente con guía de primera visita, confirmar, lista para Lightroom, reabrir. v0.10.0: el cliente elige portada y contraportada del libro y la foto del canvas. Falta el borrado automático diario | `/galerias`, `/g/<código>` |
 | Editor de imágenes | Publicado (v0.7.0): limpieza de fondos o edición completa (todo menos las caras) en Cloudflare, exigencia 1–3 y elección de modelo, subida, revisión, visor, descarga, correo, ajustes y consumo | `/editor`, `/galerias/<id>/limpieza`, `services/editor` |
 | Superadmin (plataforma) | Publicado (v0.9.0): ver todos los estudios; apagar Galerías o Editor, tope de IA y pausar cada estudio, con registro de cambios | `/admin`, `docs/plan-superadmin.md` |
 
@@ -53,6 +53,11 @@ Configuración:
 ## Pendientes
 
 Del usuario:
+- [ ] **Libros y canvas · probar la v0.10.0** con una galería de un paquete
+      con libro 8×11 (y canvas si lo tiene): mirar en «Paquete» que salgan
+      leídos de la oferta, enviarla y elegir como cliente desde el móvil. En
+      galerías creadas antes, pulsar «Añadir lo de la oferta» (o añadirlos a
+      mano) antes de enviarlas.
 - [ ] **Superadmin · poner tu contraseña**: en una ventana de incógnito
       (con tu cuenta del estudio abierta, esa página te devuelve al panel),
       abre https://uphotox-app.vercel.app/forgot-password, escribe
@@ -166,6 +171,55 @@ editar, paquetes y pagos.
 ---
 
 ## Historial
+
+### 25 oct 2026 · v0.10.0 · Libros y canvas: el cliente elige portadas en la galería
+**Qué pidió el usuario**: algunos paquetes incluyen libros de distintas
+medidas; los padres deben elegir portada y contraportada entre sus favoritas,
+y si la portada es horizontal el 8×11 sale 11×8 (las cuadradas, sin
+problema). Las ofertas con canvas traen también un libro 8×11. Decidido con
+él: la contraportada **debe coincidir** en orientación con la portada; la
+portada también va dentro del libro (es una de las favoritas); el canvas lo
+elige el cliente solo si su oferta lo incluye y entre sus elegidas; todo se
+elige al escoger las favoritas.
+
+**Qué se hizo**
+- Tabla `gallery_products` (migración `20261026005704_gallery_products`):
+  libro o canvas de cada galería, medida en pulgadas como se vende (lado
+  corto primero) y lo elegido (`photo_id` = portada o foto del canvas,
+  `back_photo_id` = contraportada), con claves compuestas a las fotos de la
+  misma galería. RLS como `gallery_photos`; el estudio añade y quita, pero
+  solo la página del cliente (service role) escribe lo elegido. Un
+  disparador borra la elección si el cliente quita el corazón a esa foto, y
+  `submit_gallery_selection` no confirma (código `23514`) si falta algo o
+  la contraportada no coincide.
+- Reglas puras en `apps/app/lib/gallery-products.ts` (leer productos de las
+  notas, medida final según la orientación, qué foto vale para cada hueco,
+  qué falta, resúmenes y la frase para el cliente), con pruebas.
+- Página del cliente: chips «Libro 8×11» / «Canvas 16×20» en el paquete; el
+  botón de abajo pasa a «Continuar» y abre «Tu libro y tu canvas»
+  (`product-picker.tsx`): maqueta con la forma real, portada, contraportada
+  (las que no valen salen grises) y foto del canvas; se guarda al tocar.
+  Etiquetas sobre las fotos elegidas y resumen al confirmar y después.
+- Galería del estudio: en «02 Paquete» la lista de productos (quitar, añadir
+  libro/canvas con medida, «Añadir lo de la oferta»), y la sección «Libro y
+  canvas» con miniaturas, medida final y «Copiar portadas y canvas».
+- Correos: «Tus fotos están listas» explica lo que tendrá que elegir;
+  «Selección recibida» trae una línea por producto.
+
+**Comprobado**: Biome, tipos y pruebas (13 nuevas: reglas y correos). Prueba
+completa en el navegador con un estudio temporal (ya borrado, galería
+eliminada desde la app para vaciar R2): crear la galería desde la tarjeta lee
+«libro 8x11» y «canva 16x20»; se suben 5 fotos (3 horizontales y 2
+verticales); el cliente elige 4, la base de datos no deja confirmar sin
+portadas, portada horizontal → «Horizontal · 11×8», las verticales y la
+propia portada no valen como contraportada, canvas vertical → «16×20»; una
+portada vertical borra la contraportada horizontal; quitar el corazón a la
+contraportada la borra; al confirmar sale el resumen, la tarjeta pasa a
+«Escogidas» y el estudio ve lo elegido. Capturas en escritorio y móvil, sin
+errores en el navegador.
+
+**Nota**: el servidor local de pruebas tiene que ir en el puerto 3000; el
+CORS del bucket de R2 solo admite ese puerto en local.
 
 ### 20 oct 2026 · Superadmin: fase 2, acceso por estudio · v0.9.0
 **Pedido**: seguir con la fase 2 del panel de superadmin: decidir a qué

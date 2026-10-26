@@ -19,6 +19,12 @@ import {
   packageCountFromNotes,
 } from "@/lib/gallery";
 import { emailGalleryReady } from "@/lib/gallery-notify";
+import {
+  MAX_GALLERY_PRODUCTS,
+  type ProductSpec,
+  parseProductSize,
+  productsFromNotes,
+} from "@/lib/gallery-products";
 import { scheduleStorageCleanup } from "@/lib/storage-cleanup";
 import { requireStudio, type StudioContext } from "@/lib/studio";
 import type { ActionResult } from "./boards";
@@ -152,6 +158,14 @@ export const createGallery = async (
       : { error: "No se pudo crear la galería." };
   }
 
+  // Book and canvas named in the offer: the client will pick their photos.
+  await insertProducts(
+    supabase,
+    context.studio.id,
+    data.id,
+    productsFromNotes(card.notes)
+  );
+
   revalidatePath("/galerias");
   return { galleryId: data.id };
 };
@@ -188,6 +202,152 @@ export const updateIncludedCount = async (
 
   if (error || !data?.length) {
     return { error: "No se pudo guardar." };
+  }
+
+  revalidateGallery(galleryId);
+  return { ok: true };
+};
+
+// --- Package products (book, canvas) -----------------------------------------
+
+const insertProducts = async (
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  studioId: number,
+  galleryId: number,
+  products: readonly ProductSpec[]
+) => {
+  if (products.length === 0) {
+    return true;
+  }
+
+  const { error } = await supabase.from("gallery_products").insert(
+    products.map((product) => ({
+      studio_id: studioId,
+      gallery_id: galleryId,
+      kind: product.kind,
+      size_short: product.short,
+      size_long: product.long,
+    }))
+  );
+
+  return !error;
+};
+
+const productSchema = z.object({
+  galleryId: id,
+  kind: z.enum(["book", "canvas"]),
+  size: z.string().trim().min(1).max(20),
+});
+
+const countProducts = async (
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  galleryId: number
+) => {
+  const { data } = await supabase
+    .from("gallery_products")
+    .select("kind, size_short, size_long")
+    .eq("gallery_id", galleryId);
+  return data ?? [];
+};
+
+/** Adds a book or canvas to the package, e.g. kind «book», size «8x11». */
+export const addGalleryProduct = async (
+  input: z.input<typeof productSchema>
+): Promise<ActionResult> => {
+  const context = await requireManager();
+
+  if (!context) {
+    return { error: NO_ACCESS };
+  }
+
+  const parsed = productSchema.safeParse(input);
+  const size = parsed.success ? parseProductSize(parsed.data.size) : null;
+
+  if (!(parsed.success && size)) {
+    return { error: "Escribe la medida así: 8x11." };
+  }
+
+  const supabase = await createClient();
+  const existing = await countProducts(supabase, parsed.data.galleryId);
+
+  if (existing.length >= MAX_GALLERY_PRODUCTS) {
+    return { error: `Como máximo ${MAX_GALLERY_PRODUCTS} productos.` };
+  }
+
+  const saved = await insertProducts(
+    supabase,
+    context.studio.id,
+    parsed.data.galleryId,
+    [{ kind: parsed.data.kind, ...size }]
+  );
+
+  if (!saved) {
+    return { error: "No se pudo añadir." };
+  }
+
+  revalidateGallery(parsed.data.galleryId);
+  return { ok: true };
+};
+
+/** Adds the books and canvases the card notes mention and are not there yet. */
+export const addProductsFromNotes = async (
+  galleryId: number
+): Promise<ActionResult> => {
+  const context = await requireManager();
+
+  if (!(context && id.safeParse(galleryId).success)) {
+    return { error: NO_ACCESS };
+  }
+
+  const supabase = await createClient();
+  const { data: gallery } = await supabase
+    .from("galleries")
+    .select("id, card:cards!galleries_card_id_studio_id_fkey(notes)")
+    .eq("id", galleryId)
+    .maybeSingle();
+
+  if (!gallery) {
+    return { error: NOT_FOUND };
+  }
+
+  const existing = await countProducts(supabase, galleryId);
+  const have = new Set(
+    existing.map((row) => `${row.kind}:${row.size_short}x${row.size_long}`)
+  );
+  const missing = productsFromNotes(gallery.card?.notes ?? null)
+    .filter(
+      (product) => !have.has(`${product.kind}:${product.short}x${product.long}`)
+    )
+    .slice(0, Math.max(0, MAX_GALLERY_PRODUCTS - existing.length));
+
+  if (
+    !(await insertProducts(supabase, context.studio.id, galleryId, missing))
+  ) {
+    return { error: "No se pudo añadir." };
+  }
+
+  revalidateGallery(galleryId);
+  return { ok: true };
+};
+
+export const removeGalleryProduct = async (
+  galleryId: number,
+  productId: number
+): Promise<ActionResult> => {
+  if (!(await requireManager())) {
+    return { error: NO_ACCESS };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("gallery_products")
+    .delete()
+    .eq("id", productId)
+    .eq("gallery_id", galleryId)
+    .select("id");
+
+  if (error || !data?.length) {
+    return { error: "No se pudo quitar." };
   }
 
   revalidateGallery(galleryId);

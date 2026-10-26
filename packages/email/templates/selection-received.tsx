@@ -10,6 +10,8 @@ interface SelectionReceivedTemplateProps {
   readonly galleryUrl: string;
   readonly includedCount: number | null;
   readonly picked: number;
+  /** One line per book/canvas with the photos chosen for it. */
+  readonly products?: readonly string[];
   /** Stage the card moved to, if it moved. */
   readonly stageName?: string | null;
   readonly studioName: string;
@@ -24,6 +26,7 @@ export const SelectionReceivedTemplate = ({
   galleryUrl,
   includedCount,
   picked,
+  products,
   stageName,
   studioName,
 }: SelectionReceivedTemplateProps) => (
@@ -50,6 +53,28 @@ export const SelectionReceivedTemplate = ({
       >
         Extras · {extras}
       </Text>
+    ) : null}
+    {products && products.length > 0 ? (
+      <Section
+        className="mb-4 px-4 py-3"
+        style={{ border: `1px solid ${colors.border}` }}
+      >
+        <Text
+          className="m-0 mb-1 text-[11px] uppercase"
+          style={{
+            color: colors.signalInk,
+            fontFamily: mono,
+            letterSpacing: "0.2em",
+          }}
+        >
+          Libro y canvas
+        </Text>
+        {products.map((line) => (
+          <Text className="m-0 text-[14px] leading-relaxed" key={line}>
+            {line}
+          </Text>
+        ))}
+      </Section>
     ) : null}
     {clientNote ? (
       <Section
@@ -111,6 +136,10 @@ SelectionReceivedTemplate.PreviewProps = {
   galleryUrl: "http://localhost:3000/galerias/1",
   includedCount: 12,
   picked: 14,
+  products: [
+    "Libro 11×8 horizontal · portada IMG_0012 · contraportada IMG_0031",
+    "Canvas 16×20 vertical · IMG_0007",
+  ],
   stageName: "Escogidas",
   studioName: "Estudio Luz",
 };

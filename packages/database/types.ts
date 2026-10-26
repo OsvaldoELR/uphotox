@@ -616,6 +616,67 @@ export type Database = {
           },
         ]
       }
+      gallery_products: {
+        Row: {
+          back_photo_id: number | null
+          created_at: string
+          gallery_id: number
+          id: number
+          kind: string
+          photo_id: number | null
+          size_long: number
+          size_short: number
+          studio_id: number
+          updated_at: string
+        }
+        Insert: {
+          back_photo_id?: number | null
+          created_at?: string
+          gallery_id: number
+          id?: never
+          kind: string
+          photo_id?: number | null
+          size_long: number
+          size_short: number
+          studio_id: number
+          updated_at?: string
+        }
+        Update: {
+          back_photo_id?: number | null
+          created_at?: string
+          gallery_id?: number
+          id?: never
+          kind?: string
+          photo_id?: number | null
+          size_long?: number
+          size_short?: number
+          studio_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gallery_products_back_photo_id_gallery_id_studio_id_fkey"
+            columns: ["back_photo_id", "gallery_id", "studio_id"]
+            isOneToOne: false
+            referencedRelation: "gallery_photos"
+            referencedColumns: ["id", "gallery_id", "studio_id"]
+          },
+          {
+            foreignKeyName: "gallery_products_gallery_id_studio_id_fkey"
+            columns: ["gallery_id", "studio_id"]
+            isOneToOne: false
+            referencedRelation: "galleries"
+            referencedColumns: ["id", "studio_id"]
+          },
+          {
+            foreignKeyName: "gallery_products_photo_id_gallery_id_studio_id_fkey"
+            columns: ["photo_id", "gallery_id", "studio_id"]
+            isOneToOne: false
+            referencedRelation: "gallery_photos"
+            referencedColumns: ["id", "gallery_id", "studio_id"]
+          },
+        ]
+      }
       platform_admins: {
         Row: {
           created_at: string

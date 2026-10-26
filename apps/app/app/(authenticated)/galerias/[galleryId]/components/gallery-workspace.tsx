@@ -26,9 +26,11 @@ import {
 } from "@/app/actions/galleries";
 import { GalleryStateChip } from "@/components/gallery-state-chip";
 import { formatMoney, type GalleryState, selectionTotals } from "@/lib/gallery";
+import type { ProductChoice, ProductSpec } from "@/lib/gallery-products";
 import { ClientShare, type ClientShareProperties } from "./client-share";
 import { type GalleryPhotoItem, PhotoGrid } from "./photo-grid";
 import { PhotoUploader } from "./photo-uploader";
+import { ProductChoices, ProductsEditor } from "./product-panel";
 
 export interface GalleryWorkspaceProperties {
   readonly access: {
@@ -54,6 +56,10 @@ export interface GalleryWorkspaceProperties {
     readonly state: GalleryState;
   };
   readonly photos: readonly GalleryPhotoItem[];
+  /** Named in the card notes and not added yet. */
+  readonly productSuggestions: readonly ProductSpec[];
+  /** Book and canvas of the package, with the client's choices. */
+  readonly products: readonly ProductChoice[];
   /** Sending, sharing and the selection for Lightroom. */
   readonly share: Omit<
     ClientShareProperties,
@@ -63,6 +69,8 @@ export interface GalleryWorkspaceProperties {
 
 const sectionLabel =
   "font-bold font-mono text-sm uppercase tracking-[0.12em] flex items-baseline gap-2";
+
+const sectionNumber = (value: number) => String(value).padStart(2, "0");
 
 const Stat = ({
   label,
@@ -244,6 +252,8 @@ export const GalleryWorkspace = ({
   card,
   gallery,
   photos,
+  products,
+  productSuggestions,
   share,
 }: GalleryWorkspaceProperties) => {
   const uploaded = photos.filter((photo) => photo.uploaded);
@@ -348,8 +358,21 @@ export const GalleryWorkspace = ({
               <span className="text-signal-ink">02</span> Paquete
             </h2>
             <PackageForm gallery={gallery} />
+            <ProductsEditor
+              galleryId={gallery.id}
+              products={products}
+              suggestions={productSuggestions}
+            />
           </div>
         </section>
+      )}
+
+      {products.length > 0 && (
+        <ProductChoices
+          index={access.canManage && !gallery.purged ? "03" : "01"}
+          photos={photos}
+          products={products}
+        />
       )}
 
       {gallery.purged && (
@@ -362,7 +385,10 @@ export const GalleryWorkspace = ({
       <section className="grid gap-3">
         <h2 className={sectionLabel}>
           <span className="text-signal-ink">
-            {access.canManage && !gallery.purged ? "03" : "01"}
+            {sectionNumber(
+              (access.canManage && !gallery.purged ? 3 : 1) +
+                (products.length > 0 ? 1 : 0)
+            )}
           </span>{" "}
           Fotos
         </h2>

@@ -10,11 +10,14 @@ import { deleteGalleryPhotos } from "@/app/actions/galleries";
 
 export interface GalleryPhotoItem {
   readonly fileName: string;
+  /** Pixels of the preview (orientation of covers and canvas). */
+  readonly height?: number | null;
   readonly id: number;
   readonly picked: boolean;
   /** Signed thumbnail URL; null until the upload finished. */
   readonly thumbnailUrl: string | null;
   readonly uploaded: boolean;
+  readonly width?: number | null;
 }
 
 type Filter = "all" | "picked" | "pending";
