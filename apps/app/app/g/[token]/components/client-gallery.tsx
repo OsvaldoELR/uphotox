@@ -617,6 +617,44 @@ const SubmittedNotice = ({
   </section>
 );
 
+/**
+ * After confirming: the studio's offer of the whole session unedited, with a
+ * WhatsApp message that already says what the client wants.
+ */
+const FullGalleryCard = ({
+  offer,
+  studioName,
+}: {
+  readonly offer: NonNullable<ClientGallery["fullGallery"]>;
+  readonly studioName: string;
+}) => (
+  <section className="mx-2.5 mb-6 grid gap-3 border bg-card p-5 md:mx-0">
+    <p className="font-mono text-[10px] text-signal-ink uppercase tracking-[0.3em]">
+      Galería completa
+    </p>
+    <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="grid max-w-prose gap-1">
+        <p className="font-bold font-mono text-sm uppercase tracking-[0.12em]">
+          ¿Quieres todas las fotos de tu sesión?
+        </p>
+        <p className="text-muted-foreground text-sm">{offer.note}</p>
+      </div>
+      <p className="font-black font-mono text-2xl tabular-nums">
+        {formatMoney(offer.price)}
+      </p>
+    </div>
+    {offer.whatsappUrl ? (
+      <Button asChild className="justify-self-start">
+        <a href={offer.whatsappUrl} rel="noopener" target="_blank">
+          La quiero: escribir por WhatsApp
+        </a>
+      </Button>
+    ) : (
+      <p className="text-sm">Si te interesa, pídesela a {studioName}.</p>
+    )}
+  </section>
+);
+
 const SelectionBar = ({
   extras,
   extrasText,
@@ -754,14 +792,22 @@ export const ClientGalleryView = ({
         )}
       >
         {readOnly ? (
-          <SubmittedNotice
-            extrasText={extrasText}
-            firstName={firstName}
-            hasExtras={totals.extras > 0}
-            picked={picked.size}
-            productLines={productLines}
-            whatsappUrl={gallery.whatsappUrl}
-          />
+          <>
+            <SubmittedNotice
+              extrasText={extrasText}
+              firstName={firstName}
+              hasExtras={totals.extras > 0}
+              picked={picked.size}
+              productLines={productLines}
+              whatsappUrl={gallery.whatsappUrl}
+            />
+            {gallery.fullGallery ? (
+              <FullGalleryCard
+                offer={gallery.fullGallery}
+                studioName={gallery.studioName}
+              />
+            ) : null}
+          </>
         ) : (
           <FilterTabs
             all={gallery.photos.length}

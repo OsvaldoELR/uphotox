@@ -7,6 +7,7 @@ import { cache } from "react";
 import {
   baseName,
   compareFileNames,
+  fullGalleryOffer,
   type GalleryState,
   galleryState,
   MAX_GALLERY_PHOTOS,
@@ -33,6 +34,15 @@ export interface ClientGallery {
   readonly clientName: string;
   readonly expiresAt: string | null;
   readonly extraPrice: number;
+  /**
+   * The whole session unedited, offered after confirming (studio setting),
+   * with a WhatsApp link that already says what the client wants.
+   */
+  readonly fullGallery: {
+    readonly note: string;
+    readonly price: number;
+    readonly whatsappUrl: string | null;
+  } | null;
   readonly includedCount: number | null;
   readonly photos: ClientPhoto[];
   /** Book and canvas of the package, with the client's choices. */
@@ -49,6 +59,40 @@ export interface ClientGallery {
   readonly whatsappUrl: string | null;
 }
 
+/** The studio's full unedited gallery offer with its WhatsApp link, or null. */
+const fullGalleryFor = (
+  studio: {
+    readonly full_gallery_note: string | null;
+    readonly full_gallery_price: number | null;
+    readonly name: string;
+    readonly whatsapp: string | null;
+  },
+  clientName: string,
+  cardTitle: string
+): ClientGallery["fullGallery"] => {
+  const offer = fullGalleryOffer({
+    price:
+      studio.full_gallery_price === null
+        ? null
+        : Number(studio.full_gallery_price),
+    note: studio.full_gallery_note,
+  });
+
+  if (!offer) {
+    return null;
+  }
+
+  return {
+    ...offer,
+    whatsappUrl: studio.whatsapp
+      ? whatsappUrl(
+          studio.whatsapp,
+          `Hola ${studio.name}${clientName ? `, soy ${clientName}` : ""}. Me interesa la galería completa sin editar de «${cardTitle}».`
+        )
+      : null,
+  };
+};
+
 /**
  * Everything the client page needs, read with the service role and scoped to
  * the gallery the token opens. Photos are only signed while they can be seen
@@ -64,7 +108,7 @@ export const loadClientGallery = cache(
     const { data: gallery } = await admin
       .from("galleries")
       .select(
-        "id, studio_id, status, expires_at, submitted_at, purged_at, included_count, extra_price, studio:studios(name, whatsapp, modules, suspended_at), card:cards!galleries_card_id_studio_id_fkey(title, client:clients(full_name))"
+        "id, studio_id, status, expires_at, submitted_at, purged_at, included_count, extra_price, studio:studios(name, whatsapp, modules, suspended_at, full_gallery_price, full_gallery_note), card:cards!galleries_card_id_studio_id_fkey(title, client:clients(full_name))"
       )
       .eq("token", token)
       .maybeSingle();
@@ -110,7 +154,9 @@ export const loadClientGallery = cache(
 
       const { data: productRows } = await admin
         .from("gallery_products")
-        .select("id, kind, size_short, size_long, photo_id, back_photo_id")
+        .select(
+          "id, kind, size_short, size_long, photo_id, back_photo_id, back_cover"
+        )
         .eq("gallery_id", gallery.id)
         .order("id");
 
@@ -121,6 +167,7 @@ export const loadClientGallery = cache(
         long: row.size_long,
         photoId: row.photo_id,
         backPhotoId: row.back_photo_id,
+        backCover: row.back_cover,
       }));
 
       photos = sorted.map((row, index) => ({
@@ -146,6 +193,11 @@ export const loadClientGallery = cache(
       submittedAt: gallery.submitted_at,
       photos,
       products,
+      fullGallery: fullGalleryFor(
+        gallery.studio,
+        clientName,
+        gallery.card.title
+      ),
       whatsappUrl: gallery.studio.whatsapp
         ? whatsappUrl(
             gallery.studio.whatsapp,

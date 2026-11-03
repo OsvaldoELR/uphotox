@@ -24,6 +24,7 @@ import {
   type ProductSpec,
   parseProductSize,
   productsFromNotes,
+  withBookFormats,
 } from "@/lib/gallery-products";
 import { scheduleStorageCleanup } from "@/lib/storage-cleanup";
 import { requireStudio, type StudioContext } from "@/lib/studio";
@@ -210,6 +211,7 @@ export const updateIncludedCount = async (
 
 // --- Package products (book, canvas) -----------------------------------------
 
+/** Adds products with the studio's say on back covers (book formats). */
 const insertProducts = async (
   supabase: Awaited<ReturnType<typeof createClient>>,
   studioId: number,
@@ -220,13 +222,24 @@ const insertProducts = async (
     return true;
   }
 
+  const { data: formats } = await supabase
+    .from("book_formats")
+    .select("size_short, size_long, back_cover");
   const { error } = await supabase.from("gallery_products").insert(
-    products.map((product) => ({
+    withBookFormats(
+      products,
+      (formats ?? []).map((format) => ({
+        short: format.size_short,
+        long: format.size_long,
+        backCover: format.back_cover,
+      }))
+    ).map((product) => ({
       studio_id: studioId,
       gallery_id: galleryId,
       kind: product.kind,
       size_short: product.short,
       size_long: product.long,
+      back_cover: product.backCover,
     }))
   );
 

@@ -11,6 +11,7 @@ import { isEmailEnabled, type SendEmailResult, sendEmail } from "./email";
 import {
   baseName,
   formatMoney,
+  fullGalleryOffer,
   galleryState,
   selectionTotals,
 } from "./gallery";
@@ -102,7 +103,9 @@ const loadProducts = async (
 ): Promise<ProductChoice[]> => {
   const { data } = await admin
     .from("gallery_products")
-    .select("id, kind, size_short, size_long, photo_id, back_photo_id")
+    .select(
+      "id, kind, size_short, size_long, photo_id, back_photo_id, back_cover"
+    )
     .eq("gallery_id", galleryId)
     .order("id");
 
@@ -113,6 +116,7 @@ const loadProducts = async (
     long: row.size_long,
     photoId: row.photo_id,
     backPhotoId: row.back_photo_id,
+    backCover: row.back_cover,
   }));
 };
 
@@ -237,7 +241,7 @@ const loadSubmitted = async (
   const { data: gallery } = await admin
     .from("galleries")
     .select(
-      "id, studio_id, card_id, submitted_at, client_note, included_count, extra_price, studio:studios(name, whatsapp, owner:profiles!studios_owner_id_fkey(id, email)), card:cards!galleries_card_id_studio_id_fkey(title, assigned_to, client:clients(full_name, email))"
+      "id, studio_id, card_id, submitted_at, client_note, included_count, extra_price, studio:studios(name, whatsapp, full_gallery_price, full_gallery_note, owner:profiles!studios_owner_id_fkey(id, email)), card:cards!galleries_card_id_studio_id_fkey(title, assigned_to, client:clients(full_name, email))"
     )
     .eq("id", galleryId)
     .single();
@@ -292,6 +296,41 @@ const loadSubmitted = async (
  * moved into a stage that notifies) and «Selección recibida» to the owner and
  * the card's assignee. Errors are logged, never shown to the client.
  */
+/** The full unedited gallery offer for the email sent on confirming. */
+const offerForEmail = (
+  studio: {
+    readonly full_gallery_note: string | null;
+    readonly full_gallery_price: number | null;
+    readonly name: string;
+    readonly whatsapp: string | null;
+  },
+  clientName: string,
+  cardTitle: string
+) => {
+  const offer = fullGalleryOffer({
+    price:
+      studio.full_gallery_price === null
+        ? null
+        : Number(studio.full_gallery_price),
+    note: studio.full_gallery_note,
+  });
+
+  if (!offer) {
+    return null;
+  }
+
+  return {
+    note: offer.note,
+    price: formatMoney(offer.price),
+    whatsappUrl: studio.whatsapp
+      ? whatsappUrl(
+          studio.whatsapp,
+          `Hola ${studio.name}, soy ${clientName}. Me interesa la galería completa sin editar de «${cardTitle}».`
+        )
+      : null,
+  };
+};
+
 export const notifyGallerySubmitted = async (input: SubmittedInput) => {
   if (!isEmailEnabled()) {
     return;
@@ -330,6 +369,11 @@ export const notifyGallerySubmitted = async (input: SubmittedInput) => {
               stage.client_message?.trim() ||
               defaultStageMessage(stage.name, studioName)
             }
+            offer={offerForEmail(
+              gallery.studio,
+              client.full_name,
+              gallery.card.title
+            )}
             stageName={stage.name}
             studioName={studioName}
             whatsappUrl={studioWhatsapp(

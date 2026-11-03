@@ -125,7 +125,9 @@ export const setProductPhoto = async (
   const { admin, galleryId } = gallery;
   const { data: row } = await admin
     .from("gallery_products")
-    .select("id, kind, size_short, size_long, photo_id, back_photo_id")
+    .select(
+      "id, kind, size_short, size_long, photo_id, back_photo_id, back_cover"
+    )
     .eq("id", input.data.productId)
     .eq("gallery_id", galleryId)
     .maybeSingle();
@@ -147,6 +149,7 @@ export const setProductPhoto = async (
       long: row.size_long,
       photoId: row.photo_id,
       backPhotoId: row.back_photo_id,
+      backCover: row.back_cover,
     };
     const ids = [input.data.photoId, row.photo_id, row.back_photo_id].filter(
       (value): value is number => value !== null

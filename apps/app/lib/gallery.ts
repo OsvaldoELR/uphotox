@@ -95,3 +95,25 @@ export const selectionTotals = ({
 
 export const formatMoney = (amount: number) =>
   Number.isInteger(amount) ? `$${amount}` : `$${amount.toFixed(2)}`;
+
+/** Default description of the full unedited gallery a studio can offer. */
+export const FULL_GALLERY_NOTE =
+  "Todas las fotos de tu sesión sin editar, solo con un retoque de color básico.";
+
+export interface FullGalleryOffer {
+  readonly note: string;
+  readonly price: number;
+}
+
+/**
+ * The whole session unedited, offered to the client once they confirm their
+ * selection (studio setting). Null when the studio does not offer it.
+ */
+export const fullGalleryOffer = ({
+  note,
+  price,
+}: {
+  readonly note: string | null;
+  readonly price: number | null;
+}): FullGalleryOffer | null =>
+  price === null ? null : { price, note: note?.trim() || FULL_GALLERY_NOTE };

@@ -94,8 +94,9 @@ export const ProductsEditor = ({
       <div className="grid gap-1">
         <Label>Libro y canvas del paquete</Label>
         <p className="text-muted-foreground text-xs">
-          El cliente elige entre sus favoritas la portada y la contraportada de
-          cada libro y la foto de cada canvas antes de confirmar.
+          El cliente elige entre sus favoritas la portada de cada libro (y la
+          contraportada si la lleva; se decide por medida en Ajustes → Galerías)
+          y la foto de cada canvas antes de confirmar.
         </p>
       </div>
 
@@ -108,6 +109,12 @@ export const ProductsEditor = ({
             >
               <span className="font-medium text-sm">
                 {productName(product)}
+                {product.kind === "book" && !product.backCover ? (
+                  <span className="font-normal text-muted-foreground">
+                    {" "}
+                    · sin contraportada
+                  </span>
+                ) : null}
               </span>
               <Button
                 aria-label={`Quitar ${productName(product)}`}
@@ -278,7 +285,7 @@ export const ProductChoices = ({
                     : byId.get(product.photoId)
                 }
               />
-              {product.kind === "book" ? (
+              {product.kind === "book" && product.backCover ? (
                 <Thumb
                   label="Contraportada"
                   photo={

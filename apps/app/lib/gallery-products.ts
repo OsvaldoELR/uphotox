@@ -8,7 +8,9 @@
  * Sizes are in inches as sold, short side first («libro 8x11», «canva
  * 16x20»). A rectangular product follows its photo: a horizontal front cover
  * turns an 8×11 book into 11×8, and the back cover must match it. Square ones
- * (6×6, 8×8) take any photo.
+ * (6×6, 8×8) take any photo. Whether a book has a back cover at all depends
+ * on the studio: its book formats say so per size (e.g. a 6×6 without one);
+ * unknown sizes have one.
  */
 
 export type ProductKind = "book" | "canvas";
@@ -24,7 +26,18 @@ export interface ProductSpec extends ProductSize {
   readonly kind: ProductKind;
 }
 
-export interface ProductChoice extends ProductSpec {
+/** A product as a gallery holds it. */
+export interface GalleryProduct extends ProductSpec {
+  /** A book whose back cover the client chooses. Always false for a canvas. */
+  readonly backCover: boolean;
+}
+
+/** One of the studio's book sizes and whether it has a back cover. */
+export interface BookFormat extends ProductSize {
+  readonly backCover: boolean;
+}
+
+export interface ProductChoice extends GalleryProduct {
   /** Book: back cover. Always null for a canvas. */
   readonly backPhotoId: number | null;
   readonly id: number;
@@ -108,6 +121,25 @@ export const productsFromNotes = (notes: string | null): ProductSpec[] => {
 
 export const isSquare = (size: ProductSize) => size.short === size.long;
 
+const sameSize = (a: ProductSize, b: ProductSize) =>
+  a.short === b.short && a.long === b.long;
+
+/**
+ * Products with the studio's say on back covers: a book of a size the studio
+ * lists takes that format's setting, any other book has a back cover, and a
+ * canvas never does.
+ */
+export const withBookFormats = (
+  products: readonly ProductSpec[],
+  formats: readonly BookFormat[]
+): GalleryProduct[] =>
+  products.map((product) => ({
+    ...product,
+    backCover:
+      product.kind === "book" &&
+      (formats.find((format) => sameSize(format, product))?.backCover ?? true),
+  }));
+
 /** A square photo counts as vertical: the product keeps its sold size. */
 export const photoOrientation = (photo: {
   readonly height: number;
@@ -177,6 +209,10 @@ export const choiceProblem = ({
     return "Este producto lleva una sola foto.";
   }
 
+  if (!product.backCover) {
+    return "Este libro no lleva contraportada.";
+  }
+
   if (photoId === product.photoId) {
     return "La contraportada tiene que ser otra foto.";
   }
@@ -223,7 +259,7 @@ export const missingChoices = (
       );
     }
 
-    if (product.kind !== "book") {
+    if (product.kind !== "book" || !product.backCover) {
       continue;
     }
 
@@ -272,6 +308,10 @@ export const choiceSummary = (
     return `${title} · ${front?.name ?? none}`;
   }
 
+  if (!product.backCover) {
+    return `${title} · portada ${front?.name ?? none}`;
+  }
+
   return `${title} · portada ${front?.name ?? none} · contraportada ${back?.name ?? none}`;
 };
 
@@ -287,7 +327,27 @@ const joinWords = (items: readonly string[]) =>
  * la foto del canvas. La portada decide si el libro sale vertical u
  * horizontal.» Null without products.
  */
-export const productsIntro = (products: readonly ProductSpec[]) => {
+/** «la portada y la contraportada», «la portada» or, mixed, «las portadas». */
+const coverTask = (books: readonly GalleryProduct[]) => {
+  const withBack = books.filter((book) => book.backCover).length;
+
+  if (withBack === books.length) {
+    return "la portada y la contraportada";
+  }
+
+  return withBack === 0 ? "la portada" : "las portadas";
+};
+
+/** « del libro» / « de cada libro», only when it is needed to tell them apart. */
+const whose = (count: number, both: boolean, one: string, each: string) => {
+  if (count > 1) {
+    return ` ${each}`;
+  }
+
+  return both ? ` ${one}` : "";
+};
+
+export const productsIntro = (products: readonly GalleryProduct[]) => {
   if (products.length === 0) {
     return null;
   }
@@ -297,10 +357,10 @@ export const productsIntro = (products: readonly ProductSpec[]) => {
   const both = books.length > 0 && canvases.length > 0;
   const tasks = [
     books.length > 0
-      ? `la portada y la contraportada${both || books.length > 1 ? ` ${books.length > 1 ? "de cada libro" : "del libro"}` : ""}`
+      ? `${coverTask(books)}${whose(books.length, both, "del libro", "de cada libro")}`
       : null,
     canvases.length > 0
-      ? `la foto${both || canvases.length > 1 ? ` ${canvases.length > 1 ? "de cada canvas" : "del canvas"}` : ""}`
+      ? `la foto${whose(canvases.length, both, "del canvas", "de cada canvas")}`
       : null,
   ].filter((task): task is string => task !== null);
   const items = products.map(

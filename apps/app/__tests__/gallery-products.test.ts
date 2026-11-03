@@ -11,6 +11,7 @@ import {
   productsFromNotes,
   productsIntro,
   shapeLabel,
+  withBookFormats,
 } from "../lib/gallery-products";
 
 const photos = new Map<number, ChoicePhoto>([
@@ -23,6 +24,7 @@ const photos = new Map<number, ChoicePhoto>([
 const book = (over: Partial<ProductChoice> = {}): ProductChoice => ({
   id: 10,
   kind: "book",
+  backCover: true,
   short: 8,
   long: 11,
   photoId: null,
@@ -123,6 +125,7 @@ describe("choices", () => {
     const canvas: ProductChoice = {
       id: 11,
       kind: "canvas",
+      backCover: false,
       short: 16,
       long: 20,
       photoId: null,
@@ -153,6 +156,7 @@ describe("choices", () => {
         {
           id: 11,
           kind: "canvas",
+          backCover: false,
           short: 16,
           long: 20,
           photoId: 3,
@@ -170,16 +174,58 @@ describe("choices", () => {
 describe("productsIntro", () => {
   test("explains what the client will choose", () => {
     expect(productsIntro([])).toBeNull();
-    expect(productsIntro([{ kind: "book", short: 6, long: 6 }])).toBe(
+    expect(
+      productsIntro([{ kind: "book", short: 6, long: 6, backCover: true }])
+    ).toBe(
       "Tu paquete incluye un libro 6×6: al terminar de elegir tus favoritas escogerás entre ellas la portada y la contraportada."
     );
     expect(
       productsIntro([
-        { kind: "book", short: 8, long: 11 },
-        { kind: "canvas", short: 16, long: 20 },
+        { kind: "book", short: 8, long: 11, backCover: true },
+        { kind: "canvas", short: 16, long: 20, backCover: false },
       ])
     ).toBe(
       "Tu paquete incluye un libro 8×11 y un canvas 16×20: al terminar de elegir tus favoritas escogerás entre ellas la portada y la contraportada del libro y la foto del canvas. La portada decide si el libro sale vertical u horizontal."
+    );
+  });
+});
+
+describe("books without a back cover (studio formats)", () => {
+  const formats = [
+    { short: 6, long: 6, backCover: false },
+    { short: 8, long: 8, backCover: true },
+  ];
+
+  test("the studio's formats decide; unknown books have one, canvases never", () => {
+    expect(
+      withBookFormats(
+        [
+          { kind: "book", short: 6, long: 6 },
+          { kind: "book", short: 8, long: 11 },
+          { kind: "canvas", short: 16, long: 20 },
+        ],
+        formats
+      ).map((product) => product.backCover)
+    ).toEqual([false, true, false]);
+  });
+
+  test("a 6×6 without back cover only needs the front", () => {
+    const small = book({ short: 6, long: 6, backCover: false, photoId: 1 });
+    expect(
+      choiceProblem({ photoId: 2, photos, product: small, slot: "back" })
+    ).toBe("Este libro no lleva contraportada.");
+    expect(missingChoices([small], photos)).toEqual([]);
+    expect(
+      missingChoices([book({ short: 6, long: 6, backCover: false })], photos)
+    ).toEqual(["la portada del libro 6×6"]);
+    expect(choiceSummary(small, photos)).toBe("Libro 6×6 · portada IMG_0001");
+  });
+
+  test("the intro only asks for the front", () => {
+    expect(
+      productsIntro([{ kind: "book", short: 6, long: 6, backCover: false }])
+    ).toBe(
+      "Tu paquete incluye un libro 6×6: al terminar de elegir tus favoritas escogerás entre ellas la portada."
     );
   });
 });

@@ -57,7 +57,9 @@ const GalleryPage = async ({ params }: GalleryPageProperties) => {
         .limit(MAX_GALLERY_PHOTOS),
       supabase
         .from("gallery_products")
-        .select("id, kind, size_short, size_long, photo_id, back_photo_id")
+        .select(
+          "id, kind, size_short, size_long, photo_id, back_photo_id, back_cover"
+        )
         .eq("gallery_id", galleryId)
         .order("id"),
     ]);
@@ -102,6 +104,7 @@ const GalleryPage = async ({ params }: GalleryPageProperties) => {
     long: row.size_long,
     photoId: row.photo_id,
     backPhotoId: row.back_photo_id,
+    backCover: row.back_cover,
   }));
   const productKeys = new Set(
     products.map(

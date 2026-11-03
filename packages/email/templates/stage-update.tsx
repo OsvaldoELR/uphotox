@@ -20,6 +20,14 @@ interface StageUpdateTemplateProps {
   readonly clientName: string;
   readonly galleryUrl?: string | null;
   readonly message: string;
+  /** The whole session unedited, offered with the email sent on confirming. */
+  readonly offer?: {
+    readonly note: string;
+    /** Formatted, e.g. «$100». */
+    readonly price: string;
+    /** WhatsApp link with a message asking for it. */
+    readonly whatsappUrl?: string | null;
+  } | null;
   /** Client link of an open selection gallery: «Elegir mis fotos». */
   readonly selectionUrl?: string | null;
   readonly stageName: string;
@@ -36,6 +44,7 @@ export const StageUpdateTemplate = ({
   clientName,
   galleryUrl,
   message,
+  offer,
   selectionUrl,
   stageName,
   studioName,
@@ -80,6 +89,38 @@ export const StageUpdateTemplate = ({
         >
           Ver mi álbum
         </Button>
+      </Section>
+    ) : null}
+    {offer ? (
+      <Section
+        className="mt-6 px-4 py-3"
+        style={{ border: `1px solid ${colors.border}` }}
+      >
+        <Text
+          className="m-0 mb-1 text-[11px] uppercase"
+          style={{
+            color: colors.signalInk,
+            fontFamily: mono,
+            letterSpacing: "0.2em",
+          }}
+        >
+          Galería completa
+        </Text>
+        <Text className="m-0 font-bold text-[15px]">
+          ¿Quieres todas las fotos de tu sesión?
+        </Text>
+        <Text className="m-0 mt-1 mb-3 text-[15px] leading-relaxed">
+          {`${offer.note} Precio: ${offer.price}.`}
+        </Text>
+        {offer.whatsappUrl ? (
+          <Button
+            className="px-5 py-2.5 font-bold text-[12px] uppercase"
+            href={offer.whatsappUrl}
+            style={primaryButton}
+          >
+            La quiero
+          </Button>
+        ) : null}
       </Section>
     ) : null}
     {whatsappUrl ? <WhatsappBlock href={whatsappUrl} /> : null}

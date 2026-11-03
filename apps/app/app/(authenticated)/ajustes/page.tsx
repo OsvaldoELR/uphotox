@@ -8,6 +8,7 @@ import { requirePermission } from "@/lib/studio";
 import { formatWhatsapp } from "@/lib/whatsapp";
 import { Header } from "../components/header";
 import { EditorSettingsForm } from "./editor-settings";
+import { BookFormatsEditor, GallerySettingsForm } from "./gallery-settings";
 import { SettingsForm } from "./settings-form";
 import {
   type WebhookBoard,
@@ -23,27 +24,36 @@ export const metadata: Metadata = {
 const SettingsPage = async () => {
   const context = await requirePermission("settings.manage");
   const supabase = await createClient();
-  const [{ data: webhookRow }, { data: boardRows }, { data: editor }] =
-    await Promise.all([
-      supabase
-        .from("studio_integrations")
-        .select(
-          "token, enabled, board_id, stage_id, last_received_at, last_error"
-        )
-        .eq("provider", "webhook")
-        .maybeSingle(),
-      supabase
-        .from("boards")
-        .select("id, name, board_stages(id, name, position)")
-        .order("created_at"),
-      supabase
-        .from("studios")
-        .select(
-          "editor_helpers, editor_framing, editor_monthly_limit, editor_platform_limit, editor_keep_days, editor_mode, editor_level, editor_model"
-        )
-        .eq("id", context.studio.id)
-        .maybeSingle(),
-    ]);
+  const [
+    { data: webhookRow },
+    { data: boardRows },
+    { data: editor },
+    { data: formatRows },
+  ] = await Promise.all([
+    supabase
+      .from("studio_integrations")
+      .select(
+        "token, enabled, board_id, stage_id, last_received_at, last_error"
+      )
+      .eq("provider", "webhook")
+      .maybeSingle(),
+    supabase
+      .from("boards")
+      .select("id, name, board_stages(id, name, position)")
+      .order("created_at"),
+    supabase
+      .from("studios")
+      .select(
+        "editor_helpers, editor_framing, editor_monthly_limit, editor_platform_limit, editor_keep_days, editor_mode, editor_level, editor_model, extra_photo_price, full_gallery_price, full_gallery_note"
+      )
+      .eq("id", context.studio.id)
+      .maybeSingle(),
+    supabase
+      .from("book_formats")
+      .select("id, size_short, size_long, back_cover")
+      .order("size_short")
+      .order("size_long"),
+  ]);
 
   const boards: WebhookBoard[] = (boardRows ?? []).map((board) => ({
     id: board.id,
@@ -104,6 +114,45 @@ const SettingsPage = async () => {
             />
           </Panel>
         </section>
+
+        {context.studio.modules.includes("galleries") && (
+          <section className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <HudLabel align="start">Galerías</HudLabel>
+              <p className="max-w-prose text-muted-foreground text-sm">
+                Lo que ve el cliente al elegir sus fotos: el precio de las
+                extras, la galería completa sin editar y qué libros llevan
+                contraportada.
+              </p>
+            </div>
+            <div className="grid max-w-5xl gap-4 lg:grid-cols-2">
+              <Panel className="p-6">
+                <GallerySettingsForm
+                  extraPhotoPrice={Number(editor?.extra_photo_price ?? 20)}
+                  fullGalleryNote={editor?.full_gallery_note ?? null}
+                  fullGalleryPrice={
+                    editor?.full_gallery_price == null
+                      ? null
+                      : Number(editor.full_gallery_price)
+                  }
+                />
+              </Panel>
+              <Panel className="p-6">
+                <h3 className="mb-3 font-bold font-mono text-sm uppercase tracking-[0.12em]">
+                  Libros
+                </h3>
+                <BookFormatsEditor
+                  formats={(formatRows ?? []).map((row) => ({
+                    id: row.id,
+                    short: row.size_short,
+                    long: row.size_long,
+                    backCover: row.back_cover,
+                  }))}
+                />
+              </Panel>
+            </div>
+          </section>
+        )}
 
         {context.studio.modules.includes("editor") && (
           <section className="flex flex-col gap-4">

@@ -7,6 +7,21 @@ en `docs/bitacora.md`.
 Numeración: el primer número cambia con cambios grandes que rompen la forma de
 trabajar, el segundo con funciones nuevas y el tercero con arreglos.
 
+## [0.11.0] · 3 nov 2026 · Ajustes de galerías: contraportadas y galería completa
+
+**Añadido**
+- Nueva sección **Ajustes → Galerías**:
+  - **Libros**: las medidas de libro del estudio, cada una con «Lleva
+    contraportada». En los libros sin contraportada (p. ej. el 6×6) el
+    cliente solo elige la portada. Las medidas que no están en la lista
+    llevan contraportada. Los cambios se aplican también a las galerías que
+    el cliente aún no ha confirmado.
+  - **Galería completa sin editar** (opcional): precio y descripción. Al
+    confirmar su selección, el cliente ve la oferta con el botón «La
+    quiero», que abre WhatsApp con el mensaje ya escrito, y también le llega
+    en el correo de confirmación si esa etapa avisa al cliente.
+  - **Precio por foto extra**, que antes era fijo ($20).
+
 ## [0.10.0] · 25 oct 2026 · Libros y canvas en la galería
 
 **Añadido**

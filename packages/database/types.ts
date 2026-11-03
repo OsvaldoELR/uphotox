@@ -106,6 +106,44 @@ export type Database = {
           },
         ]
       }
+      book_formats: {
+        Row: {
+          back_cover: boolean
+          created_at: string
+          id: number
+          size_long: number
+          size_short: number
+          studio_id: number
+          updated_at: string
+        }
+        Insert: {
+          back_cover?: boolean
+          created_at?: string
+          id?: never
+          size_long: number
+          size_short: number
+          studio_id: number
+          updated_at?: string
+        }
+        Update: {
+          back_cover?: boolean
+          created_at?: string
+          id?: never
+          size_long?: number
+          size_short?: number
+          studio_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "book_formats_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       card_events: {
         Row: {
           actor_id: string | null
@@ -618,6 +656,7 @@ export type Database = {
       }
       gallery_products: {
         Row: {
+          back_cover: boolean
           back_photo_id: number | null
           created_at: string
           gallery_id: number
@@ -630,6 +669,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          back_cover?: boolean
           back_photo_id?: number | null
           created_at?: string
           gallery_id: number
@@ -642,6 +682,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          back_cover?: boolean
           back_photo_id?: number | null
           created_at?: string
           gallery_id?: number
@@ -908,6 +949,8 @@ export type Database = {
           editor_monthly_limit: number | null
           editor_platform_limit: number | null
           extra_photo_price: number
+          full_gallery_note: string | null
+          full_gallery_price: number | null
           id: number
           modules: string[]
           name: string
@@ -928,6 +971,8 @@ export type Database = {
           editor_monthly_limit?: number | null
           editor_platform_limit?: number | null
           extra_photo_price?: number
+          full_gallery_note?: string | null
+          full_gallery_price?: number | null
           id?: never
           modules?: string[]
           name: string
@@ -948,6 +993,8 @@ export type Database = {
           editor_monthly_limit?: number | null
           editor_platform_limit?: number | null
           extra_photo_price?: number
+          full_gallery_note?: string | null
+          full_gallery_price?: number | null
           id?: never
           modules?: string[]
           name?: string

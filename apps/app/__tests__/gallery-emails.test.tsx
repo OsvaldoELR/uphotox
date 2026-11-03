@@ -1,6 +1,7 @@
 import { render } from "@react-email/components";
 import { GalleryReadyTemplate } from "@repo/email/templates/gallery-ready";
 import { SelectionReceivedTemplate } from "@repo/email/templates/selection-received";
+import { StageUpdateTemplate } from "@repo/email/templates/stage-update";
 import { describe, expect, test } from "vitest";
 
 describe("gallery emails with a book and a canvas", () => {
@@ -18,7 +19,9 @@ describe("gallery emails with a book and a canvas", () => {
       />
     );
 
-    expect(html).toContain("Tu paquete incluye un libro 8×11 y un canvas 16×20");
+    expect(html).toContain(
+      "Tu paquete incluye un libro 8×11 y un canvas 16×20"
+    );
   });
 
   test("«Selección recibida» lists the covers and the canvas photo", async () => {
@@ -57,5 +60,25 @@ describe("gallery emails with a book and a canvas", () => {
     );
 
     expect(html).not.toContain("Libro y canvas");
+  });
+
+  test("the email on confirming carries the full gallery offer", async () => {
+    const html = await render(
+      <StageUpdateTemplate
+        clientName="Ana"
+        message="Recibimos tu selección."
+        offer={{
+          note: "Todas las fotos de tu sesión sin editar, solo con un retoque de color básico.",
+          price: "$100",
+          whatsappUrl: "https://wa.me/13055550123?text=galeria",
+        }}
+        stageName="Escogidas"
+        studioName="Estudio"
+      />
+    );
+
+    expect(html).toContain("¿Quieres todas las fotos de tu sesión?");
+    expect(html).toContain("Precio: $100");
+    expect(html).toContain("https://wa.me/13055550123?text=galeria");
   });
 });

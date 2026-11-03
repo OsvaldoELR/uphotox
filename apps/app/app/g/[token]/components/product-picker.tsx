@@ -213,6 +213,15 @@ const BackCoverStep = ({
   );
 };
 
+/** «1 · Portada» when a back cover follows, «Portada» or the canvas photo. */
+const frontStepLabel = (isBook: boolean, hasBack: boolean) => {
+  if (!isBook) {
+    return "Foto del canvas";
+  }
+
+  return hasBack ? "1 · Portada" : "Portada";
+};
+
 const ProductSection = ({
   favorites,
   onChoose,
@@ -232,6 +241,8 @@ const ProductSection = ({
   const orientation = front ? photoOrientation(front) : null;
   const shape = shapeLabel(product, orientation);
   const isBook = product.kind === "book";
+  // Some books have no back cover (the studio's book formats say which).
+  const hasBack = isBook && product.backCover;
   const portrait = product.short / product.long;
   let ratio = 1;
 
@@ -258,7 +269,7 @@ const ProductSection = ({
           photo={front}
           ratio={ratio}
         />
-        {isBook ? (
+        {hasBack ? (
           <Face label="Contraportada" photo={back} ratio={ratio} />
         ) : null}
         {isBook && orientation === "horizontal" && !isSquare(product) ? (
@@ -270,9 +281,7 @@ const ProductSection = ({
       </div>
 
       <div className="grid gap-2">
-        <p className={stepLabel}>
-          {isBook ? "1 · Portada" : "Foto del canvas"}
-        </p>
+        <p className={stepLabel}>{frontStepLabel(isBook, hasBack)}</p>
         <ChoiceGrid
           badge={isBook ? "Portada" : "Canvas"}
           onSelect={(photoId) => onChoose("photo", photoId)}
@@ -282,7 +291,7 @@ const ProductSection = ({
         />
       </div>
 
-      {isBook ? (
+      {hasBack ? (
         <div className="grid gap-2">
           <p className={stepLabel}>2 · Contraportada</p>
           <BackCoverStep

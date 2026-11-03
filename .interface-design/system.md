@@ -169,6 +169,16 @@ Patrones de la app:
   traen más, y alta con dos pestañas (Libro / Canvas) + medida («8x11»). Sección numerada
   «Libro y canvas» con una tarjeta por producto (resumen + miniaturas cuadradas
   `object-contain` de portada/contraportada) y «Copiar portadas y canvas».
+- **Ajustes → Galerías**: dos Panel en rejilla (`lg:grid-cols-2`). Izquierda, formulario con
+  «Precio por foto extra» y una caja con borde para «Ofrecer la galería completa sin editar»
+  (interruptor; al encenderlo, precio y «Qué incluye» con el texto por defecto de marcador).
+  Derecha, «Libros»: filas `border bg-card` «Libro 6×6» + interruptor «Lleva contraportada»
+  + quitar (×); alta con medida + interruptor + «Añadir medida». Los interruptores de la lista
+  se guardan al instante.
+- **Galería completa (cliente)**: tras confirmar, debajo de «¡Listo! Recibimos tu selección»,
+  tarjeta `border bg-card p-5` con etiqueta mono signal-ink «Galería completa», título mono
+  bold «¿Quieres todas las fotos de tu sesión?», descripción muted, precio mono black `text-2xl`
+  a la derecha (debajo en el móvil) y botón principal «La quiero: escribir por WhatsApp».
 
 ## Movimiento
 

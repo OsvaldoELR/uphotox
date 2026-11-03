@@ -18,9 +18,9 @@ Documentos relacionados:
 
 ---
 
-## Estado actual (25 oct 2026 · versión 0.10.0)
+## Estado actual (3 nov 2026 · versión 0.11.0)
 
-Versión publicada: **v0.10.0** (historial de versiones en `CHANGELOG.md`).
+Versión publicada: **v0.11.0** (historial de versiones en `CHANGELOG.md`).
 
 | Módulo | Estado | Dónde |
 | --- | --- | --- |
@@ -29,7 +29,7 @@ Versión publicada: **v0.10.0** (historial de versiones en `CHANGELOG.md`).
 | Tableros (tipo Trello) | Hecho: etapas (se pueden reordenar), arrastrar o «Mover a…», añadir arriba o abajo, foto, avisos por correo, historial | `/tableros` |
 | Clientes | Hecho: lista, ficha, importación CSV | `/clientes`, `/clientes/importar` |
 | Equipo | Hecho: usuarios con rol y permisos tipo GoHighLevel | `/equipo` |
-| Ajustes | Hecho: nombre, WhatsApp, entrada de clientes (webhook) | `/ajustes` |
+| Ajustes | Hecho: nombre, WhatsApp, entrada de clientes (webhook), Galerías (precio de extras, libros con o sin contraportada, galería completa sin editar), Editor | `/ajustes` |
 | Entrada de clientes (Make/Typeform) | Hecho y publicado | `apps/api` |
 | Galerías (selección, sustituye a Pixieset) | Publicado (v0.4.0): subir fotos a Cloudflare R2, enviar al cliente, página del cliente con guía de primera visita, confirmar, lista para Lightroom, reabrir. v0.10.0: el cliente elige portada y contraportada del libro y la foto del canvas. Falta el borrado automático diario | `/galerias`, `/g/<código>` |
 | Editor de imágenes | Publicado (v0.7.0): limpieza de fondos o edición completa (todo menos las caras) en Cloudflare, exigencia 1–3 y elección de modelo, subida, revisión, visor, descarga, correo, ajustes y consumo | `/editor`, `/galerias/<id>/limpieza`, `services/editor` |
@@ -53,6 +53,10 @@ Configuración:
 ## Pendientes
 
 Del usuario:
+- [ ] **Galerías · revisar Ajustes → Galerías** (v0.11.0): dejé Lente Libre
+      con el libro 6×6 sin contraportada y el 8×8 y el 8×11 con ella, y la
+      galería completa sin editar a $100. Confirmar con la dueña que el 8×8
+      lleva contraportada y ajustar el texto de la oferta si quiere.
 - [ ] **Libros y canvas · probar la v0.10.0** con una galería de un paquete
       con libro 8×11 (y canvas si lo tiene): mirar en «Paquete» que salgan
       leídos de la oferta, enviarla y elegir como cliente desde el móvil. En
@@ -104,7 +108,6 @@ De Galerías (por programar, en este orden):
       o caducar (`purged_at`), filas sin terminar de más de un día y lo que
       quede en `storage_deletions`. Añadir `R2_*` al proyecto `uphotox-api`
       de Vercel y `@repo/storage` a la API.
-- [ ] Ajustes: campo «Precio por foto extra» (hoy $20 fijo por defecto).
 - [ ] Probar en producción con una galería real antes de cancelar Pixieset.
 - [ ] Opcional: estado de la galería en la tarjeta del tablero (chip «Esperando
       · 5/12», «Selección recibida»).
@@ -180,6 +183,60 @@ editar, paquetes y pagos.
 ---
 
 ## Historial
+
+### 3 nov 2026 · v0.11.0 · Ajustes de galerías: contraportadas y galería completa
+**Qué pidió el usuario**: la dueña aclaró que el libro 6×6 no lleva
+contraportada; quiere que sea configurable para que sirva a otros estudios.
+Además, avisar al cliente de que puede tener la galería completa sin editar
+(con retoque de color mínimo) por $100, cuando confirme su selección; también
+opcional por estudio.
+
+**Qué se hizo**
+- Migración `20261103122626_book_formats_full_gallery`:
+  - Tabla `book_formats` (medidas de libro del estudio con `back_cover`).
+    RLS: la ven todos los miembros y la cambia quien tiene `settings.manage`.
+  - Columna `gallery_products.back_cover`, copiada del formato al crear el
+    producto (las medidas sin formato llevan contraportada).
+  - `studios.full_gallery_price` (vacío = no se ofrece) y
+    `full_gallery_note`.
+  - `submit_gallery_selection` solo pide contraportada si el libro la lleva.
+- Migración `20261103122720_canvas_never_back_cover`: un disparador pone
+  `back_cover = false` en todo lo que no es libro. Hacía falta porque la
+  versión publicada antes (v0.10.0) insertaba canvas sin esa columna, y la
+  nueva regla los habría rechazado hasta publicar. Probado en una
+  transacción deshecha.
+- Reglas en `lib/gallery-products.ts` (`withBookFormats`, sin
+  contraportada en `choiceProblem`, `missingChoices`, `choiceSummary` y
+  `productsIntro`) y `fullGalleryOffer` en `lib/gallery.ts`, con pruebas.
+- **Ajustes → Galerías** (`ajustes/gallery-settings.tsx`, acciones en
+  `app/actions/gallery-settings.ts`):
+  - Precio por foto extra (era un pendiente).
+  - Galería completa sin editar: interruptor, precio y «Qué incluye».
+  - Libros: medida + «Lleva contraportada», con quitar. Cambiar un formato
+    actualiza los libros de esa medida en las galerías en borrador o
+    abiertas (con el cliente administrador, tras comprobar
+    `settings.manage`); las confirmadas no cambian.
+- Cliente: los libros sin contraportada solo piden la portada (maqueta y
+  paso «Portada»). Tras confirmar aparece la tarjeta «Galería completa» con
+  el precio y el botón «La quiero: escribir por WhatsApp» (mensaje: «Me
+  interesa la galería completa sin editar de «…»»).
+- El correo que sale al confirmar, si la etapa avisa, incluye la oferta con
+  el botón «La quiero».
+- Estudio: «Libro 6×6 · sin contraportada» en «Paquete»; en «Libro y canvas»
+  solo la portada.
+
+**Comprobado**: Biome, tipos y 95 pruebas (nuevas: formatos, libro sin
+contraportada y oferta; correo con la oferta). Prueba completa en el
+navegador con un estudio temporal, ya borrado (22 de 22, sin errores):
+- En Ajustes se añade el 6×6 sin contraportada y se guardan la oferta ($100)
+  y el precio de extras ($25).
+- Encender, apagar y quitar el 8×8 cambia el libro de otra galería abierta.
+- Al crear la galería, el 6×6 sale «sin contraportada» y el precio de
+  extras es $25.
+- El cliente solo elige la portada y confirma.
+- Ve la oferta y el botón abre WhatsApp con el mensaje.
+- El estudio ve «Libro 6×6 · portada IMG_0001».
+- Cambiar el 6×6 después no toca la galería confirmada.
 
 ### 25 oct 2026 · v0.10.0 · Libros y canvas: el cliente elige portadas en la galería
 **Qué pidió el usuario**: algunos paquetes incluyen libros de distintas
