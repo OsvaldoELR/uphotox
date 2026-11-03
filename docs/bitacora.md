@@ -238,6 +238,15 @@ navegador con un estudio temporal, ya borrado (22 de 22, sin errores):
 - El estudio ve «Libro 6×6 · portada IMG_0001».
 - Cambiar el 6×6 después no toca la galería confirmada.
 
+Publicado (app y API en READY, etiqueta `v0.11.0`) y la misma prueba pasó en
+`https://uphotox-app.vercel.app` (22 de 22, estudio temporal borrado). Después
+se configuró **Lente Libre** (como haría Ajustes → Galerías):
+- Libros: 6×6 sin contraportada, 8×8 y 8×11 con ella. Las galerías abiertas
+  con 6×6 (g47 y g55) quedaron sin contraportada; la confirmada (g54) no se
+  tocó.
+- Galería completa sin editar: $100, «Todas las fotos de tu sesión sin
+  editar, solo con un retoque de color mínimo.»
+
 ### 25 oct 2026 · v0.10.0 · Libros y canvas: el cliente elige portadas en la galería
 **Qué pidió el usuario**: algunos paquetes incluyen libros de distintas
 medidas; los padres deben elegir portada y contraportada entre sus favoritas,
